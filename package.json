@@ -1,0 +1,37 @@
+{
+  "name": "babylon-game-gui",
+  "version": "0.0.1",
+  "description": "Game GUI extension for Babylon.js build on top of Babylon 2D GUI.",
+  "main": "lib/babylon-game-gui.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "svg-kit": "^0.5.1"
+  },
+  "scripts": {
+    "test": "tea-time -R dot"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cronvel/babylon-game-gui.git"
+  },
+  "keywords": [
+    "babylonjs",
+    "3D",
+    "game",
+    "GUI"
+  ],
+  "author": "Cédric Ronvel",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/cronvel/babylon-game-gui/issues"
+  },
+  "copyright": {
+    "title": "Babylon Game GUI",
+    "years": [
+      2023
+    ],
+    "owner": "Cédric Ronvel"
+  }
+}
