@@ -1,15 +1,17 @@
 
 "use strict" ;
 
-
+/* global BABYLON GAMEGUI */
 
 var svgKit = GAMEGUI.svgKit ;
 
 
 
-function createVg() {
+function createTestVg() {
 	var vg = new svgKit.VG( {
-		viewBox: { x: 0 , y: 0 , width: 700 , height: 500 } ,
+		viewBox: {
+			x: 0 , y: 0 , width: 700 , height: 500
+		}
 		//invertY: true
 	} ) ;
 
@@ -33,7 +35,8 @@ function createVg() {
 		let vgClipper = new svgKit.VGFlowingText( {
 			x: 550 ,
 			y: 380 ,
-			width: 140 , height: 100 ,
+			width: 140 ,
+			height: 100 ,
 			clip: false ,
 			textWrapping: 'wordWrap' ,
 			attr: { fontSize: 30 } ,
@@ -66,7 +69,10 @@ function createVg() {
 		y: 10 ,
 		width: 100 ,
 		height: 100 ,
-		sourceX: 50 , sourceY: 30 , sourceWidth: 100 , sourceHeight: 150 ,
+		sourceX: 50 ,
+		sourceY: 30 ,
+		sourceWidth: 100 ,
+		sourceHeight: 150 ,
 		url: './smiley.png'
 	} ) ;
 	vg.addEntity( vgImage ) ;
@@ -106,14 +112,15 @@ function createVg() {
 			x: 375 ,
 			y: 245 ,
 			//rx: 175 , ry: 125
-			rx: 160 , ry: 110
+			rx: 160 ,
+			ry: 110
 		} ) ;
 
 		let vgClipper2 = new svgKit.VGRect( {
 			x: 200 ,
 			y: 300 ,
 			width: 350 ,
-			height: 80 ,
+			height: 80
 		} ) ;
 
 		let vgClipper3 = new svgKit.VGPath() ;
@@ -125,7 +132,8 @@ function createVg() {
 		let vgClipper4 = new svgKit.VGFlowingText( {
 			x: 220 ,
 			y: 140 ,
-			width: 140 , height: 100 ,
+			width: 140 ,
+			height: 100 ,
 			clip: false ,
 			textWrapping: 'wordWrap' ,
 			attr: { fontSize: 30 } ,
@@ -166,25 +174,27 @@ function createVg() {
 		y: 40 ,
 		style: {
 			fontSize: 30 ,
-			fill: '#696' ,
+			fill: '#696'
 		}
 	} ) ;
 	vg.addEntity( vgText ) ;
-	
+
 	var vgFlowingText = new svgKit.VGFlowingText( {
 		x: 20 ,
 		y: 50 ,
 		//width: 400 , height: 200 ,
-		width: 200 , height: 400 ,
+		width: 200 ,
+		height: 400 ,
 		//clip: false ,
 		debugContainer: true ,
 		//textWrapping: 'ellipsis' ,
 		textWrapping: 'wordWrap' ,
 		attr: {
-			fontSize: 30 , color: '#777' ,
+			fontSize: 30 ,
+			color: '#777' ,
 			outline: true ,
 			frameCornerRadius: '0.2em' ,
-			frameOutlineWidth: '0.1em' ,
+			frameOutlineWidth: '0.1em'
 			//outlineColor: '#afa' ,
 			//lineOutline: true ,
 			//lineColor: '#559'
@@ -197,150 +207,127 @@ function createVg() {
 			{ text: "world!" , attr: { outline: true , outlineWidth: '0.05em' , outlineColor: '#b55' } } ,
 			//{ text: "\nThis is a very very very very very very long long long line..." } ,
 			{ text: "\nThis is an " } ,
-			{ text: "underlined part" , attr: {
-				underline: true , lineColor: '#599' ,
+			{ text: "underlined part" ,
+				attr: {
+					underline: true , lineColor: '#599'
 				//outline: true
-			} } ,
+				} } ,
 			{ text: "!" } ,
 			{ text: "\nAnd this is a " } ,
-			{ text: "striked through part" , attr: {
-				lineThrough: true ,
+			{ text: "striked through part" ,
+				attr: {
+					lineThrough: true
 				//lineThickness: '0.075em' ,
 				//outline: true
-			} } ,
+				} } ,
 			{ text: "!" } ,
 			{ text: "\nAnd this is " } ,
-			{ text: "a framed part" , attr: {
-				frame: true ,
-				//frameCornerRadius: 10 , frameColor: '#557' , frameOutlineWidth: 1 , frameOutlineColor: '#66e' ,
-				frameCornerRadius: '0.1em' , frameColor: '#557' , frameOutlineWidth: '0.1em' , frameOutlineColor: '#66e' ,
-				outline: true
-			} } ,
+			{ text: "a framed part" ,
+				attr: {
+					frame: true ,
+					//frameCornerRadius: 10 , frameColor: '#557' , frameOutlineWidth: 1 , frameOutlineColor: '#66e' ,
+					frameCornerRadius: '0.1em' ,
+					frameColor: '#557' ,
+					frameOutlineWidth: '0.1em' ,
+					frameOutlineColor: '#66e' ,
+					outline: true
+				} } ,
 			{ text: "!" }
 		]
 	} ) ;
 	vg.addEntity( vgFlowingText ) ;
-	
+
 	return vg ;
 }
 
 
 
-function createSimpleVg() {
+function createDialogVg() {
+	let x = 0 ,
+		y = 0 ,
+		width = 600 ,
+		height = 170 ,
+		padding = 40 ;
+
 	var vg = new svgKit.VG( {
-		viewBox: { x: 0 , y: 0 , width: 700 , height: 500 } ,
+		viewBox: { x , y , width , height }
 		//invertY: true
 	} ) ;
 
-	var vgEllipse = new svgKit.VGEllipse( {
-		x: 75 ,
-		y: 45 ,
-		rx: 160 ,
-		ry: 110 ,
-		style: {
-			fill: '#eaa' ,
-			stroke: '#c55'
-		}
+	var vg9pImage = new svgKit.VGImage( {
+		x , y , width , height ,
+		sourceLeftWidth: 70 ,
+		sourceRightWidth: 70 ,
+		sourceTopHeight: 70 ,
+		sourceBottomHeight: 70 ,
+		url: './9p.png'
 	} ) ;
-	vg.addEntity( vgEllipse ) ;
+	vg.addEntity( vg9pImage ) ;
 
-	var vgRect = new svgKit.VGRect( {
-		x: 10 ,
-		y: 10 ,
-		width: 60 ,
-		height: 40 ,
-		style: {
-			//fill: '#779' ,
-			fill: '#0f0' ,
-			stroke: '#c55'
-		}
-	} ) ;
-	vg.addEntity( vgRect ) ;
-
-/*
 	var vgFlowingText = new svgKit.VGFlowingText( {
-		x: 20 ,
-		y: 50 ,
-		//width: 400 , height: 200 ,
-		width: 200 , height: 400 ,
+		x: x + padding ,
+		y: y + padding ,
+		width: width - padding * 2 ,
+		height: height - padding * 2 ,
 		//clip: false ,
-		debugContainer: true ,
+		//debugContainer: true ,
 		//textWrapping: 'ellipsis' ,
 		textWrapping: 'wordWrap' ,
 		attr: {
-			fontSize: 30 , color: '#777' ,
+			fontSize: 30 ,
+			color: '#777' ,
 			outline: true ,
 			frameCornerRadius: '0.2em' ,
-			frameOutlineWidth: '0.1em' ,
+			frameOutlineWidth: '0.1em'
 			//outlineColor: '#afa' ,
 			//lineOutline: true ,
 			//lineColor: '#559'
 		} ,
-		markupText: "^GHello^ ^/my^ ^+friend^:, ^+^/stay^ ^[bgBlue]awhile^ and ^_listen^:..." ,
+		markupText: "^GHello^ ^/my^ ^+friend^:, ^+^/stay^ ^[bgBlue]awhile^ and ^_listen^:..."
 	} ) ;
 	vg.addEntity( vgFlowingText ) ;
-*/	
+
 	return vg ;
 }
-
-
-
-var canvas = document.getElementById( 'renderCanvas' ) ;
-
-function startRenderLoop(engine, canvas) {
-	engine.runRenderLoop(function () {
-		if (sceneToRender && sceneToRender.activeCamera) {
-			sceneToRender.render();
-		}
-	});
-}
-
-var engine = null;
-var scene = null;
-var sceneToRender = null;
-
-function createDefaultEngine() {
-	return new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true,  disableWebGL2Support: false});
-};
 
 
 
 async function createScene() {
 	// This creates a basic Babylon Scene object (non-mesh)
-	var scene = new BABYLON.Scene(engine);
+	var scene = new BABYLON.Scene( engine ) ;
 
 	// This creates and positions a free camera (non-mesh)
-	var camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0, 5, -10), scene);
+	var camera = new BABYLON.FreeCamera( "camera1" , new BABYLON.Vector3( 0 , 5 , - 10 ) , scene ) ;
 
 	// This targets the camera to scene origin
-	camera.setTarget(BABYLON.Vector3.Zero());
+	camera.setTarget( BABYLON.Vector3.Zero() ) ;
 
 	// This attaches the camera to the canvas
-	camera.attachControl(canvas, true);
+	camera.attachControl( canvas , true ) ;
 
 	// This creates a light, aiming 0,1,0 - to the sky (non-mesh)
-	var light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
+	var light = new BABYLON.HemisphericLight( "light" , new BABYLON.Vector3( 0 , 1 , 0 ) , scene ) ;
 
 	// Default intensity is 1. Let's dim the light a small amount
-	light.intensity = 0.7;
+	light.intensity = 0.7 ;
 
 	// Our built-in 'ground' shape.
-	var ground = BABYLON.MeshBuilder.CreateGround("ground", {width: 6, height: 6}, scene);
-	
+	var ground = BABYLON.MeshBuilder.CreateGround( "ground" , { width: 6 , height: 6 } , scene ) ;
+
 	// GUI
 	var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI( 'UI' ) ;
-	
-	var button1 = BABYLON.GUI.Button.CreateSimpleButton("but1", "Click Me");
-    button1.width = "150px"
-    button1.height = "40px";
-    button1.color = "white";
-    button1.cornerRadius = 20;
-    button1.background = "green";
-    button1.onPointerUpObservable.add(function() {
-        alert("you did it!");
-    });
-    advancedTexture.addControl(button1);
-	
+
+	var button1 = BABYLON.GUI.Button.CreateSimpleButton( "but1" , "Click Me" ) ;
+	button1.width = "150px" ;
+	button1.height = "40px" ;
+	button1.color = "white" ;
+	button1.cornerRadius = 20 ;
+	button1.background = "green" ;
+	button1.onPointerUpObservable.add( () => {
+		alert( "button clicked!" ) ;
+	} ) ;
+	advancedTexture.addControl( button1 ) ;
+
 	//console.log( GAMEGUI , BABYLON.GUI ) ;
 	svgKit.fontLib.setFontUrl( 'serif' , './serif.ttf' ) ;
 	svgKit.fontLib.setFontUrl( 'serif' , 'italic' , './serif-italic.ttf' ) ;
@@ -349,39 +336,66 @@ async function createScene() {
 	await svgKit.fontLib.preloadFontFamily( 'serif' ) ;
 	console.log( "OK!" ) ;
 
-	//var vg = createSimpleVg() ;
-	var vg = createVg() ;
+	//var vg = createTestVg() ;
+	var vg = createDialogVg() ;
 	var vgControl = new GAMEGUI.VG( 'vg' , vg ) ;
+	vgControl.width = vg.viewBox.width + "px" ;
+	vgControl.height = vg.viewBox.height + "px" ;
+	vgControl.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
+	vgControl.onPointerUpObservable.add( () => {
+		alert( "dialog clicked!" ) ;
+	} ) ;
 	advancedTexture.addControl( vgControl ) ;
 
 	return scene ;
-};
+}
+
+
+
+var canvas = document.getElementById( 'renderCanvas' ) ;
+
+function startRenderLoop( engine , canvas_ ) {
+	engine.runRenderLoop( () => {
+		if ( sceneToRender && sceneToRender.activeCamera ) {
+			sceneToRender.render() ;
+		}
+	} ) ;
+}
+
+var engine = null ;
+var scene = null ;
+var sceneToRender = null ;
+
+function createDefaultEngine() {
+	return new BABYLON.Engine( canvas , true , { preserveDrawingBuffer: true , stencil: true ,  disableWebGL2Support: false } ) ;
+}
 
 
 
 window.initFunction = async function() {
 	async function asyncEngineCreation() {
 		try {
-			return createDefaultEngine();
-		} catch(e) {
-			console.log("the available createEngine function failed. Creating the default engine instead");
-			return createDefaultEngine();
+			return createDefaultEngine() ;
+		}
+		catch( e ) {
+			console.log( "the available createEngine function failed. Creating the default engine instead" ) ;
+			return createDefaultEngine() ;
 		}
 	}
 
-	window.engine = await asyncEngineCreation();
-	
-	if (!engine) throw 'engine should not be null.';
-	startRenderLoop(engine, canvas);
-	window.scene = await createScene() ;
-};
+	window.engine = await asyncEngineCreation() ;
 
-initFunction().then(() => {
+	if ( ! engine ) throw 'engine should not be null.' ;
+	startRenderLoop( engine , canvas ) ;
+	window.scene = await createScene() ;
+} ;
+
+window.initFunction().then( () => {
 	sceneToRender = scene ;
 } ) ;
 
 // Resize
-window.addEventListener("resize", function () {
-	engine.resize();
-});
+window.addEventListener( "resize" , () => {
+	engine.resize() ;
+} ) ;
 
