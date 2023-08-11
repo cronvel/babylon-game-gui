@@ -232,18 +232,54 @@ function createSimpleVg() {
 		//invertY: true
 	} ) ;
 
+	var vgEllipse = new svgKit.VGEllipse( {
+		x: 75 ,
+		y: 45 ,
+		rx: 160 ,
+		ry: 110 ,
+		style: {
+			fill: '#eaa' ,
+			stroke: '#c55'
+		}
+	} ) ;
+	vg.addEntity( vgEllipse ) ;
+
 	var vgRect = new svgKit.VGRect( {
 		x: 10 ,
 		y: 10 ,
 		width: 60 ,
 		height: 40 ,
 		style: {
-			fill: '#779' ,
+			//fill: '#779' ,
+			fill: '#0f0' ,
 			stroke: '#c55'
 		}
 	} ) ;
 	vg.addEntity( vgRect ) ;
-	
+
+/*
+	var vgFlowingText = new svgKit.VGFlowingText( {
+		x: 20 ,
+		y: 50 ,
+		//width: 400 , height: 200 ,
+		width: 200 , height: 400 ,
+		//clip: false ,
+		debugContainer: true ,
+		//textWrapping: 'ellipsis' ,
+		textWrapping: 'wordWrap' ,
+		attr: {
+			fontSize: 30 , color: '#777' ,
+			outline: true ,
+			frameCornerRadius: '0.2em' ,
+			frameOutlineWidth: '0.1em' ,
+			//outlineColor: '#afa' ,
+			//lineOutline: true ,
+			//lineColor: '#559'
+		} ,
+		markupText: "^GHello^ ^/my^ ^+friend^:, ^+^/stay^ ^[bgBlue]awhile^ and ^_listen^:..." ,
+	} ) ;
+	vg.addEntity( vgFlowingText ) ;
+*/	
 	return vg ;
 }
 
@@ -348,3 +384,4 @@ initFunction().then(() => {
 window.addEventListener("resize", function () {
 	engine.resize();
 });
+
