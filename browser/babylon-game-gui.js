@@ -31,7 +31,6 @@
 
 
 
-const Image = BABYLON.GUI.Image ;
 const Observable = BABYLON.Observable ;
 
 
@@ -45,10 +44,17 @@ class VG extends BABYLON.GUI.Control {
 	_offscreenCanvas = null ;
 	_context = null ;
 
-	_stretch = Image.STRETCH_FILL ;
+	_stretch = VG.STRETCH_FILL ;
 	_autoScale = false ;
 
 	onRenderedObservable = new Observable() ;
+
+	// For interoperability, it should follow BABYLON.GUI.Image constants
+	static STRETCH_NONE = BABYLON.GUI.Image.STRETCH_NONE ;	// =0
+	static STRETCH_FILL = BABYLON.GUI.Image.STRETCH_FILL ;	// =1
+	static STRETCH_UNIFORM = BABYLON.GUI.Image.STRETCH_UNIFORM ;	// =2
+	static STRETCH_EXTEND = BABYLON.GUI.Image.STRETCH_EXTEND ;	// =3
+	//static STRETCH_NINE_PATCH = BABYLON.GUI.Image.STRETCH_NINE_PATCH ;	// =4
 
 	constructor( name , vg ) {
 		super( name ) ;
@@ -62,7 +68,11 @@ class VG extends BABYLON.GUI.Control {
 	_getTypeName() { return "VG" ; }
 
 	get stretch() { return this._stretch ; }
-	set stretch( v ) { this._stretch = v ; }
+	set stretch( v ) {
+		if ( this._stretch === v ) { return ; }
+		this._stretch = v ;
+		this._markAsDirty() ;
+	}
 
 	get autoScale() { return this._autoScale ; }
 	set autoScale( v ) {
@@ -107,7 +117,7 @@ class VG extends BABYLON.GUI.Control {
 		context.save() ;
 		this._applyStates( context ) ;
 
-		if ( this._stretch === Image.STRETCH_UNIFORM ) {
+		if ( this._stretch === VG.STRETCH_UNIFORM ) {
 			let hRatio = this._currentMeasure.width / this._vgWidth ,
 				vRatio = this._currentMeasure.height / this._vgHeight ,
 				ratio = Math.min( hRatio , vRatio ) ,
@@ -155,11 +165,11 @@ class VG extends BABYLON.GUI.Control {
 		// From Babylon GUI image.ts
 		if ( this._vgRendered ) {
 			switch ( this._stretch ) {
-				case Image.STRETCH_NONE :
-				case Image.STRETCH_FILL :
-				case Image.STRETCH_UNIFORM :
-				case Image.STRETCH_NINE_PATCH :
-				case Image.STRETCH_EXTEND :
+				case VG.STRETCH_NONE :
+				case VG.STRETCH_FILL :
+				case VG.STRETCH_UNIFORM :
+				case VG.STRETCH_NINE_PATCH :
+				case VG.STRETCH_EXTEND :
 					if ( this._autoScale ) {
 						this.synchronizeSizeWithContent() ;
 					}
