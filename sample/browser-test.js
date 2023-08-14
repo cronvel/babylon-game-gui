@@ -339,8 +339,11 @@ async function createScene() {
 	//var vg = createTestVg() ;
 	var vg = createDialogVg() ;
 	var vgControl = new GAMEGUI.VG( 'vg' , vg ) ;
-	vgControl.width = vg.viewBox.width + "px" ;
-	vgControl.height = vg.viewBox.height + "px" ;
+	//vgControl.width = vg.viewBox.width + "px" ;
+	//vgControl.height = vg.viewBox.height + "px" ;
+	vgControl.width = "300px" ;
+	vgControl.height = "200px" ;
+	vgControl.stretch = BABYLON.GUI.Image.STRETCH_UNIFORM ;
 	vgControl.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
 	vgControl.onPointerUpObservable.add( () => {
 		alert( "dialog clicked!" ) ;

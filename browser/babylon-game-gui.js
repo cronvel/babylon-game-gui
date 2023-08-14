@@ -31,36 +31,24 @@
 
 
 
+const Image = BABYLON.GUI.Image ;
+const Observable = BABYLON.Observable ;
+
+
+
 class VG extends BABYLON.GUI.Control {
 	_vg = null ;
 	_vgRendered = false ;
+	_vgWidth = null ;
+	_vgHeight = null ;
+
 	_offscreenCanvas = null ;
 	_context = null ;
 
-	get vg() { return this._vg ; }
+	_stretch = Image.STRETCH_FILL ;
+	_autoScale = false ;
 
-	set vg( _vg ) {
-		if ( ! _vg ) {
-			this._vg = null ;
-			this._vgRendered = false ;
-			return ;
-		}
-
-		var width = _vg.viewBox.width ,
-			height = _vg.viewBox.height ;
-
-		if ( ! this._offscreenCanvas || width !== this._offscreenCanvas.width || height !== this._offscreenCanvas.height ) {
-			this._offscreenCanvas = new OffscreenCanvas( width , height ) ;
-			this._context = this._offscreenCanvas.getContext( '2d' ) ;
-		}
-
-		this._vg = _vg ;
-		this._vgRendered = false ;
-		this._vg.renderCanvas( this._context ).then( () => {
-			this._vgRendered = true ;
-			this._markAsDirty() ;
-		} ) ;
-	}
+	onRenderedObservable = new Observable() ;
 
 	constructor( name , vg ) {
 		super( name ) ;
@@ -71,8 +59,46 @@ class VG extends BABYLON.GUI.Control {
 		super.dispose() ;
 	}
 
-	_getTypeName() {
-		return "VG" ;
+	_getTypeName() { return "VG" ; }
+
+	get stretch() { return this._stretch ; }
+	set stretch( v ) { this._stretch = v ; }
+
+	get autoScale() { return this._autoScale ; }
+	set autoScale( v ) {
+		if ( this._autoScale === v ) { return ; }
+		this._autoScale = v ;
+		if ( v && this._vgRendered ) { this.synchronizeSizeWithContent() ; }
+	}
+
+	get vg() { return this._vg ; }
+	set vg( _vg ) {
+		if ( ! _vg ) {
+			this._vg = null ;
+			this._vgRendered = false ;
+			this._vgWidth = null ;
+			this._vgHeight = null ;
+			return ;
+		}
+
+		this._vgWidth = _vg.viewBox.width ;
+		this._vgHeight = _vg.viewBox.height ;
+
+		if ( ! this._offscreenCanvas || this._vgWidth !== this._offscreenCanvas.width || this._vgHeight !== this._offscreenCanvas.height ) {
+			this._offscreenCanvas = new OffscreenCanvas( this._vgWidth , this._vgHeight ) ;
+			this._context = this._offscreenCanvas.getContext( '2d' ) ;
+		}
+
+		this._vg = _vg ;
+		this._vgRendered = false ;
+		this._vg.renderCanvas( this._context ).then( () => this._onRendered() ) ;
+	}
+
+	_onRendered() {
+		this._vgRendered = true ;
+		if ( this._autoScale ) { this.synchronizeSizeWithContent() ; }
+		this.onRenderedObservable.notifyObservers( this ) ;
+		this._markAsDirty() ;
 	}
 
 	_draw( context ) {
@@ -80,13 +106,32 @@ class VG extends BABYLON.GUI.Control {
 
 		context.save() ;
 		this._applyStates( context ) ;
-		context.drawImage(
-			this._offscreenCanvas ,
-			this._currentMeasure.left ,
-			this._currentMeasure.top ,
-			this._currentMeasure.width ,
-			this._currentMeasure.height
-		) ;
+
+		if ( this._stretch === Image.STRETCH_UNIFORM ) {
+			let hRatio = this._currentMeasure.width / this._vgWidth ,
+				vRatio = this._currentMeasure.height / this._vgHeight ,
+				ratio = Math.min( hRatio , vRatio ) ,
+				centerX = ( this._currentMeasure.width - this._vgWidth * ratio ) / 2 ,
+				centerY = ( this._currentMeasure.height - this._vgHeight * ratio ) / 2 ;
+
+			context.drawImage(
+				this._offscreenCanvas ,
+				this._currentMeasure.left + centerX ,
+				this._currentMeasure.top + centerY ,
+				this._vgWidth * ratio ,
+				this._vgHeight * ratio
+			) ;
+		}
+		else {
+			context.drawImage(
+				this._offscreenCanvas ,
+				this._currentMeasure.left ,
+				this._currentMeasure.top ,
+				this._currentMeasure.width ,
+				this._currentMeasure.height
+			) ;
+		}
+
 		context.restore() ;
 	}
 
@@ -98,12 +143,36 @@ class VG extends BABYLON.GUI.Control {
 		//context.miterLimit = 2;
 	}
 
+	synchronizeSizeWithContent() {
+		// From Babylon GUI image.ts
+		if ( ! this._vgRendered ) { return ; }
+
+		this.width = this._vgWidth + "px" ;
+		this.height = this._vgHeight + "px" ;
+	}
+
 	_processMeasures( parentMeasure , context ) {
-		// Do something before...
+		// From Babylon GUI image.ts
+		if ( this._vgRendered ) {
+			switch ( this._stretch ) {
+				case Image.STRETCH_NONE :
+				case Image.STRETCH_FILL :
+				case Image.STRETCH_UNIFORM :
+				case Image.STRETCH_NINE_PATCH :
+				case Image.STRETCH_EXTEND :
+					if ( this._autoScale ) {
+						this.synchronizeSizeWithContent() ;
+					}
+					if ( this.parent && this.parent.parent ) {
+						// Will update root size if root is not the top root
+						this.parent.adaptWidthToChildren = true ;
+						this.parent.adaptHeightToChildren = true ;
+					}
+					break ;
+			}
+		}
 
 		super._processMeasures( parentMeasure , context ) ;
-
-		// Do something after...
 	}
 }
 
