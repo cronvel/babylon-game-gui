@@ -317,34 +317,21 @@ async function createScene() {
 	// GUI
 	var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI( 'UI' ) ;
 
-	var button1 = BABYLON.GUI.Button.CreateSimpleButton( "but1" , "Click Me" ) ;
-	button1.width = "150px" ;
-	button1.height = "40px" ;
-	button1.color = "white" ;
-	button1.cornerRadius = 20 ;
-	button1.background = "green" ;
-	button1.onPointerUpObservable.add( () => {
-		alert( "button clicked!" ) ;
-	} ) ;
-	advancedTexture.addControl( button1 ) ;
-
-	//console.log( GAMEGUI , BABYLON.GUI ) ;
 	svgKit.fontLib.setFontUrl( 'serif' , './serif.ttf' ) ;
 	svgKit.fontLib.setFontUrl( 'serif' , 'italic' , './serif-italic.ttf' ) ;
 	svgKit.fontLib.setFontUrl( 'serif' , 'bold' , './serif-bold.ttf' ) ;
 	svgKit.fontLib.setFontUrl( 'serif' , 'bold' , 'italic' , './serif-bold+italic.ttf' ) ;
-	await svgKit.fontLib.preloadFontFamily( 'serif' ) ;
-	console.log( "OK!" ) ;
+	//await svgKit.fontLib.preloadFontFamily( 'serif' ) ;
 
 	//var vg = createTestVg() ;
 	var vg = createDialogVg() ;
-	var vgControl = new GAMEGUI.VG( 'vg' , vg ) ;
+	var vgControl = new BABYLON.GUI.VG( 'vg' , vg ) ;
 	//vgControl.width = vg.viewBox.width + "px" ;
 	//vgControl.height = vg.viewBox.height + "px" ;
 	vgControl.width = "300px" ;
 	vgControl.height = "200px" ;
-	//vgControl.stretch = GAMEGUI.VG.STRETCH_UNIFORM ;
-	vgControl.stretch = GAMEGUI.VG.STRETCH_EXTEND ; vgControl.autoScale = true ;
+	//vgControl.stretch = BABYLON.GUI.VG.STRETCH_UNIFORM ;
+	vgControl.stretch = BABYLON.GUI.VG.STRETCH_EXTEND ; vgControl.autoScale = true ;
 	vgControl.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
 	vgControl.onPointerUpObservable.add( () => {
 		alert( "dialog clicked!" ) ;
@@ -353,53 +340,4 @@ async function createScene() {
 
 	return scene ;
 }
-
-
-
-var canvas = document.getElementById( 'renderCanvas' ) ;
-
-function startRenderLoop( engine , canvas_ ) {
-	engine.runRenderLoop( () => {
-		if ( sceneToRender && sceneToRender.activeCamera ) {
-			sceneToRender.render() ;
-		}
-	} ) ;
-}
-
-var engine = null ;
-var scene = null ;
-var sceneToRender = null ;
-
-function createDefaultEngine() {
-	return new BABYLON.Engine( canvas , true , { preserveDrawingBuffer: true , stencil: true ,  disableWebGL2Support: false } ) ;
-}
-
-
-
-window.initFunction = async function() {
-	async function asyncEngineCreation() {
-		try {
-			return createDefaultEngine() ;
-		}
-		catch( e ) {
-			console.log( "the available createEngine function failed. Creating the default engine instead" ) ;
-			return createDefaultEngine() ;
-		}
-	}
-
-	window.engine = await asyncEngineCreation() ;
-
-	if ( ! engine ) throw 'engine should not be null.' ;
-	startRenderLoop( engine , canvas ) ;
-	window.scene = await createScene() ;
-} ;
-
-window.initFunction().then( () => {
-	sceneToRender = scene ;
-} ) ;
-
-// Resize
-window.addEventListener( "resize" , () => {
-	engine.resize() ;
-} ) ;
 

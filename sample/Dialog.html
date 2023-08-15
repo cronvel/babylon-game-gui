@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf8" />
+    <title>Babylon Game GUI test</title>
+    <style>
+		html, body {
+			overflow: hidden;
+			width: 100%;
+			height: 100%;
+			margin: 0;
+			padding: 0;
+		}
+
+		#renderCanvas {
+			width: 100%;
+			height: 100%;
+			touch-action: none;
+		}
+
+		#canvasZone {
+			width: 100%;
+			height: 100%;
+		}
+	</style>
+	<script src="babylon.min.js"></script>
+	<script src="babylon.gui.min.js"></script>
+	<script src="../browser/babylon-game-gui.js"></script>
+</head>
+<body>
+    <div id="canvasZone"><canvas id="renderCanvas"></canvas></div>
+	<script src="Dialog.js"></script>
+	<script src="boilerplate.js"></script>
+</body>
+</html>
