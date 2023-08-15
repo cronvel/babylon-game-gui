@@ -41,7 +41,8 @@ async function createScene() {
 
 	//var vg = createTestVg() ;
 	var flowingText = new BABYLON.GUI.FlowingText( 'text' ) ;
-	flowingText.markupText = "^GHello^ ^/my^ ^+friend^:, ^+^/stay^ ^[bgBlue]awhile^ and ^_listen^:..." ;
+	flowingText.width = "300px" ;
+	flowingText.height = "200px" ;
 	flowingText.textWrapping = "wordWrap" ;
 	flowingText.textAttr = {
 		fontSize: 30 ,
@@ -55,10 +56,16 @@ async function createScene() {
 	} ;
 	flowingText.debugContainer = true ;
 	flowingText.clip = false ;
-	flowingText.width = "300px" ;
-	flowingText.height = "200px" ;
 	flowingText.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
-	flowingText._generateVg() ;
+	flowingText.autoScale = true ;
+
+	// There are huge troubles because of the asyncness, we should debounce every setter.
+	// Here, moving markupText assignment above autoScale or width/height assignment cause a lot of trouble,
+	// at best we have to call _generateVg() on our own.
+	flowingText.markupText = "^GHello^ ^/my^ ^+friend^:, ^+^/stay^ ^[bgBlue]awhile^ and ^_listen^:..." ;
+
+	//await flowingText._generateVg() ;
+
 	advancedTexture.addControl( flowingText ) ;
 
 	return scene ;
