@@ -31,8 +31,10 @@
 
 
 
-const svgKit = require( 'svg-kit' ) ;
 const VG = require( './VG.js' ) ;
+
+const svgKit = require( 'svg-kit' ) ;
+const Promise = require( 'seventh' ) ;
 
 
 
@@ -46,6 +48,7 @@ class FlowingText extends VG {
 
 	constructor( name ) {
 		super( name ) ;
+		this._generateVg = Promise.debounceUpdate( { waitNextTick: true } , () => this._generateVgNow() ) ;
 	}
 
 	dispose() {
@@ -79,7 +82,8 @@ class FlowingText extends VG {
 		}
 	}
 
-	async _generateVg() {
+	async _generateVgNow() {
+		console.warn( "_generateVg()" , this ) ;
 		var vg ;
 
 		var params = {
@@ -141,7 +145,7 @@ BABYLON.GUI.FlowingText = FlowingText ;
 BABYLON.RegisterClass( 'BABYLON.GUI.FlowingText' , FlowingText ) ;
 
 
-},{"./VG.js":2,"svg-kit":27}],2:[function(require,module,exports){
+},{"./VG.js":2,"seventh":12,"svg-kit":37}],2:[function(require,module,exports){
 /*
 	Babylon Game GUI
 
@@ -176,6 +180,8 @@ BABYLON.RegisterClass( 'BABYLON.GUI.FlowingText' , FlowingText ) ;
 
 const Observable = BABYLON.Observable ;
 
+const Promise = require( 'seventh' ) ;
+
 
 
 class VG extends BABYLON.GUI.Control {
@@ -201,6 +207,7 @@ class VG extends BABYLON.GUI.Control {
 
 	constructor( name , vg ) {
 		super( name ) ;
+		this._renderCanvas = Promise.debounceUpdate( { waitNextTick: true } , () => this._renderCanvasNow() ) ;
 		if ( vg ) { this.vg = vg ; }
 	}
 
@@ -247,9 +254,14 @@ class VG extends BABYLON.GUI.Control {
 			this._offscreenCanvas = new OffscreenCanvas( this._vgWidth , this._vgHeight ) ;
 			this._context = this._offscreenCanvas.getContext( '2d' ) ;
 		}
-
+		
+		this._renderCanvas() ;
+	}
+	
+	async _renderCanvasNow() {
 		this._vgRendered = false ;
-		this._vg.renderCanvas( this._context ).then( () => this._onRendered() ) ;
+		await this._vg.renderCanvas( this._context ) ;
+		this._onRendered() ;
 	}
 
 	_onRendered() {
@@ -339,7 +351,7 @@ BABYLON.GUI.VG = VG ;
 BABYLON.RegisterClass( 'BABYLON.GUI.VG' , VG ) ;
 
 
-},{}],3:[function(require,module,exports){
+},{"seventh":12}],3:[function(require,module,exports){
 /*
 	Babylon Game GUI
 
@@ -373,7 +385,2774 @@ exports.VG = require( './VG.js' ) ;
 exports.FlowingText = require( './FlowingText.js' ) ;
 
 
-},{"./FlowingText.js":1,"./VG.js":2,"svg-kit":27}],4:[function(require,module,exports){
+},{"./FlowingText.js":1,"./VG.js":2,"svg-kit":37}],4:[function(require,module,exports){
+(function (process,global){(function (){
+(function (global, undefined) {
+    "use strict";
+
+    if (global.setImmediate) {
+        return;
+    }
+
+    var nextHandle = 1; // Spec says greater than zero
+    var tasksByHandle = {};
+    var currentlyRunningATask = false;
+    var doc = global.document;
+    var registerImmediate;
+
+    function setImmediate(callback) {
+      // Callback can either be a function or a string
+      if (typeof callback !== "function") {
+        callback = new Function("" + callback);
+      }
+      // Copy function arguments
+      var args = new Array(arguments.length - 1);
+      for (var i = 0; i < args.length; i++) {
+          args[i] = arguments[i + 1];
+      }
+      // Store and register the task
+      var task = { callback: callback, args: args };
+      tasksByHandle[nextHandle] = task;
+      registerImmediate(nextHandle);
+      return nextHandle++;
+    }
+
+    function clearImmediate(handle) {
+        delete tasksByHandle[handle];
+    }
+
+    function run(task) {
+        var callback = task.callback;
+        var args = task.args;
+        switch (args.length) {
+        case 0:
+            callback();
+            break;
+        case 1:
+            callback(args[0]);
+            break;
+        case 2:
+            callback(args[0], args[1]);
+            break;
+        case 3:
+            callback(args[0], args[1], args[2]);
+            break;
+        default:
+            callback.apply(undefined, args);
+            break;
+        }
+    }
+
+    function runIfPresent(handle) {
+        // From the spec: "Wait until any invocations of this algorithm started before this one have completed."
+        // So if we're currently running a task, we'll need to delay this invocation.
+        if (currentlyRunningATask) {
+            // Delay by doing a setTimeout. setImmediate was tried instead, but in Firefox 7 it generated a
+            // "too much recursion" error.
+            setTimeout(runIfPresent, 0, handle);
+        } else {
+            var task = tasksByHandle[handle];
+            if (task) {
+                currentlyRunningATask = true;
+                try {
+                    run(task);
+                } finally {
+                    clearImmediate(handle);
+                    currentlyRunningATask = false;
+                }
+            }
+        }
+    }
+
+    function installNextTickImplementation() {
+        registerImmediate = function(handle) {
+            process.nextTick(function () { runIfPresent(handle); });
+        };
+    }
+
+    function canUsePostMessage() {
+        // The test against `importScripts` prevents this implementation from being installed inside a web worker,
+        // where `global.postMessage` means something completely different and can't be used for this purpose.
+        if (global.postMessage && !global.importScripts) {
+            var postMessageIsAsynchronous = true;
+            var oldOnMessage = global.onmessage;
+            global.onmessage = function() {
+                postMessageIsAsynchronous = false;
+            };
+            global.postMessage("", "*");
+            global.onmessage = oldOnMessage;
+            return postMessageIsAsynchronous;
+        }
+    }
+
+    function installPostMessageImplementation() {
+        // Installs an event handler on `global` for the `message` event: see
+        // * https://developer.mozilla.org/en/DOM/window.postMessage
+        // * http://www.whatwg.org/specs/web-apps/current-work/multipage/comms.html#crossDocumentMessages
+
+        var messagePrefix = "setImmediate$" + Math.random() + "$";
+        var onGlobalMessage = function(event) {
+            if (event.source === global &&
+                typeof event.data === "string" &&
+                event.data.indexOf(messagePrefix) === 0) {
+                runIfPresent(+event.data.slice(messagePrefix.length));
+            }
+        };
+
+        if (global.addEventListener) {
+            global.addEventListener("message", onGlobalMessage, false);
+        } else {
+            global.attachEvent("onmessage", onGlobalMessage);
+        }
+
+        registerImmediate = function(handle) {
+            global.postMessage(messagePrefix + handle, "*");
+        };
+    }
+
+    function installMessageChannelImplementation() {
+        var channel = new MessageChannel();
+        channel.port1.onmessage = function(event) {
+            var handle = event.data;
+            runIfPresent(handle);
+        };
+
+        registerImmediate = function(handle) {
+            channel.port2.postMessage(handle);
+        };
+    }
+
+    function installReadyStateChangeImplementation() {
+        var html = doc.documentElement;
+        registerImmediate = function(handle) {
+            // Create a <script> element; its readystatechange event will be fired asynchronously once it is inserted
+            // into the document. Do so, thus queuing up the task. Remember to clean up once it's been called.
+            var script = doc.createElement("script");
+            script.onreadystatechange = function () {
+                runIfPresent(handle);
+                script.onreadystatechange = null;
+                html.removeChild(script);
+                script = null;
+            };
+            html.appendChild(script);
+        };
+    }
+
+    function installSetTimeoutImplementation() {
+        registerImmediate = function(handle) {
+            setTimeout(runIfPresent, 0, handle);
+        };
+    }
+
+    // If supported, we should attach to the prototype of global, since that is where setTimeout et al. live.
+    var attachTo = Object.getPrototypeOf && Object.getPrototypeOf(global);
+    attachTo = attachTo && attachTo.setTimeout ? attachTo : global;
+
+    // Don't get fooled by e.g. browserify environments.
+    if ({}.toString.call(global.process) === "[object process]") {
+        // For Node.js before 0.9
+        installNextTickImplementation();
+
+    } else if (canUsePostMessage()) {
+        // For non-IE10 modern browsers
+        installPostMessageImplementation();
+
+    } else if (global.MessageChannel) {
+        // For web workers, where supported
+        installMessageChannelImplementation();
+
+    } else if (doc && "onreadystatechange" in doc.createElement("script")) {
+        // For IE 6–8
+        installReadyStateChangeImplementation();
+
+    } else {
+        // For older browsers
+        installSetTimeoutImplementation();
+    }
+
+    attachTo.setImmediate = setImmediate;
+    attachTo.clearImmediate = clearImmediate;
+}(typeof self === "undefined" ? typeof global === "undefined" ? this : global : self));
+
+}).call(this)}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"_process":75}],5:[function(require,module,exports){
+/*
+	Seventh
+
+	Copyright (c) 2017 - 2020 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+const Promise = require( './seventh.js' ) ;
+
+
+
+function Queue( jobRunner , concurrency = 4 ) {
+	this.jobRunner = jobRunner ;
+	this.jobs = new Map() ;			// all jobs
+	this.pendingJobs = new Map() ;	// only pending jobs (not run)
+	this.runningJobs = new Map() ;	// only running jobs (not done)
+	this.errorJobs = new Map() ;	// jobs that have failed
+	this.jobsDone = new Map() ;		// jobs that finished successfully
+	this.concurrency = + concurrency || 1 ;
+
+	// Internal
+	this.isQueueRunning = true ;
+	this.isLoopRunning = false ;
+	this.canLoopAgain = false ;
+	this.ready = Promise.resolved ;
+
+	// Misc
+	this.startTime = null ;		// timestamp at the first time the loop is run
+	this.endTime = null ;		// timestamp at the last time the loop exited
+
+	// External API, resolved when there is no jobs anymore in the queue, a new Promise is created when new element are injected
+	this.drained = Promise.resolved ;
+
+	// External API, resolved when the Queue has nothing to do: either it's drained or the pending jobs have dependencies that cannot be solved
+	this.idle = Promise.resolved ;
+}
+
+Promise.Queue = Queue ;
+
+
+
+function Job( id , dependencies = null , data = undefined ) {
+	this.id = id ;
+	this.dependencies = dependencies === null ? null : [ ... dependencies ] ;
+	this.data = data === undefined ? id : data ;
+	this.error = null ;
+	this.startTime = null ;
+	this.endTime = null ;
+}
+
+Queue.Job = Job ;
+
+
+
+Queue.prototype.setConcurrency = function( concurrency ) { this.concurrency = + concurrency || 1 ; } ;
+Queue.prototype.stop = Queue.prototype.pause = function() { this.isQueueRunning = false ; } ;
+Queue.prototype.has = function( id ) { return this.jobs.has( id ) ; } ;
+
+
+
+Queue.prototype.add = Queue.prototype.addJob = function( id , data , dependencies = null ) {
+	// Don't add it twice!
+	if ( this.jobs.has( id ) ) { return false ; }
+
+	var job = new Job( id , dependencies , data ) ;
+	this.jobs.set( id , job ) ;
+	this.pendingJobs.set( id , job ) ;
+	this.canLoopAgain = true ;
+	if ( this.isQueueRunning && ! this.isLoopRunning ) { this.run() ; }
+	if ( this.drained.isSettled() ) { this.drained = new Promise() ; }
+	return job ;
+} ;
+
+
+
+// Add a batch of jobs, with only id (data=id) and no dependencies
+Queue.prototype.addBatch = Queue.prototype.addJobBatch = function( ids ) {
+	var id , job ;
+
+	for ( id of ids ) {
+		// Don't add it twice!
+		if ( this.jobs.has( id ) ) { return false ; }
+		job = new Job( id ) ;
+		this.jobs.set( id , job ) ;
+		this.pendingJobs.set( id , job ) ;
+	}
+
+	this.canLoopAgain = true ;
+	if ( this.isQueueRunning && ! this.isLoopRunning ) { this.run() ; }
+	if ( this.drained.isSettled() ) { this.drained = new Promise() ; }
+} ;
+
+
+
+Queue.prototype.run = Queue.prototype.resume = async function() {
+	var job ;
+
+	this.isQueueRunning = true ;
+
+	if ( this.isLoopRunning ) { return ; }
+	this.isLoopRunning = true ;
+
+	if ( ! this.startTime ) { this.startTime = Date.now() ; }
+
+	do {
+		this.canLoopAgain = false ;
+
+		for ( job of this.pendingJobs.values() ) {
+			if ( job.dependencies && job.dependencies.some( dependencyId => ! this.jobsDone.has( dependencyId ) ) ) { continue ; }
+			// This should be done synchronously:
+			if ( this.idle.isSettled() ) { this.idle = new Promise() ; }
+			this.canLoopAgain = true ;
+
+			await this.ready ;
+
+			// Something has stopped the queue while we were awaiting.
+			// This check MUST be done only after "await", before is potentially synchronous, and things only change concurrently during an "await"
+			if ( ! this.isQueueRunning ) { this.finishRun() ; return ; }
+
+			this.runJob( job ) ;
+		}
+	} while ( this.canLoopAgain ) ;
+
+	this.finishRun() ;
+} ;
+
+
+
+// Finish current run
+Queue.prototype.finishRun = function() {
+	this.isLoopRunning = false ;
+
+	if ( ! this.pendingJobs.size ) { this.drained.resolve() ; }
+
+	if ( ! this.runningJobs.size ) {
+		this.endTime = Date.now() ;
+		this.idle.resolve() ;
+	}
+} ;
+
+
+
+Queue.prototype.runJob = async function( job ) {
+	// Immediately remove it synchronously from the pending queue and add it to the running one
+	this.pendingJobs.delete( job.id ) ;
+	this.runningJobs.set( job.id , job ) ;
+
+	if ( this.runningJobs.size >= this.concurrency ) { this.ready = new Promise() ; }
+
+	// Async part
+	try {
+		job.startTime = Date.now() ;
+		await this.jobRunner( job.data ) ;
+		job.endTime = Date.now() ;
+		this.jobsDone.set( job.id , job ) ;
+		this.canLoopAgain = true ;
+	}
+	catch ( error ) {
+		job.endTime = Date.now() ;
+		job.error = error ;
+		this.errorJobs.set( job.id , job ) ;
+	}
+
+	this.runningJobs.delete( job.id ) ;
+	if ( this.runningJobs.size < this.concurrency ) { this.ready.resolve() ; }
+
+	// This MUST come last, because it retry the loop: dependencies may have been unlocked!
+	if ( ! this.isLoopRunning ) {
+		if ( this.isQueueRunning && this.pendingJobs.size ) { this.run() ; }
+		else { this.finishRun() ; }
+	}
+} ;
+
+
+
+Queue.prototype.getJobTimes = function() {
+	var job , stats = {} ;
+	for ( job of this.jobsDone.values() ) { stats[ job.id ] = job.endTime - job.startTime ; }
+	return stats ;
+} ;
+
+
+
+Queue.prototype.getStats = function() {
+	var job , sum = 0 ,
+		stats = {
+			pending: this.pendingJobs.size ,
+			running: this.runningJobs.size ,
+			failed: this.errorJobs.size ,
+			done: this.jobsDone.size ,
+			averageJobTime: null ,
+			queueTime: null
+		} ;
+
+	if ( this.jobsDone.size ) {
+		for ( job of this.jobsDone.values() ) { sum += job.endTime - job.startTime ; }
+		stats.averageJobTime = sum / this.jobsDone.size ;
+	}
+
+	if ( this.endTime ) { stats.queueTime = this.endTime - this.startTime ; }
+
+	return stats ;
+} ;
+
+
+},{"./seventh.js":12}],6:[function(require,module,exports){
+/*
+	Seventh
+
+	Copyright (c) 2017 - 2020 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+const Promise = require( './seventh.js' ) ;
+
+
+
+Promise.promisifyNodeApi = ( api , suffix , multiSuffix , filter , anything ) => {
+	var keys ;
+
+	suffix = suffix || 'Async' ;
+	multiSuffix = multiSuffix || 'AsyncAll' ;
+	filter = filter || ( key => key[ 0 ] !== '_' && ! key.endsWith( 'Sync' ) ) ;
+
+	if ( anything ) {
+		keys = [] ;
+
+		for ( let key in api ) {
+			if ( typeof api[ key ] === 'function' ) { keys.push( key ) ; }
+		}
+	}
+	else {
+		keys = Object.keys( api ) ;
+	}
+
+	keys.filter( key => {
+		if ( typeof api[ key ] !== 'function' ) { return false ; }
+
+		// If it has any enumerable properties on its prototype, it's a constructor
+		for ( let trash in api[ key ].prototype ) { return false ; }
+
+		return filter( key , api ) ;
+	} )
+		.forEach( key => {
+			const targetKey = key + suffix ;
+			const multiTargetKey = key + multiSuffix ;
+
+			// Do nothing if it already exists
+			if ( ! api[ targetKey ] ) {
+				api[ targetKey ] = Promise.promisify( api[ key ] , api ) ;
+			}
+
+			if ( ! api[ multiTargetKey ] ) {
+				api[ multiTargetKey ] = Promise.promisifyAll( api[ key ] , api ) ;
+			}
+		} ) ;
+} ;
+
+
+
+Promise.promisifyAnyNodeApi = ( api , suffix , multiSuffix , filter ) => {
+	Promise.promisifyNodeApi( api , suffix , multiSuffix , filter , true ) ;
+} ;
+
+
+
+},{"./seventh.js":12}],7:[function(require,module,exports){
+/*
+	Seventh
+
+	Copyright (c) 2017 - 2020 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+const Promise = require( './seventh.js' ) ;
+
+
+
+// This object is used as a special unique value for array hole (see Promise.filter())
+const HOLE = {} ;
+
+function noop() {}
+
+
+
+Promise.all = ( iterable ) => {
+	var index = - 1 , settled = false ,
+		count = 0 , length = Infinity ,
+		value , values = [] ,
+		allPromise = new Promise() ;
+
+	for ( value of iterable ) {
+		if ( settled ) { break ; }
+
+		const promiseIndex = ++ index ;
+
+		Promise.resolve( value )
+			.then(
+				value_ => {
+					if ( settled ) { return ; }
+
+					values[ promiseIndex ] = value_ ;
+					count ++ ;
+
+					if ( count >= length ) {
+						settled = true ;
+						allPromise._resolveValue( values ) ;
+					}
+				} ,
+				error => {
+					if ( settled ) { return ; }
+					settled = true ;
+					allPromise.reject( error ) ;
+				}
+			) ;
+	}
+
+	length = index + 1 ;
+
+	if ( ! length ) {
+		allPromise._resolveValue( values ) ;
+	}
+
+	return allPromise ;
+} ;
+
+
+
+// Maybe faster, but can't find any reasonable grounds for that ATM
+//Promise.all =
+Promise._allArray = ( iterable ) => {
+	var length = iterable.length ;
+
+	if ( ! length ) { Promise._resolveValue( [] ) ; }
+
+	var index ,
+		runtime = {
+			settled: false ,
+			count: 0 ,
+			length: length ,
+			values: [] ,
+			allPromise: new Promise()
+		} ;
+
+	for ( index = 0 ; ! runtime.settled && index < length ; index ++ ) {
+		Promise._allArrayOne( iterable[ index ] , index , runtime ) ;
+	}
+
+	return runtime.allPromise ;
+} ;
+
+
+
+// internal for allArray
+Promise._allArrayOne = ( value , index , runtime ) => {
+	Promise._bareThen( value ,
+		value_ => {
+			if ( runtime.settled ) { return ; }
+
+			runtime.values[ index ] = value_ ;
+			runtime.count ++ ;
+
+			if ( runtime.count >= runtime.length ) {
+				runtime.settled = true ;
+				runtime.allPromise._resolveValue( runtime.values ) ;
+			}
+		} ,
+		error => {
+			if ( runtime.settled ) { return ; }
+			runtime.settled = true ;
+			runtime.allPromise.reject( error ) ;
+		}
+	) ;
+} ;
+
+
+
+Promise.allSettled = ( iterable ) => {
+	var index = - 1 , settled = false ,
+		count = 0 , length = Infinity ,
+		value , values = [] ,
+		allPromise = new Promise() ;
+
+	for ( value of iterable ) {
+		if ( settled ) { break ; }
+
+		const promiseIndex = ++ index ;
+
+		Promise.resolve( value )
+			.then(
+				value_ => {
+					if ( settled ) { return ; }
+
+					values[ promiseIndex ] = { status: 'fulfilled' , value: value_ } ;
+					count ++ ;
+
+					if ( count >= length ) {
+						settled = true ;
+						allPromise._resolveValue( values ) ;
+					}
+				} ,
+				error => {
+					if ( settled ) { return ; }
+
+					values[ promiseIndex ] = { status: 'rejected' ,  reason: error } ;
+					count ++ ;
+
+					if ( count >= length ) {
+						settled = true ;
+						allPromise._resolveValue( values ) ;
+					}
+				}
+			) ;
+	}
+
+	length = index + 1 ;
+
+	if ( ! length ) {
+		allPromise._resolveValue( values ) ;
+	}
+
+	return allPromise ;
+} ;
+
+
+
+// Promise.all() with an iterator
+Promise.every =
+Promise.map = ( iterable , iterator ) => {
+	var index = - 1 , settled = false ,
+		count = 0 , length = Infinity ,
+		value , values = [] ,
+		allPromise = new Promise() ;
+
+	for ( value of iterable ) {
+		if ( settled ) { break ; }
+
+		const promiseIndex = ++ index ;
+
+		Promise.resolve( value )
+			.then( value_ => {
+				if ( settled ) { return ; }
+				return iterator( value_ , promiseIndex ) ;
+			} )
+			.then(
+				value_ => {
+					if ( settled ) { return ; }
+
+					values[ promiseIndex ] = value_ ;
+					count ++ ;
+
+					if ( count >= length ) {
+						settled = true ;
+						allPromise._resolveValue( values ) ;
+					}
+				} ,
+				error => {
+					if ( settled ) { return ; }
+					settled = true ;
+					allPromise.reject( error ) ;
+				}
+			) ;
+	}
+
+	length = index + 1 ;
+
+	if ( ! length ) {
+		allPromise._resolveValue( values ) ;
+	}
+
+	return allPromise ;
+} ;
+
+
+
+/*
+	It works symmetrically with Promise.all(), the resolve and reject logic are switched.
+	Therefore, it resolves to the first resolving promise OR reject if all promises are rejected
+	with, as a reason an AggregateError of all promise rejection reasons.
+*/
+Promise.any = ( iterable ) => {
+	var index = - 1 , settled = false ,
+		count = 0 , length = Infinity ,
+		value ,
+		errors = [] ,
+		anyPromise = new Promise() ;
+
+	for ( value of iterable ) {
+		if ( settled ) { break ; }
+
+		const promiseIndex = ++ index ;
+
+		Promise.resolve( value )
+			.then(
+				value_ => {
+					if ( settled ) { return ; }
+
+					settled = true ;
+					anyPromise._resolveValue( value_ ) ;
+				} ,
+				error => {
+					if ( settled ) { return ; }
+
+					errors[ promiseIndex ] = error ;
+					count ++ ;
+
+					if ( count >= length ) {
+						settled = true ;
+						anyPromise.reject( new AggregateError( errors ) , 'Promise.any(): All promises have rejected' ) ;
+					}
+				}
+			) ;
+	}
+
+	length = index + 1 ;
+
+	if ( ! length ) {
+		anyPromise.reject( new RangeError( 'Promise.any(): empty array' ) ) ;
+	}
+
+	return anyPromise ;
+} ;
+
+
+
+// Like Promise.any() but with an iterator
+Promise.some = ( iterable , iterator ) => {
+	var index = - 1 , settled = false ,
+		count = 0 , length = Infinity ,
+		value ,
+		errors = [] ,
+		anyPromise = new Promise() ;
+
+	for ( value of iterable ) {
+		if ( settled ) { break ; }
+
+		const promiseIndex = ++ index ;
+
+		Promise.resolve( value )
+			.then( value_ => {
+				if ( settled ) { return ; }
+				return iterator( value_ , promiseIndex ) ;
+			} )
+			.then(
+				value_ => {
+					if ( settled ) { return ; }
+
+					settled = true ;
+					anyPromise._resolveValue( value_ ) ;
+				} ,
+				error => {
+					if ( settled ) { return ; }
+
+					errors[ promiseIndex ] = error ;
+					count ++ ;
+
+					if ( count >= length ) {
+						settled = true ;
+						anyPromise.reject( new AggregateError( errors , 'Promise.some(): All promises have rejected' ) ) ;
+					}
+				}
+			) ;
+	}
+
+	length = index + 1 ;
+
+	if ( ! length ) {
+		anyPromise.reject( new RangeError( 'Promise.some(): empty array' ) ) ;
+	}
+
+	return anyPromise ;
+} ;
+
+
+
+/*
+	More closed to Array#filter().
+	The iterator should return truthy if the array element should be kept,
+	or falsy if the element should be filtered out.
+	Any rejection reject the whole promise.
+*/
+Promise.filter = ( iterable , iterator ) => {
+	var index = - 1 , settled = false ,
+		count = 0 , length = Infinity ,
+		value , values = [] ,
+		filterPromise = new Promise() ;
+
+	for ( value of iterable ) {
+		if ( settled ) { break ; }
+
+		const promiseIndex = ++ index ;
+
+		Promise.resolve( value )
+			.then( value_ => {
+				if ( settled ) { return ; }
+				values[ promiseIndex ] = value_ ;
+				return iterator( value_ , promiseIndex ) ;
+			} )
+			.then(
+				iteratorValue => {
+					if ( settled ) { return ; }
+
+					count ++ ;
+
+					if ( ! iteratorValue ) { values[ promiseIndex ] = HOLE ; }
+
+					if ( count >= length ) {
+						settled = true ;
+						values = values.filter( e => e !== HOLE ) ;
+						filterPromise._resolveValue( values ) ;
+					}
+				} ,
+				error => {
+					if ( settled ) { return ; }
+					settled = true ;
+					filterPromise.reject( error ) ;
+				}
+			) ;
+	}
+
+	length = index + 1 ;
+
+	if ( ! length ) {
+		filterPromise._resolveValue( values ) ;
+	}
+	else if ( count >= length ) {
+		settled = true ;
+		values = values.filter( e => e !== HOLE ) ;
+		filterPromise._resolveValue( values ) ;
+	}
+
+	return filterPromise ;
+} ;
+
+
+
+// forEach performs reduce as well, if a third argument is supplied
+// Force a function statement because we are using arguments.length, so we can support accumulator equals to undefined
+Promise.foreach =
+Promise.forEach = function( iterable , iterator , accumulator ) {
+	var index = - 1 ,
+		isReduce = arguments.length >= 3 ,
+		it = iterable[Symbol.iterator]() ,
+		forEachPromise = new Promise() ,
+		lastPromise = Promise.resolve( accumulator ) ;
+
+	// The array-like may contains promises that could be rejected before being handled
+	if ( Promise.warnUnhandledRejection ) { Promise._handleAll( iterable ) ; }
+
+	var nextElement = () => {
+		lastPromise.then(
+			accumulator_ => {
+				let { value , done } = it.next() ;
+				index ++ ;
+
+				if ( done ) {
+					forEachPromise.resolve( accumulator_ ) ;
+				}
+				else {
+					lastPromise = Promise.resolve( value ).then(
+						isReduce ?
+							value_ => iterator( accumulator_ , value_ , index ) :
+							value_ => iterator( value_ , index )
+					) ;
+
+					nextElement() ;
+				}
+			} ,
+			error => {
+				forEachPromise.reject( error ) ;
+
+				// We have to eat all remaining promise errors
+				for ( ;; ) {
+					let { value , done } = it.next() ;
+					if ( done ) { break ; }
+
+					//if ( ( value instanceof Promise ) || ( value instanceof NativePromise ) )
+					if ( Promise.isThenable( value ) ) {
+						value.then( noop , noop ) ;
+					}
+				}
+			}
+		) ;
+	} ;
+
+	nextElement() ;
+
+	return forEachPromise ;
+} ;
+
+
+
+Promise.reduce = ( iterable , iterator , accumulator ) => {
+	// Force 3 arguments
+	return Promise.forEach( iterable , iterator , accumulator ) ;
+} ;
+
+
+
+/*
+	Same than map, but iterate over an object and produce an object.
+	Think of it as a kind of Object#map() (which of course does not exist).
+*/
+Promise.mapObject = ( inputObject , iterator ) => {
+	var settled = false ,
+		count = 0 ,
+		keys = Object.keys( inputObject ) ,
+		length = keys.length ,
+		outputObject = {} ,
+		mapPromise = new Promise() ;
+
+	for ( let i = 0 ; ! settled && i < length ; i ++ ) {
+		const key = keys[ i ] ;
+		const value = inputObject[ key ] ;
+
+		Promise.resolve( value )
+			.then( value_ => {
+				if ( settled ) { return ; }
+				return iterator( value_ , key ) ;
+			} )
+			.then(
+				value_ => {
+					if ( settled ) { return ; }
+
+					outputObject[ key ] = value_ ;
+					count ++ ;
+
+					if ( count >= length ) {
+						settled = true ;
+						mapPromise._resolveValue( outputObject ) ;
+					}
+				} ,
+				error => {
+					if ( settled ) { return ; }
+					settled = true ;
+					mapPromise.reject( error ) ;
+				}
+			) ;
+	}
+
+	if ( ! length ) {
+		mapPromise._resolveValue( outputObject ) ;
+	}
+
+	return mapPromise ;
+} ;
+
+
+
+// Like map, but with a concurrency limit
+Promise.concurrent = ( limit , iterable , iterator ) => {
+	var index = - 1 , settled = false ,
+		running = 0 ,
+		count = 0 , length = Infinity ,
+		value , done = false ,
+		values = [] ,
+		it = iterable[Symbol.iterator]() ,
+		concurrentPromise = new Promise() ;
+
+	// The array-like may contains promises that could be rejected before being handled
+	if ( Promise.warnUnhandledRejection ) { Promise._handleAll( iterable ) ; }
+
+	limit = + limit || 1 ;
+
+	const runBatch = () => {
+		while ( ! done && running < limit ) {
+
+			//console.log( "Pre" , index ) ;
+			( { value , done } = it.next() ) ;
+
+			if ( done ) {
+				length = index + 1 ;
+
+				if ( count >= length ) {
+					settled = true ;
+					concurrentPromise._resolveValue( values ) ;
+					return ;
+				}
+				break ;
+			}
+
+			if ( settled ) { break ; }
+
+			const promiseIndex = ++ index ;
+			running ++ ;
+			//console.log( "Launch" , promiseIndex ) ;
+
+			Promise.resolve( value )
+				.then( value_ => {
+					if ( settled ) { return ; }
+					return iterator( value_ , promiseIndex ) ;
+				} )
+				.then(
+					value_ => {
+					//console.log( "Done" , promiseIndex , value_ ) ;
+						if ( settled ) { return ; }
+
+						values[ promiseIndex ] = value_ ;
+						count ++ ;
+						running -- ;
+
+						//console.log( "count/length" , count , length ) ;
+						if ( count >= length ) {
+							settled = true ;
+							concurrentPromise._resolveValue( values ) ;
+							return ;
+						}
+
+						if ( running < limit ) {
+							runBatch() ;
+							return ;
+						}
+					} ,
+					error => {
+						if ( settled ) { return ; }
+						settled = true ;
+						concurrentPromise.reject( error ) ;
+					}
+				) ;
+		}
+	} ;
+
+	runBatch() ;
+
+	if ( index < 0 ) {
+		concurrentPromise._resolveValue( values ) ;
+	}
+
+	return concurrentPromise ;
+} ;
+
+
+
+/*
+	Like native Promise.race(), it is hanging forever if the array is empty.
+	It resolves or rejects to the first resolved/rejected promise.
+*/
+Promise.race = ( iterable ) => {
+	var settled = false ,
+		value ,
+		racePromise = new Promise() ;
+
+	for ( value of iterable ) {
+		if ( settled ) { break ; }
+
+		Promise.resolve( value )
+			.then(
+				value_ => {
+					if ( settled ) { return ; }
+
+					settled = true ;
+					racePromise._resolveValue( value_ ) ;
+				} ,
+				error => {
+					if ( settled ) { return ; }
+
+					settled = true ;
+					racePromise.reject( error ) ;
+				}
+			) ;
+	}
+
+	return racePromise ;
+} ;
+
+
+},{"./seventh.js":12}],8:[function(require,module,exports){
+(function (process,global,setImmediate){(function (){
+/*
+	Seventh
+
+	Copyright (c) 2017 - 2020 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+/*
+	Prerequisite.
+*/
+
+
+
+const NativePromise = global.Promise ;
+
+// Cross-platform next tick function
+var nextTick ;
+
+if ( ! process.browser ) {
+	nextTick = process.nextTick ;
+}
+else {
+	// Browsers suck, they don't have setImmediate() except IE/Edge.
+	// A module is needed to emulate it.
+	require( 'setimmediate' ) ;
+	nextTick = setImmediate ;
+}
+
+
+
+/*
+	Constructor.
+*/
+
+
+
+function Promise( fn ) {
+	this.fn = fn ;
+	this._then = Promise._dormantThen ;
+	this.value = null ;
+	this.thenHandlers = null ;
+	this.handledRejection = null ;
+
+	if ( this.fn ) {
+		this._exec() ;
+	}
+}
+
+module.exports = Promise ;
+
+
+
+Promise.Native = NativePromise ;
+Promise.warnUnhandledRejection = true ;
+Promise.nextTick = nextTick ;
+
+
+
+Promise.prototype._exec = function() {
+	this._then = Promise._pendingThen ;
+
+	try {
+		this.fn(
+			// Don't return anything, it would create nasty bugs! E.g.:
+			// bad: error => this.reject( error_ )
+			// good: error_ => { this.reject( error_ ) ; }
+			result_ => { this.resolve( result_ ) ; } ,
+			error_ => { this.reject( error_ ) ; }
+		) ;
+	}
+	catch ( error ) {
+		this.reject( error ) ;
+	}
+} ;
+
+
+
+/*
+	Resolve/reject and then-handlers management.
+*/
+
+
+
+Promise.prototype.resolve = Promise.prototype.fulfill = function( value ) {
+	// Throw an error?
+	if ( this._then.settled ) { return this ; }
+
+	if ( Promise.isThenable( value ) ) {
+		this._execThenPromise( value ) ;
+		return this ;
+	}
+
+	return this._resolveValue( value ) ;
+} ;
+
+
+
+Promise.prototype._resolveValue = function( value ) {
+	this._then = Promise._fulfilledThen ;
+	this.value = value ;
+	if ( this.thenHandlers && this.thenHandlers.length ) { this._execFulfillHandlers() ; }
+
+	return this ;
+} ;
+
+
+
+// Faster on node v8.x
+Promise.prototype._execThenPromise = function( thenPromise ) {
+	try {
+		thenPromise.then(
+			result_ => { this.resolve( result_ ) ; } ,
+			error_ => { this.reject( error_ ) ; }
+		) ;
+	}
+	catch ( error ) {
+		this.reject( error ) ;
+	}
+} ;
+
+
+
+Promise.prototype.reject = function( error ) {
+	// Throw an error?
+	if ( this._then.settled ) { return this ; }
+
+	this._then = Promise._rejectedThen ;
+	this.value = error ;
+
+	if ( this.thenHandlers && this.thenHandlers.length ) {
+		this._execRejectionHandlers() ;
+	}
+	else if ( Promise.warnUnhandledRejection && ! this.handledRejection ) {
+		this._unhandledRejection() ;
+	}
+
+	return this ;
+} ;
+
+
+
+Promise.prototype._execFulfillHandlers = function() {
+	var i ,
+		length = this.thenHandlers.length ;
+
+	// Do cache the length, if a handler is synchronously added, it will be called on next tick
+	for ( i = 0 ; i < length ; i += 3 ) {
+		if ( this.thenHandlers[ i + 1 ] ) {
+			this._execOneFulfillHandler( this.thenHandlers[ i ] , this.thenHandlers[ i + 1 ] ) ;
+		}
+		else {
+			this.thenHandlers[ i ].resolve( this.value ) ;
+		}
+	}
+} ;
+
+
+
+// Faster on node v8.x?
+//*
+Promise.prototype._execOneFulfillHandler = function( promise , onFulfill ) {
+	try {
+		promise.resolve( onFulfill( this.value ) ) ;
+	}
+	catch ( error_ ) {
+		promise.reject( error_ ) ;
+	}
+} ;
+//*/
+
+
+
+Promise.prototype._execRejectionHandlers = function() {
+	var i ,
+		length = this.thenHandlers.length ;
+
+	// Do cache the length, if a handler is synchronously added, it will be called on next tick
+	for ( i = 0 ; i < length ; i += 3 ) {
+		if ( this.thenHandlers[ i + 2 ] ) {
+			this._execOneRejectHandler( this.thenHandlers[ i ] , this.thenHandlers[ i + 2 ] ) ;
+		}
+		else {
+			this.thenHandlers[ i ].reject( this.value ) ;
+		}
+	}
+} ;
+
+
+
+// Faster on node v8.x?
+//*
+Promise.prototype._execOneRejectHandler = function( promise , onReject ) {
+	try {
+		promise.resolve( onReject( this.value ) ) ;
+	}
+	catch ( error_ ) {
+		promise.reject( error_ ) ;
+	}
+} ;
+//*/
+
+
+
+Promise.prototype.resolveTimeout = Promise.prototype.fulfillTimeout = function( time , result ) {
+	setTimeout( () => this.resolve( result ) , time ) ;
+} ;
+
+
+
+Promise.prototype.rejectTimeout = function( time , error ) {
+	setTimeout( () => this.reject( error ) , time ) ;
+} ;
+
+
+
+Promise.prototype.resolveNextTick = Promise.prototype.fulfillNextTick = function( result ) {
+	nextTick( () => this.resolve( result ) ) ;
+} ;
+
+
+
+Promise.prototype.rejectNextTick = function( error ) {
+	nextTick( () => this.reject( error ) ) ;
+} ;
+
+
+
+/*
+	.then() variants depending on the state
+*/
+
+
+
+// .then() variant when the promise is dormant
+Promise._dormantThen = function( onFulfill , onReject ) {
+	if ( this.fn ) {
+		// If this is a dormant promise, wake it up now!
+		this._exec() ;
+
+		// Return now, some sync stuff can change the status
+		return this._then( onFulfill , onReject ) ;
+	}
+
+	var promise = new Promise() ;
+
+	if ( ! this.thenHandlers ) {
+		this.thenHandlers = [ promise , onFulfill , onReject ] ;
+	}
+	else {
+		//this.thenHandlers.push( onFulfill ) ;
+		this.thenHandlers[ this.thenHandlers.length ] = promise ;
+		this.thenHandlers[ this.thenHandlers.length ] = onFulfill ;
+		this.thenHandlers[ this.thenHandlers.length ] = onReject ;
+	}
+
+	return promise ;
+} ;
+
+Promise._dormantThen.settled = false ;
+
+
+
+// .then() variant when the promise is pending
+Promise._pendingThen = function( onFulfill , onReject ) {
+	var promise = new Promise() ;
+
+	if ( ! this.thenHandlers ) {
+		this.thenHandlers = [ promise , onFulfill , onReject ] ;
+	}
+	else {
+		//this.thenHandlers.push( onFulfill ) ;
+		this.thenHandlers[ this.thenHandlers.length ] = promise ;
+		this.thenHandlers[ this.thenHandlers.length ] = onFulfill ;
+		this.thenHandlers[ this.thenHandlers.length ] = onReject ;
+	}
+
+	return promise ;
+} ;
+
+Promise._pendingThen.settled = false ;
+
+
+
+// .then() variant when the promise is fulfilled
+Promise._fulfilledThen = function( onFulfill ) {
+	if ( ! onFulfill ) { return this ; }
+
+	var promise = new Promise() ;
+
+	// This handler should not fire in this code sync flow
+	nextTick( () => {
+		try {
+			promise.resolve( onFulfill( this.value ) ) ;
+		}
+		catch ( error ) {
+			promise.reject( error ) ;
+		}
+	} ) ;
+
+	return promise ;
+} ;
+
+Promise._fulfilledThen.settled = true ;
+
+
+
+// .then() variant when the promise is rejected
+Promise._rejectedThen = function( onFulfill , onReject ) {
+	if ( ! onReject ) { return this ; }
+
+	this.handledRejection = true ;
+	var promise = new Promise() ;
+
+	// This handler should not fire in this code sync flow
+	nextTick( () => {
+		try {
+			promise.resolve( onReject( this.value ) ) ;
+		}
+		catch ( error ) {
+			promise.reject( error ) ;
+		}
+	} ) ;
+
+	return promise ;
+} ;
+
+Promise._rejectedThen.settled = true ;
+
+
+
+/*
+	.then() and short-hands.
+*/
+
+
+
+Promise.prototype.then = function( onFulfill , onReject ) {
+	return this._then( onFulfill , onReject ) ;
+} ;
+
+
+
+Promise.prototype.catch = function( onReject = () => undefined ) {
+	return this._then( undefined , onReject ) ;
+} ;
+
+
+
+Promise.prototype.finally = function( onSettled ) {
+	return this._then( onSettled , onSettled ) ;
+} ;
+
+
+
+Promise.prototype.tap = Promise.prototype.tapThen = function( onFulfill ) {
+	this._then( onFulfill , undefined ) ;
+	return this ;
+} ;
+
+
+
+Promise.prototype.tapCatch = function( onReject ) {
+	this._then( undefined , onReject ) ;
+	return this ;
+} ;
+
+
+
+Promise.prototype.tapFinally = function( onSettled ) {
+	this._then( onSettled , onSettled ) ;
+	return this ;
+} ;
+
+
+
+// Any unhandled error throw ASAP
+Promise.prototype.fatal = function() {
+	this._then( undefined , error => {
+		// Throw async, otherwise it would be catched by .then()
+		nextTick( () => { throw error ; } ) ;
+	} ) ;
+} ;
+
+
+
+Promise.prototype.done = function( onFulfill , onReject ) {
+	this._then( onFulfill , onReject ).fatal() ;
+	return this ;
+} ;
+
+
+
+Promise.prototype.callback = function( cb ) {
+	this._then(
+		value => { cb( undefined , value ) ; } ,
+		error => { cb( error ) ; }
+	).fatal() ;
+
+	return this ;
+} ;
+
+
+
+Promise.prototype.callbackAll = function( cb ) {
+	this._then(
+		values => {
+			if ( Array.isArray( values ) ) { cb( undefined , ... values ) ; }
+			else { cb( undefined , values ) ; }
+		} ,
+		error => { cb( error ) ; }
+	).fatal() ;
+
+	return this ;
+} ;
+
+
+
+/*
+	The reverse of .callback(), it calls the function with a callback argument and return a promise that resolve or reject depending on that callback invocation.
+	Usage:
+		await Promise.callback( callback => myFunctionRelyingOnCallback( [arg1] , [arg2] , [...] , callback ) ;
+*/
+Promise.callback = function( fn ) {
+	return new Promise( ( resolve , reject ) => {
+		fn( ( error , arg ) => {
+			if ( error ) { reject( error ) ; }
+			else { resolve( arg ) ; }
+		} ) ;
+	} ) ;
+} ;
+
+
+
+Promise.callbackAll = function( fn ) {
+	return new Promise( ( resolve , reject ) => {
+		fn( ( error , ... args ) => {
+			if ( error ) { reject( error ) ; }
+			else { resolve( args ) ; }
+		} ) ;
+	} ) ;
+} ;
+
+
+
+Promise.prototype.toPromise =	// <-- DEPRECATED, use .propagate
+Promise.prototype.propagate = function( promise ) {
+	this._then(
+		value => { promise.resolve( value ) ; } ,
+		error => { promise.reject( error ) ; }
+	) ;
+
+	return this ;
+} ;
+
+
+
+
+
+/*
+	Foreign promises facilities
+*/
+
+
+
+Promise.propagate = function( foreignPromise , promise ) {
+	foreignPromise.then(
+		value => { promise.resolve( value ) ; } ,
+		error => { promise.reject( error ) ; }
+	) ;
+
+	return foreignPromise ;
+} ;
+
+
+
+Promise.finally = function( foreignPromise , onSettled ) {
+	return foreignPromise.then( onSettled , onSettled ) ;
+} ;
+
+
+
+
+
+/*
+	Static factories.
+*/
+
+
+
+Promise.resolve = Promise.fulfill = function( value ) {
+	if ( Promise.isThenable( value ) ) { return Promise.fromThenable( value ) ; }
+	return Promise._resolveValue( value ) ;
+} ;
+
+
+
+Promise._resolveValue = function( value ) {
+	var promise = new Promise() ;
+	promise._then = Promise._fulfilledThen ;
+	promise.value = value ;
+	return promise ;
+} ;
+
+
+
+Promise.reject = function( error ) {
+	//return new Promise().reject( error ) ;
+	var promise = new Promise() ;
+	promise._then = Promise._rejectedThen ;
+	promise.value = error ;
+	return promise ;
+} ;
+
+
+
+Promise.resolveTimeout = Promise.fulfillTimeout = function( timeout , value ) {
+	return new Promise( resolve => setTimeout( () => resolve( value ) , timeout ) ) ;
+} ;
+
+
+
+Promise.rejectTimeout = function( timeout , error ) {
+	return new Promise( ( resolve , reject ) => setTimeout( () => reject( error ) , timeout ) ) ;
+} ;
+
+
+
+Promise.resolveNextTick = Promise.fulfillNextTick = function( value ) {
+	return new Promise( resolve => nextTick( () => resolve( value ) ) ) ;
+} ;
+
+
+
+Promise.rejectNextTick = function( error ) {
+	return new Promise( ( resolve , reject ) => nextTick( () => reject( error ) ) ) ;
+} ;
+
+
+
+// A dormant promise is activated the first time a then handler is assigned
+Promise.dormant = function( fn ) {
+	var promise = new Promise() ;
+	promise.fn = fn ;
+	return promise ;
+} ;
+
+
+
+// Try-catched Promise.resolve( fn() )
+Promise.try = function( fn ) {
+	try {
+		return Promise.resolve( fn() ) ;
+	}
+	catch ( error ) {
+		return Promise.reject( error ) ;
+	}
+} ;
+
+
+
+/*
+	Thenables.
+*/
+
+
+
+Promise.isThenable = function( value ) {
+	return value && typeof value === 'object' && typeof value.then === 'function' ;
+} ;
+
+
+
+// We assume a thenable object here
+Promise.fromThenable = function( thenable ) {
+	if ( thenable instanceof Promise ) { return thenable ; }
+
+	return new Promise( ( resolve , reject ) => {
+		thenable.then(
+			value => { resolve( value ) ; } ,
+			error => { reject( error ) ; }
+		) ;
+	} ) ;
+} ;
+
+
+
+// When you just want a fast then() function out of anything, without any desync and unchainable
+Promise._bareThen = function( value , onFulfill , onReject ) {
+	//if ( Promise.isThenable( value ) )
+	if( value && typeof value === 'object' ) {
+		if ( value instanceof Promise ) {
+			if ( value._then === Promise._fulfilledThen ) { onFulfill( value.value ) ; }
+			else if ( value._then === Promise._rejectedThen ) { onReject( value.value ) ; }
+			else { value._then( onFulfill , onReject ) ; }
+		}
+		else if ( typeof value.then === 'function' ) {
+			value.then( onFulfill , onReject ) ;
+		}
+		else {
+			onFulfill( value ) ;
+		}
+	}
+	else {
+		onFulfill( value ) ;
+	}
+} ;
+
+
+
+/*
+	Misc.
+*/
+
+
+
+// Internal usage, mark all promises as handled ahead of time, useful for series,
+// because a warning would be displayed for unhandled rejection for promises that are not yet processed.
+Promise._handleAll = function( iterable ) {
+	var value ;
+
+	for ( value of iterable ) {
+		//if ( ( value instanceof Promise ) || ( value instanceof NativePromise ) )
+		if ( Promise.isThenable( value ) ) {
+			value.handledRejection = true ;
+		}
+	}
+} ;
+
+
+
+Promise.prototype._unhandledRejection = function() {
+	// This promise is currently unhandled
+	// If still unhandled at the end of the synchronous block of code,
+	// output an error message.
+
+	this.handledRejection = false ;
+
+	// Don't know what is the correct way to inform node.js about that.
+	// There is no doc about that, and emitting unhandledRejection,
+	// does not produce what is expected.
+
+	//process.emit( 'unhandledRejection' , this.value , this ) ;
+
+	/*
+	nextTick( () => {
+		if ( this.handledRejection === false )
+		{
+			process.emit( 'unhandledRejection' , this.value , this ) ;
+		}
+	} ) ;
+	*/
+
+	// It looks like 'await' inside a 'try-catch' does not handle the promise soon enough -_-'
+	//const nextTick_ = nextTick ;
+	const nextTick_ = cb => setTimeout( cb , 0 ) ;
+
+	//*
+	if ( this.value instanceof Error ) {
+		nextTick_( () => {
+			if ( this.handledRejection === false ) {
+				this.value.message = 'Unhandled promise rejection: ' + this.value.message ;
+				console.error( this.value ) ;
+			}
+		} ) ;
+	}
+	else {
+		// Avoid starting the stack trace in the nextTick()...
+		let error_ = new Error( 'Unhandled promise rejection' ) ;
+		nextTick_( () => {
+			if ( this.handledRejection === false ) {
+				console.error( error_ ) ;
+				console.error( 'Rejection reason:' , this.value ) ;
+			}
+		} ) ;
+	}
+	//*/
+} ;
+
+
+
+Promise.prototype.isSettled = function() { return this._then.settled ; } ;
+
+
+
+Promise.prototype.getStatus = function() {
+	switch ( this._then ) {
+		case Promise._dormantThen :
+			return 'dormant' ;
+		case Promise._pendingThen :
+			return 'pending' ;
+		case Promise._fulfilledThen :
+			return 'fulfilled' ;
+		case Promise._rejectedThen :
+			return 'rejected' ;
+	}
+} ;
+
+
+
+Promise.prototype.inspect = function() {
+	switch ( this._then ) {
+		case Promise._dormantThen :
+			return 'Promise { <DORMANT> }' ;
+		case Promise._pendingThen :
+			return 'Promise { <PENDING> }' ;
+		case Promise._fulfilledThen :
+			return 'Promise { <FULFILLED> ' + this.value + ' }' ;
+		case Promise._rejectedThen :
+			return 'Promise { <REJECTED> ' + this.value + ' }' ;
+	}
+} ;
+
+
+
+// A shared dummy promise, when you just want to return an immediately thenable
+Promise.resolved = Promise.dummy = Promise.resolve() ;
+
+
+
+
+
+/*
+	Browser specific.
+*/
+
+
+
+if ( process.browser ) {
+	Promise.prototype.resolveAtAnimationFrame = function( value ) {
+		window.requestAnimationFrame( () => this.resolve( value ) ) ;
+	} ;
+
+	Promise.prototype.rejectAtAnimationFrame = function( error ) {
+		window.requestAnimationFrame( () => this.reject( error ) ) ;
+	} ;
+
+	Promise.resolveAtAnimationFrame = function( value ) {
+		return new Promise( resolve => window.requestAnimationFrame( () => resolve( value ) ) ) ;
+	} ;
+
+	Promise.rejectAtAnimationFrame = function( error ) {
+		return new Promise( ( resolve , reject ) => window.requestAnimationFrame( () => reject( error ) ) ) ;
+	} ;
+}
+
+
+}).call(this)}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("timers").setImmediate)
+},{"_process":75,"setimmediate":4,"timers":76}],9:[function(require,module,exports){
+/*
+	Seventh
+
+	Copyright (c) 2017 - 2020 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+const Promise = require( './seventh.js' ) ;
+
+
+
+Promise.promisifyAll = ( nodeAsyncFn , thisBinding ) => {
+	// Little optimization here to have a promisified function as fast as possible
+	if ( thisBinding ) {
+		return ( ... args ) => {
+			return new Promise( ( resolve , reject ) => {
+				nodeAsyncFn.call( thisBinding , ... args , ( error , ... cbArgs ) => {
+					if ( error ) {
+						if ( cbArgs.length && error instanceof Error ) { error.args = cbArgs ; }
+						reject( error ) ;
+					}
+					else {
+						resolve( cbArgs ) ;
+					}
+				} ) ;
+			} ) ;
+		} ;
+	}
+
+	return function( ... args ) {
+		return new Promise( ( resolve , reject ) => {
+			nodeAsyncFn.call( this , ... args , ( error , ... cbArgs ) => {
+				if ( error ) {
+					if ( cbArgs.length && error instanceof Error ) { error.args = cbArgs ; }
+					reject( error ) ;
+				}
+				else {
+					resolve( cbArgs ) ;
+				}
+			} ) ;
+		} ) ;
+	} ;
+
+} ;
+
+
+
+// Same than .promisifyAll() but only return the callback args #1 instead of an array of args from #1 to #n
+Promise.promisify = ( nodeAsyncFn , thisBinding ) => {
+	// Little optimization here to have a promisified function as fast as possible
+	if ( thisBinding ) {
+		return ( ... args ) => {
+			return new Promise( ( resolve , reject ) => {
+				nodeAsyncFn.call( thisBinding , ... args , ( error , cbArg ) => {
+					if ( error ) {
+						if ( cbArg !== undefined && error instanceof Error ) { error.arg = cbArg ; }
+						reject( error ) ;
+					}
+					else {
+						resolve( cbArg ) ;
+					}
+				} ) ;
+			} ) ;
+		} ;
+	}
+
+	return function( ... args ) {
+		return new Promise( ( resolve , reject ) => {
+			nodeAsyncFn.call( this , ... args , ( error , cbArg ) => {
+				if ( error ) {
+					if ( cbArg !== undefined && error instanceof Error ) { error.arg = cbArg ; }
+					reject( error ) ;
+				}
+				else {
+					resolve( cbArg ) ;
+				}
+			} ) ;
+		} ) ;
+	} ;
+} ;
+
+
+
+/*
+	Pass a function that will be called every time the decoratee return something.
+*/
+Promise.returnValueInterceptor = ( interceptor , asyncFn , thisBinding ) => {
+	return function( ... args ) {
+		var returnVal = asyncFn.call( thisBinding || this , ... args ) ;
+		interceptor( returnVal ) ;
+		return returnVal ;
+	} ;
+} ;
+
+
+
+/*
+	Run only once, return always the same promise.
+*/
+Promise.once = ( asyncFn , thisBinding ) => {
+	var triggered = false ;
+	var result ;
+
+	return function( ... args ) {
+		if ( ! triggered ) {
+			triggered = true ;
+			result = asyncFn.call( thisBinding || this , ... args ) ;
+		}
+
+		return result ;
+	} ;
+} ;
+
+
+
+/*
+	The decoratee execution does not overlap, multiple calls are serialized.
+*/
+Promise.serialize = ( asyncFn , thisBinding ) => {
+	var lastPromise = new Promise.resolve() ;
+
+	return function( ... args ) {
+		var promise = new Promise() ;
+
+		lastPromise.finally( () => {
+			Promise.propagate( asyncFn.call( thisBinding || this , ... args ) , promise ) ;
+		} ) ;
+
+		lastPromise = promise ;
+
+		return promise ;
+	} ;
+} ;
+
+
+
+/*
+	It does nothing if the decoratee is still in progress, but return the promise of the action in progress.
+*/
+Promise.debounce = ( asyncFn , thisBinding ) => {
+	var inProgress = null ;
+
+	const outWrapper = () => {
+		inProgress = null ;
+	} ;
+
+	return function( ... args ) {
+		if ( inProgress ) { return inProgress ; }
+
+		inProgress = asyncFn.call( thisBinding || this , ... args ) ;
+		Promise.finally( inProgress , outWrapper ) ;
+		return inProgress ;
+	} ;
+} ;
+
+
+
+/*
+	Like .debounce(), but subsequent call continue to return the last promise for some extra time after it resolved.
+*/
+Promise.debounceDelay = ( delay , asyncFn , thisBinding ) => {
+	var inProgress = null ;
+
+	const outWrapper = () => {
+		setTimeout( () => inProgress = null , delay ) ;
+	} ;
+
+	return function( ... args ) {
+		if ( inProgress ) { return inProgress ; }
+
+		inProgress = asyncFn.call( thisBinding || this , ... args ) ;
+		Promise.finally( inProgress , outWrapper ) ;
+		return inProgress ;
+	} ;
+} ;
+
+
+
+/*
+	debounceUpdate( [options] , asyncFn , thisBinding ) => {
+
+	It does nothing if the decoratee is still in progress.
+	Instead, the decoratee is called again after finishing once and only once, if it was tried one or more time during its progress.
+	In case of multiple calls, the arguments of the last call will be used.
+
+	The use case is .update()/.refresh()/.redraw() functions.
+
+	If 'options' is given, it is an object, with:
+		* delay: `number` a delay before calling again the decoratee
+		* delayFn: async `function` called before calling again the decoratee
+		* waitFn: async `function` called before calling the decoratee (even the first try), use-case: Window.requestAnimationFrame()
+*/
+Promise.debounceUpdate = ( options , asyncFn , thisBinding ) => {
+	var inProgress = null ,
+		waitInProgress = null ,
+		currentUpdateWith = null ,
+		currentUpdatePromise = null ,
+		nextUpdateWith = null ,
+		nextUpdatePromise = null ,
+		delay = 0 ,
+		delayFn = null ,
+		waitFn = null ,
+		inWrapper = null ,
+		outWrapper = null ;
+
+
+	// Manage arguments
+	if ( typeof options === 'function' ) {
+		thisBinding = asyncFn ;
+		asyncFn = options ;
+	}
+	else {
+		if ( typeof options.delay === 'number' ) { delay = options.delay ; }
+		if ( typeof options.delayFn === 'function' ) { delayFn = options.delayFn ; }
+
+		if ( options.waitNextTick ) { waitFn = Promise.resolveNextTick ; }
+		else if ( typeof options.waitFn === 'function' ) { waitFn = options.waitFn ; }
+	}
+
+
+	const nextUpdate = () => {
+		inProgress = currentUpdatePromise = null ;
+
+		if ( nextUpdateWith ) {
+			let callArgs = nextUpdateWith ;
+			nextUpdateWith = null ;
+			let sharedPromise = nextUpdatePromise ;
+			nextUpdatePromise = null ;
+
+			inProgress = inWrapper( callArgs ) ;
+			// Forward the result to the pending promise
+			Promise.propagate( inProgress , sharedPromise ) ;
+		}
+	} ;
+
+
+	// Build outWrapper
+	if ( delayFn ) {
+		outWrapper = () => delayFn().then( nextUpdate ) ;
+	}
+	else if ( delay ) {
+		outWrapper = () => setTimeout( nextUpdate , delay ) ;
+	}
+	else {
+		outWrapper = nextUpdate ;
+	}
+
+
+	if ( waitFn ) {
+		inWrapper = ( callArgs ) => {
+			inProgress = new Promise() ;
+			currentUpdateWith = callArgs ;
+			waitInProgress = waitFn() ;
+
+			Promise.finally( waitInProgress , () => {
+				waitInProgress = null ;
+				currentUpdatePromise = asyncFn.call( ... currentUpdateWith ) ;
+				Promise.finally( currentUpdatePromise , outWrapper ) ;
+				Promise.propagate( currentUpdatePromise , inProgress ) ;
+			} ) ;
+
+			return inProgress ;
+		} ;
+
+		return function( ... args ) {
+			var localThis = thisBinding || this ;
+
+			if ( waitInProgress ) {
+				currentUpdateWith = [ localThis , ... args ] ;
+				return inProgress ;
+			}
+
+			if ( currentUpdatePromise ) {
+				if ( ! nextUpdatePromise ) { nextUpdatePromise = new Promise() ; }
+				nextUpdateWith = [ localThis , ... args ] ;
+				return nextUpdatePromise ;
+			}
+
+			return inWrapper( [ localThis , ... args ] ) ;
+		} ;
+	}
+
+
+	// Variant without a waitFn
+
+	inWrapper = ( callArgs ) => {
+		inProgress = asyncFn.call( ... callArgs ) ;
+		Promise.finally( inProgress , outWrapper ) ;
+		return inProgress ;
+	} ;
+
+	return function( ... args ) {
+		var localThis = thisBinding || this ;
+
+		if ( inProgress ) {
+			if ( ! nextUpdatePromise ) { nextUpdatePromise = new Promise() ; }
+			nextUpdateWith = [ localThis , ... args ] ;
+			return nextUpdatePromise ;
+		}
+
+		return inWrapper( [ localThis , ... args ] ) ;
+	} ;
+} ;
+
+
+
+// Used to ensure that the sync is done immediately if not busy
+Promise.NO_DELAY = {} ;
+
+// Used to ensure that the sync is done immediately if not busy, but for the first of a batch
+Promise.BATCH_NO_DELAY = {} ;
+
+/*
+	Debounce for synchronization algorithm.
+	Get two functions, one for getting from upstream, one for a full sync with upstream (getting AND updating).
+	No operation overlap for a given resourceId.
+	Depending on the configuration, it is either like .debounce() or like .debounceUpdate().
+
+	*Params:
+		fn: the function
+		thisBinding: the this binding, if any
+		delay: the minimum delay between to call
+			for get: nothing is done is the delay is not met, simply return the last promise
+			for update/fullSync, it waits for that delay before synchronizing again
+		onDebounce: *ONLY* for GET ATM, a callback called when debounced
+*/
+Promise.debounceSync = ( getParams , fullSyncParams ) => {
+	var perResourceData = new Map() ;
+
+	const getResourceData = resourceId => {
+		var resourceData = perResourceData.get( resourceId ) ;
+
+		if ( ! resourceData ) {
+			resourceData = {
+				inProgress: null ,
+				inProgressIsFull: null ,
+				last: null ,				// Get or full sync promise
+				lastTime: null ,			// Get or full sync time
+				lastFullSync: null ,		// last full sync promise
+				lastFullSyncTime: null ,	// last full sync time
+				nextFullSyncPromise: null ,	// the promise for the next fullSync iteration
+				nextFullSyncWith: null , 	// the 'this' and arguments for the next fullSync iteration
+				noDelayBatches: new Set()		// only the first of the batch has no delay
+			} ;
+
+			perResourceData.set( resourceId , resourceData ) ;
+		}
+
+		return resourceData ;
+	} ;
+
+
+	const outWrapper = ( resourceData , level ) => {
+		// level 2: fullSync, 1: get, 0: nothing but a delay
+		var delta , args , sharedPromise , now = new Date() ;
+		//lastTime = resourceData.lastTime , lastFullSyncTime = resourceData.lastFullSyncTime ;
+
+		resourceData.inProgress = null ;
+
+		if ( level >= 2 ) { resourceData.lastFullSyncTime = resourceData.lastTime = now ; }
+		else if ( level >= 1 ) { resourceData.lastTime = now ; }
+
+		if ( resourceData.nextFullSyncWith ) {
+			if ( fullSyncParams.delay && resourceData.lastFullSyncTime && ( delta = now - resourceData.lastFullSyncTime - fullSyncParams.delay ) < 0 ) {
+				resourceData.inProgress = Promise.resolveTimeout( - delta + 1 ) ;	// Strangely, sometime it is trigerred 1ms too soon
+				resourceData.inProgress.finally( () => outWrapper( resourceData , 0 ) ) ;
+				return resourceData.nextFullSyncPromise ;
+			}
+
+			args = resourceData.nextFullSyncWith ;
+			resourceData.nextFullSyncWith = null ;
+			sharedPromise = resourceData.nextFullSyncPromise ;
+			resourceData.nextFullSyncPromise = null ;
+
+			// Call the fullSyncParams.fn again
+			resourceData.lastFullSync = resourceData.last = resourceData.inProgress = fullSyncParams.fn.call( ... args ) ;
+
+			// Forward the result to the pending promise
+			Promise.propagate( resourceData.inProgress , sharedPromise ) ;
+
+			// BTW, trigger again the outWrapper
+			Promise.finally( resourceData.inProgress , () => outWrapper( resourceData , 2 ) ) ;
+
+			return resourceData.inProgress ;
+		}
+	} ;
+
+	const getInWrapper = function( resourceId , ... args ) {
+		var noDelay = false ,
+			localThis = getParams.thisBinding || this ,
+			resourceData = getResourceData( resourceId ) ;
+
+		if ( args[ 0 ] === Promise.NO_DELAY ) {
+			noDelay = true ;
+			args.shift() ;
+		}
+		else if ( args[ 0 ] === Promise.BATCH_NO_DELAY ) {
+			args.shift() ;
+			let batchId = args.shift() ;
+			if ( ! resourceData.noDelayBatches.has( batchId ) ) {
+				resourceData.noDelayBatches.add( batchId ) ;
+				noDelay = true ;
+			}
+		}
+
+		if ( resourceData.inProgress ) { return resourceData.inProgress ; }
+
+		if ( ! noDelay && getParams.delay && resourceData.lastTime && new Date() - resourceData.lastTime < getParams.delay ) {
+			if ( typeof getParams.onDebounce === 'function' ) { getParams.onDebounce( resourceId , ... args ) ; }
+			return resourceData.last ;
+		}
+
+		resourceData.last = resourceData.inProgress = getParams.fn.call( localThis , resourceId , ... args ) ;
+		resourceData.inProgressIsFull = false ;
+		Promise.finally( resourceData.inProgress , () => outWrapper( resourceData , 1 ) ) ;
+		return resourceData.inProgress ;
+	} ;
+
+	const fullSyncInWrapper = function( resourceId , ... args ) {
+		var delta ,
+			noDelay = false ,
+			localThis = fullSyncParams.thisBinding || this ,
+			resourceData = getResourceData( resourceId ) ;
+
+		if ( args[ 0 ] === Promise.NO_DELAY ) {
+			noDelay = true ;
+			args.shift() ;
+		}
+		else if ( args[ 0 ] === Promise.BATCH_NO_DELAY ) {
+			args.shift() ;
+			let batchId = args.shift() ;
+			if ( ! resourceData.noDelayBatches.has( batchId ) ) {
+				resourceData.noDelayBatches.add( batchId ) ;
+				noDelay = true ;
+			}
+		}
+
+		if ( ! resourceData.inProgress && ! noDelay && fullSyncParams.delay && resourceData.lastFullSyncTime && ( delta = new Date() - resourceData.lastFullSyncTime - fullSyncParams.delay ) < 0 ) {
+			resourceData.inProgress = Promise.resolveTimeout( - delta + 1 ) ;	// Strangely, sometime it is trigerred 1ms too soon
+			Promise.finally( resourceData.inProgress , () => outWrapper( resourceData , 0 ) ) ;
+		}
+
+		if ( resourceData.inProgress ) {
+			// No difference between in-progress is 'get' or 'fullSync'
+			if ( ! resourceData.nextFullSyncPromise ) { resourceData.nextFullSyncPromise = new Promise() ; }
+			resourceData.nextFullSyncWith = [ localThis , resourceId , ... args ] ;
+			return resourceData.nextFullSyncPromise ;
+		}
+
+		resourceData.lastFullSync = resourceData.last = resourceData.inProgress = fullSyncParams.fn.call( localThis , resourceId , ... args ) ;
+		Promise.finally( resourceData.inProgress , () => outWrapper( resourceData , 2 ) ) ;
+		return resourceData.inProgress ;
+	} ;
+
+	return [ getInWrapper , fullSyncInWrapper ] ;
+} ;
+
+
+
+// The call reject with a timeout error if it takes too much time
+Promise.timeout = ( timeout , asyncFn , thisBinding ) => {
+	return function( ... args ) {
+		var promise = asyncFn.call( thisBinding || this , ... args ) ;
+		// Careful: not my promise, so cannot retrieve its status
+		setTimeout( () => promise.reject( new Error( 'Timeout' ) ) , timeout ) ;
+		return promise ;
+	} ;
+
+} ;
+
+
+
+// Like .timeout(), but here the timeout value is not passed at creation, but as the first arg of each call
+Promise.variableTimeout = ( asyncFn , thisBinding ) => {
+	return function( timeout , ... args ) {
+		var promise = asyncFn.call( thisBinding || this , ... args ) ;
+		// Careful: not my promise, so cannot retrieve its status
+		setTimeout( () => promise.reject( new Error( 'Timeout' ) ) , timeout ) ;
+		return promise ;
+	} ;
+
+} ;
+
+
+},{"./seventh.js":12}],10:[function(require,module,exports){
+(function (process){(function (){
+/*
+	Seventh
+
+	Copyright (c) 2017 - 2020 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+const Promise = require( './seventh.js' ) ;
+
+
+
+/*
+	Asynchronously exit.
+
+	Wait for all listeners of the 'asyncExit' event (on the 'process' object) to have called their callback.
+	The listeners receive the exit code about to be produced and a completion callback.
+*/
+
+var exitInProgress = false ;
+
+Promise.asyncExit = function( exitCode , timeout ) {
+	// Already exiting? no need to call it twice!
+	if ( exitInProgress ) { return ; }
+
+	exitInProgress = true ;
+
+	var listeners = process.listeners( 'asyncExit' ) ;
+
+	if ( ! listeners.length ) { process.exit( exitCode ) ; return ; }
+
+	if ( timeout === undefined ) { timeout = 1000 ; }
+
+	const callListener = listener => {
+
+		if ( listener.length < 3 ) {
+			// This listener does not have a callback, it is interested in the event but does not need to perform critical stuff.
+			// E.g. a server will not accept connection or data anymore, but doesn't need cleanup.
+			listener( exitCode , timeout ) ;
+			return Promise.dummy ;
+		}
+
+		// This listener have a callback, it probably has critical stuff to perform before exiting.
+		// E.g. a server that needs to gracefully exit will not accept connection or data anymore,
+		// but still want to deliver request in progress.
+		return new Promise( resolve => {
+			listener( exitCode , timeout , () => { resolve() ; } ) ;
+		} ) ;
+
+	} ;
+
+	// We don't care about errors here... We are exiting!
+	Promise.map( listeners , callListener )
+		.finally( () => process.exit( exitCode ) ) ;
+
+	// Quit anyway if it's too long
+	setTimeout( () => process.exit( exitCode ) , timeout ) ;
+} ;
+
+
+
+// A timeout that ensure a task get the time to perform its action (when there are CPU-bound tasks)
+Promise.resolveSafeTimeout = function( timeout , value ) {
+	return new Promise( resolve => {
+		setTimeout( () => {
+			setTimeout( () => {
+				setTimeout( () => {
+					setTimeout( () => resolve( value ) , 0 ) ;
+				} , timeout / 2 ) ;
+			} , timeout / 2 ) ;
+		} , 0 ) ;
+	} ) ;
+} ;
+
+
+}).call(this)}).call(this,require('_process'))
+},{"./seventh.js":12,"_process":75}],11:[function(require,module,exports){
+/*
+	Seventh
+
+	Copyright (c) 2017 - 2020 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+const Promise = require( './seventh.js' ) ;
+
+
+
+/*
+	This parasite the native promise, bringing some of seventh features into them.
+*/
+
+Promise.parasite = () => {
+
+	var compatibleProtoFn = [
+		'tap' , 'tapCatch' , 'finally' ,
+		'fatal' , 'done' ,
+		'callback' , 'callbackAll'
+	] ;
+
+	compatibleProtoFn.forEach( fn => Promise.Native.prototype[ fn ] = Promise.prototype[ fn ] ) ;
+	Promise.Native.prototype._then = Promise.Native.prototype.then ;
+} ;
+
+
+},{"./seventh.js":12}],12:[function(require,module,exports){
+/*
+	Seventh
+
+	Copyright (c) 2017 - 2020 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+const seventh = require( './core.js' ) ;
+module.exports = seventh ;
+
+// The order matters
+require( './batch.js' ) ;
+require( './wrapper.js' ) ;
+require( './decorators.js' ) ;
+require( './Queue.js' ) ;
+require( './api.js' ) ;
+require( './parasite.js' ) ;
+require( './misc.js' ) ;
+
+
+},{"./Queue.js":5,"./api.js":6,"./batch.js":7,"./core.js":8,"./decorators.js":9,"./misc.js":10,"./parasite.js":11,"./wrapper.js":13}],13:[function(require,module,exports){
+/*
+	Seventh
+
+	Copyright (c) 2017 - 2020 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+const Promise = require( './seventh.js' ) ;
+
+
+
+Promise.timeLimit = ( timeout , asyncFnOrPromise ) => {
+	return new Promise( ( resolve , reject ) => {
+		if ( typeof asyncFnOrPromise === 'function' ) { asyncFnOrPromise = asyncFnOrPromise() ; }
+		Promise.resolve( asyncFnOrPromise ).then( resolve , reject ) ;
+		setTimeout( () => reject( new Error( "Timeout" ) ) , timeout ) ;
+	} ) ;
+} ;
+
+
+
+/*
+	options:
+		retries: number of retry
+		coolDown: time before retrying
+		raiseFactor: time multiplier for each successive cool down
+		maxCoolDown: maximum cool-down, the raising time is capped to this value
+		timeout: time before assuming it has failed, 0 = no time limit
+		catch: `function` (optional) if absent, the function is always retried until it reaches the limit,
+			if present, that catch-function is used like a normal promise catch block, the function is retry
+			only if the catch-function does not throw or return a rejecting promise
+*/
+Promise.retry = ( options , asyncFn ) => {
+	var count = options.retries || 1 ,
+		coolDown = options.coolDown || 0 ,
+		raiseFactor = options.raiseFactor || 1 ,
+		maxCoolDown = options.maxCoolDown || Infinity ,
+		timeout = options.timeout || 0 ,
+		catchFn = options.catch || null ;
+
+	const oneTry = () => {
+		return ( timeout ? Promise.timeLimit( timeout , asyncFn ) : asyncFn() ).catch( error => {
+			if ( ! count -- ) { throw error ; }
+
+			var currentCoolDown = coolDown ;
+			coolDown = Math.min( coolDown * raiseFactor , maxCoolDown ) ;
+
+			if ( catchFn ) {
+				// Call the custom catch function
+				// Let it crash, if it throw we are already in a .catch() block
+				return Promise.resolve( catchFn( error ) ).then( () => Promise.resolveTimeout( currentCoolDown ).then( oneTry ) ) ;
+			}
+
+			return Promise.resolveTimeout( currentCoolDown ).then( oneTry ) ;
+		} ) ;
+	} ;
+
+	return oneTry() ;
+} ;
+
+
+
+// Resolve once an event is fired
+Promise.onceEvent = ( emitter , eventName ) => {
+	return new Promise( resolve => emitter.once( eventName , resolve ) ) ;
+} ;
+
+
+
+// Resolve once an event is fired, resolve with an array of arguments
+Promise.onceEventAll = ( emitter , eventName ) => {
+	return new Promise( resolve => emitter.once( eventName , ( ... args ) => resolve( args ) ) ) ;
+} ;
+
+
+
+// Resolve once an event is fired, or reject on error
+Promise.onceEventOrError = ( emitter , eventName , excludeEvents , _internalAllArgs = false ) => {
+	return new Promise( ( resolve , reject ) => {
+		var altRejects ;
+
+		// We care about removing listener, especially 'error', because if an error kick in after, it should throw because there is no listener
+		var resolve_ = ( ... args ) => {
+			emitter.removeListener( 'error' , reject_ ) ;
+
+			if ( altRejects ) {
+				for ( let event in altRejects ) {
+					emitter.removeListener( event , altRejects[ event ] ) ;
+				}
+			}
+
+			resolve( _internalAllArgs ? args : args[ 0 ] ) ;
+		} ;
+
+		var reject_ = arg => {
+			emitter.removeListener( eventName , resolve_ ) ;
+
+			if ( altRejects ) {
+				for ( let event in altRejects ) {
+					emitter.removeListener( event , altRejects[ event ] ) ;
+				}
+			}
+
+			reject( arg ) ;
+		} ;
+
+		emitter.once( eventName , resolve_ ) ;
+		emitter.once( 'error' , reject_ ) ;
+
+		if ( excludeEvents ) {
+			if ( ! Array.isArray( excludeEvents ) ) { excludeEvents = [ excludeEvents ] ; }
+
+			altRejects = {} ;
+
+			excludeEvents.forEach( event => {
+				var altReject = ( ... args ) => {
+					emitter.removeListener( 'error' , reject_ ) ;
+					emitter.removeListener( eventName , resolve_ ) ;
+
+					var error = new Error( "Received an excluded event: " + event ) ;
+					error.event = event ;
+					error.eventArgs = args ;
+					reject( error ) ;
+				} ;
+
+				emitter.once( event , altReject ) ;
+
+				altRejects[ event ] = altReject ;
+			} ) ;
+		}
+	} ) ;
+} ;
+
+
+
+// Resolve once an event is fired, or reject on error, resolve with an array of arguments, reject with the first argument
+Promise.onceEventAllOrError = ( emitter , eventName , excludeEvents ) => {
+	return Promise.onceEventOrError( emitter , eventName , excludeEvents , true ) ;
+} ;
+
+
+},{"./seventh.js":12}],14:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -459,7 +3238,7 @@ BoundingBox.prototype.merge = function( bbox ) {
 } ;
 
 
-},{}],5:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -576,7 +3355,7 @@ Metric.isEqual = function( a , b ) {
 } ;
 
 
-},{}],6:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -718,7 +3497,7 @@ VG.prototype.addCssRule = function( rule ) {
 } ;
 
 
-},{"../package.json":58,"./VGContainer.js":8}],7:[function(require,module,exports){
+},{"../package.json":68,"./VGContainer.js":18}],17:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -827,7 +3606,7 @@ VGClip.prototype.svgContentGroupAttributes = function() {
 } ;
 
 
-},{"../package.json":58,"./VGContainer.js":8,"./VGEntity.js":10,"./svg-kit.js":27,"array-kit":32}],8:[function(require,module,exports){
+},{"../package.json":68,"./VGContainer.js":18,"./VGEntity.js":20,"./svg-kit.js":37,"array-kit":42}],18:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -1022,7 +3801,7 @@ VGContainer.prototype.morphSvgDom = function() {
 } ;
 
 
-},{"../package.json":58,"./VGEntity.js":10,"./svg-kit.js":27,"array-kit":32}],9:[function(require,module,exports){
+},{"../package.json":68,"./VGEntity.js":20,"./svg-kit.js":37,"array-kit":42}],19:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -1142,7 +3921,7 @@ VGEllipse.prototype.renderHookForPath2D = function( path2D , canvasCtx , options
 } ;
 
 
-},{"../package.json":58,"./VGEntity.js":10,"./canvas.js":21}],10:[function(require,module,exports){
+},{"../package.json":68,"./VGEntity.js":20,"./canvas.js":31}],20:[function(require,module,exports){
 (function (process){(function (){
 /*
 	SVG Kit
@@ -1733,7 +4512,7 @@ VGEntity.prototype.getBoundingBox = function() { return null ; }
 
 
 }).call(this)}).call(this,require('_process'))
-},{"../package.json":58,"./fontLib.js":22,"_process":65,"dom-kit":38,"string-kit/lib/camel":43,"string-kit/lib/escape":44}],11:[function(require,module,exports){
+},{"../package.json":68,"./fontLib.js":32,"_process":75,"dom-kit":48,"string-kit/lib/camel":53,"string-kit/lib/escape":54}],21:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -1809,7 +4588,7 @@ StructuredTextLine.prototype.fuseEqualAttr = function() {
 } ;
 
 
-},{"./TextMetrics.js":14}],12:[function(require,module,exports){
+},{"./TextMetrics.js":24}],22:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -1975,7 +4754,7 @@ StructuredTextPart.prototype.checkLineSplit = function() {
 } ;
 
 
-},{"./TextAttribute.js":13,"./TextMetrics.js":14,"string-kit/lib/escape.js":44}],13:[function(require,module,exports){
+},{"./TextAttribute.js":23,"./TextMetrics.js":24,"string-kit/lib/escape.js":54}],23:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -2548,7 +5327,7 @@ TextAttribute.prototype.getFrameSvgStyle = function( inherit = null , relTo = nu
 } ;
 
 
-},{"../Metric.js":5}],14:[function(require,module,exports){
+},{"../Metric.js":15}],24:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -2665,7 +5444,7 @@ TextMetrics.measureStructuredTextPart = async function( part , inheritedAttr ) {
 } ;
 
 
-},{"../fontLib.js":22}],15:[function(require,module,exports){
+},{"../fontLib.js":32}],25:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -3600,7 +6379,7 @@ VGFlowingText.prototype.computeXYOffset = function() {
 } ;
 
 
-},{"../../package.json":58,"../BoundingBox.js":4,"../VGEntity.js":10,"../canvas.js":21,"../fontLib.js":22,"../structuredText.js":26,"./StructuredTextLine.js":11,"./StructuredTextPart.js":12,"./TextAttribute.js":13,"./TextMetrics.js":14}],16:[function(require,module,exports){
+},{"../../package.json":68,"../BoundingBox.js":14,"../VGEntity.js":20,"../canvas.js":31,"../fontLib.js":32,"../structuredText.js":36,"./StructuredTextLine.js":21,"./StructuredTextPart.js":22,"./TextAttribute.js":23,"./TextMetrics.js":24}],26:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -3657,7 +6436,7 @@ VGGroup.prototype.set = function( params ) {
 } ;
 
 
-},{"../package.json":58,"./VGContainer.js":8,"./svg-kit.js":27}],17:[function(require,module,exports){
+},{"../package.json":68,"./VGContainer.js":18,"./svg-kit.js":37}],27:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -4238,7 +7017,7 @@ VGImage.prototype.getNinePatchCoordsList = function( imageSize ) {
 } ;
 
 
-},{"../package.json":58,"./VGEntity.js":10,"./canvas.js":21,"./getImageSize.js":23,"dom-kit":38}],18:[function(require,module,exports){
+},{"../package.json":68,"./VGEntity.js":20,"./canvas.js":31,"./getImageSize.js":33,"dom-kit":48}],28:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -4931,7 +7710,7 @@ VGPath.prototype.forwardNegativeTurn = function( data ) {
 } ;
 
 
-},{"../package.json":58,"./VGEntity.js":10,"./canvas.js":21}],19:[function(require,module,exports){
+},{"../package.json":68,"./VGEntity.js":20,"./canvas.js":31}],29:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -5073,7 +7852,7 @@ VGRect.prototype.renderHookForPath2D = function( path2D , canvasCtx , options = 
 } ;
 
 
-},{"../package.json":58,"./VGEntity.js":10,"./canvas.js":21}],20:[function(require,module,exports){
+},{"../package.json":68,"./VGEntity.js":20,"./canvas.js":31}],30:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -5248,7 +8027,7 @@ VGText.prototype.renderHookForCanvas = function( canvasCtx , options = {} ) {
 } ;
 
 
-},{"../package.json":58,"./VGEntity.js":10}],21:[function(require,module,exports){
+},{"../package.json":68,"./VGEntity.js":20}],31:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -5327,7 +8106,7 @@ canvas.fillAndStrokeUsingSvgStyle = ( canvasCtx , style , path2d = null ) => {
 } ;
 
 
-},{}],22:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 (function (process,__dirname){(function (){
 /*
 	SVG Kit
@@ -5695,7 +8474,7 @@ else {
 
 
 }).call(this)}).call(this,require('_process'),"/../svg-kit/lib")
-},{"_process":65,"fs":59,"opentype.js":40,"path":64}],23:[function(require,module,exports){
+},{"_process":75,"fs":69,"opentype.js":50,"path":74}],33:[function(require,module,exports){
 (function (process){(function (){
 /*
 	SVG Kit
@@ -5753,7 +8532,7 @@ else {
 
 
 }).call(this)}).call(this,require('_process'))
-},{"_process":65,"image-size":59}],24:[function(require,module,exports){
+},{"_process":75,"image-size":69}],34:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -5867,7 +8646,7 @@ misc.getContrastColorCode = ( colorStr , rate = 0.5 ) => {
 } ;
 
 
-},{}],25:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -5915,7 +8694,7 @@ path.dFromPoints = ( points , invertY ) => {
 } ;
 
 
-},{}],26:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -6174,7 +8953,7 @@ structuredText.parseStringKitMarkup = ( ... args ) => {
 structuredText.stripMarkup = format.stripMarkup ;
 
 
-},{"./misc.js":24,"string-kit/lib/format.js":45}],27:[function(require,module,exports){
+},{"./misc.js":34,"string-kit/lib/format.js":55}],37:[function(require,module,exports){
 (function (process){(function (){
 /*
 	SVG Kit
@@ -6673,7 +9452,7 @@ svgKit.objectToVG = function( object , clone = false ) {
 
 
 }).call(this)}).call(this,require('_process'))
-},{"./BoundingBox.js":4,"./VG.js":6,"./VGClip.js":7,"./VGContainer.js":8,"./VGEllipse.js":9,"./VGEntity.js":10,"./VGFlowingText/StructuredTextLine.js":11,"./VGFlowingText/StructuredTextPart.js":12,"./VGFlowingText/TextAttribute.js":13,"./VGFlowingText/TextMetrics.js":14,"./VGFlowingText/VGFlowingText.js":15,"./VGGroup.js":16,"./VGImage.js":17,"./VGPath.js":18,"./VGRect.js":19,"./VGText.js":20,"./canvas.js":21,"./fontLib.js":22,"./misc.js":24,"./path.js":25,"./structuredText.js":26,"_process":65,"dom-kit":38,"fs":59,"opentype.js":40,"string-kit/lib/escape.js":44}],28:[function(require,module,exports){
+},{"./BoundingBox.js":14,"./VG.js":16,"./VGClip.js":17,"./VGContainer.js":18,"./VGEllipse.js":19,"./VGEntity.js":20,"./VGFlowingText/StructuredTextLine.js":21,"./VGFlowingText/StructuredTextPart.js":22,"./VGFlowingText/TextAttribute.js":23,"./VGFlowingText/TextMetrics.js":24,"./VGFlowingText/VGFlowingText.js":25,"./VGGroup.js":26,"./VGImage.js":27,"./VGPath.js":28,"./VGRect.js":29,"./VGText.js":30,"./canvas.js":31,"./fontLib.js":32,"./misc.js":34,"./path.js":35,"./structuredText.js":36,"_process":75,"dom-kit":48,"fs":69,"opentype.js":50,"string-kit/lib/escape.js":54}],38:[function(require,module,exports){
 function DOMParser(options){
 	this.options = options ||{locator:{}};
 	
@@ -6927,7 +9706,7 @@ exports.XMLSerializer = require('./dom').XMLSerializer ;
 exports.DOMParser = DOMParser;
 //}
 
-},{"./dom":29,"./entities":30,"./sax":31}],29:[function(require,module,exports){
+},{"./dom":39,"./entities":40,"./sax":41}],39:[function(require,module,exports){
 
 "use strict" ;
 
@@ -8335,7 +11114,7 @@ try{
 	exports.XMLSerializer = XMLSerializer;
 //}
 
-},{"nwmatcher":39,"string-kit":53}],30:[function(require,module,exports){
+},{"nwmatcher":49,"string-kit":63}],40:[function(require,module,exports){
 exports.entityMap = {
        lt: '<',
        gt: '>',
@@ -8580,7 +11359,7 @@ exports.entityMap = {
        diams: "♦"
 };
 //for(var  n in exports.entityMap){console.log(exports.entityMap[n].charCodeAt())}
-},{}],31:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 //[4]   	NameStartChar	   ::=   	":" | [A-Z] | "_" | [a-z] | [#xC0-#xD6] | [#xD8-#xF6] | [#xF8-#x2FF] | [#x370-#x37D] | [#x37F-#x1FFF] | [#x200C-#x200D] | [#x2070-#x218F] | [#x2C00-#x2FEF] | [#x3001-#xD7FF] | [#xF900-#xFDCF] | [#xFDF0-#xFFFD] | [#x10000-#xEFFFF]
 //[4a]   	NameChar	   ::=   	NameStartChar | "-" | "." | [0-9] | #xB7 | [#x0300-#x036F] | [#x203F-#x2040]
 //[5]   	Name	   ::=   	NameStartChar (NameChar)*
@@ -9198,7 +11977,7 @@ function split(source,start){
 exports.XMLReader = XMLReader;
 
 
-},{}],32:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 /*
 	Array Kit
 
@@ -9242,7 +12021,7 @@ module.exports = arrayKit ;
 arrayKit.shuffle = array => arrayKit.sample( array , array.length , true ) ;
 
 
-},{"./delete.js":33,"./deleteValue.js":34,"./inPlaceFilter.js":35,"./range.js":36,"./sample.js":37}],33:[function(require,module,exports){
+},{"./delete.js":43,"./deleteValue.js":44,"./inPlaceFilter.js":45,"./range.js":46,"./sample.js":47}],43:[function(require,module,exports){
 /*
 	Array Kit
 
@@ -9294,7 +12073,7 @@ module.exports = ( src , index ) => {
 } ;
 
 
-},{}],34:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 /*
 	Array Kit
 
@@ -9358,7 +12137,7 @@ module.exports = ( src , value ) => {
 } ;
 
 
-},{}],35:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 /*
 	Array Kit
 
@@ -9423,7 +12202,7 @@ module.exports = ( src , fn , thisArg , forceKey ) => {
 } ;
 
 
-},{}],36:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 /*
 	Array Kit
 
@@ -9490,7 +12269,7 @@ module.exports = function( start , end , step ) {
 } ;
 
 
-},{}],37:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 /*
 	Array Kit
 
@@ -9547,7 +12326,7 @@ module.exports = ( array , count = Infinity , inPlace = false ) => {
 } ;
 
 
-},{}],38:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 (function (process){(function (){
 /*
 	Dom Kit
@@ -10122,7 +12901,7 @@ domKit.html = ( $element , html ) => $element.innerHTML = html ;
 
 
 }).call(this)}).call(this,require('_process'))
-},{"@cronvel/xmldom":28,"_process":65}],39:[function(require,module,exports){
+},{"@cronvel/xmldom":38,"_process":75}],49:[function(require,module,exports){
 /*
  * Copyright (C) 2007-2018 Diego Perini
  * All rights reserved.
@@ -11900,7 +14679,7 @@ domKit.html = ( $element , html ) => $element.innerHTML = html ;
   return Dom;
 });
 
-},{}],40:[function(require,module,exports){
+},{}],50:[function(require,module,exports){
 (function (Buffer){(function (){
 /**
  * https://opentype.js.org v1.3.4 | (c) Frederik De Bleser and other contributors | MIT License | Uses tiny-inflate by Devon Govett and string.prototype.codepointat polyfill by Mathias Bynens
@@ -26381,7 +29160,7 @@ domKit.html = ( $element , html ) => $element.innerHTML = html ;
 
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"buffer":61,"fs":59}],41:[function(require,module,exports){
+},{"buffer":71,"fs":69}],51:[function(require,module,exports){
 /*
 	String Kit
 
@@ -26795,7 +29574,7 @@ function arrayConcatSlice( intoArray , sourceArray , start = 0 , end = sourceArr
 }
 
 
-},{}],42:[function(require,module,exports){
+},{}],52:[function(require,module,exports){
 /*
 	String Kit
 
@@ -27064,7 +29843,7 @@ ansi.parse = str => {
 } ;
 
 
-},{}],43:[function(require,module,exports){
+},{}],53:[function(require,module,exports){
 /*
 	String Kit
 
@@ -27153,7 +29932,7 @@ camel.camelCaseToDash =
 camel.camelCaseToDashed = ( str ) => camel.camelCaseToSeparated( str , '-' , false ) ;
 
 
-},{}],44:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
 /*
 	String Kit
 
@@ -27258,7 +30037,7 @@ exports.unicodePercentEncode = str => str.replace( /[\x00-\x1f\u0100-\uffff\x7f%
 exports.httpHeaderValue = str => exports.unicodePercentEncode( str ) ;
 
 
-},{}],45:[function(require,module,exports){
+},{}],55:[function(require,module,exports){
 (function (Buffer){(function (){
 /*
 	String Kit
@@ -28499,7 +31278,7 @@ function round( v , step ) {
 
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"./StringNumber.js":41,"./ansi.js":42,"./escape.js":44,"./inspect.js":47,"./naturalSort.js":51,"./unicode.js":56,"buffer":61}],46:[function(require,module,exports){
+},{"./StringNumber.js":51,"./ansi.js":52,"./escape.js":54,"./inspect.js":57,"./naturalSort.js":61,"./unicode.js":66,"buffer":71}],56:[function(require,module,exports){
 /*
 	String Kit
 
@@ -28815,7 +31594,7 @@ fuzzy.levenshtein = ( left , right ) => {
 } ;
 
 
-},{}],47:[function(require,module,exports){
+},{}],57:[function(require,module,exports){
 (function (Buffer,process){(function (){
 /*
 	String Kit
@@ -29579,9 +32358,9 @@ inspectStyle.html = Object.assign( {} , inspectStyle.none , {
 
 
 }).call(this)}).call(this,{"isBuffer":require("../../../../../../../../opt/node-v16.16.0/lib/node_modules/browserify/node_modules/is-buffer/index.js")},require('_process'))
-},{"../../../../../../../../opt/node-v16.16.0/lib/node_modules/browserify/node_modules/is-buffer/index.js":63,"./ansi.js":42,"./escape.js":44,"_process":65}],48:[function(require,module,exports){
+},{"../../../../../../../../opt/node-v16.16.0/lib/node_modules/browserify/node_modules/is-buffer/index.js":73,"./ansi.js":52,"./escape.js":54,"_process":75}],58:[function(require,module,exports){
 module.exports={"߀":"0","́":""," ":" ","Ⓐ":"A","Ａ":"A","À":"A","Á":"A","Â":"A","Ầ":"A","Ấ":"A","Ẫ":"A","Ẩ":"A","Ã":"A","Ā":"A","Ă":"A","Ằ":"A","Ắ":"A","Ẵ":"A","Ẳ":"A","Ȧ":"A","Ǡ":"A","Ä":"A","Ǟ":"A","Ả":"A","Å":"A","Ǻ":"A","Ǎ":"A","Ȁ":"A","Ȃ":"A","Ạ":"A","Ậ":"A","Ặ":"A","Ḁ":"A","Ą":"A","Ⱥ":"A","Ɐ":"A","Ꜳ":"AA","Æ":"AE","Ǽ":"AE","Ǣ":"AE","Ꜵ":"AO","Ꜷ":"AU","Ꜹ":"AV","Ꜻ":"AV","Ꜽ":"AY","Ⓑ":"B","Ｂ":"B","Ḃ":"B","Ḅ":"B","Ḇ":"B","Ƀ":"B","Ɓ":"B","ｃ":"C","Ⓒ":"C","Ｃ":"C","Ꜿ":"C","Ḉ":"C","Ç":"C","Ⓓ":"D","Ｄ":"D","Ḋ":"D","Ď":"D","Ḍ":"D","Ḑ":"D","Ḓ":"D","Ḏ":"D","Đ":"D","Ɗ":"D","Ɖ":"D","ᴅ":"D","Ꝺ":"D","Ð":"Dh","Ǳ":"DZ","Ǆ":"DZ","ǲ":"Dz","ǅ":"Dz","ɛ":"E","Ⓔ":"E","Ｅ":"E","È":"E","É":"E","Ê":"E","Ề":"E","Ế":"E","Ễ":"E","Ể":"E","Ẽ":"E","Ē":"E","Ḕ":"E","Ḗ":"E","Ĕ":"E","Ė":"E","Ë":"E","Ẻ":"E","Ě":"E","Ȅ":"E","Ȇ":"E","Ẹ":"E","Ệ":"E","Ȩ":"E","Ḝ":"E","Ę":"E","Ḙ":"E","Ḛ":"E","Ɛ":"E","Ǝ":"E","ᴇ":"E","ꝼ":"F","Ⓕ":"F","Ｆ":"F","Ḟ":"F","Ƒ":"F","Ꝼ":"F","Ⓖ":"G","Ｇ":"G","Ǵ":"G","Ĝ":"G","Ḡ":"G","Ğ":"G","Ġ":"G","Ǧ":"G","Ģ":"G","Ǥ":"G","Ɠ":"G","Ꞡ":"G","Ᵹ":"G","Ꝿ":"G","ɢ":"G","Ⓗ":"H","Ｈ":"H","Ĥ":"H","Ḣ":"H","Ḧ":"H","Ȟ":"H","Ḥ":"H","Ḩ":"H","Ḫ":"H","Ħ":"H","Ⱨ":"H","Ⱶ":"H","Ɥ":"H","Ⓘ":"I","Ｉ":"I","Ì":"I","Í":"I","Î":"I","Ĩ":"I","Ī":"I","Ĭ":"I","İ":"I","Ï":"I","Ḯ":"I","Ỉ":"I","Ǐ":"I","Ȉ":"I","Ȋ":"I","Ị":"I","Į":"I","Ḭ":"I","Ɨ":"I","Ⓙ":"J","Ｊ":"J","Ĵ":"J","Ɉ":"J","ȷ":"J","Ⓚ":"K","Ｋ":"K","Ḱ":"K","Ǩ":"K","Ḳ":"K","Ķ":"K","Ḵ":"K","Ƙ":"K","Ⱪ":"K","Ꝁ":"K","Ꝃ":"K","Ꝅ":"K","Ꞣ":"K","Ⓛ":"L","Ｌ":"L","Ŀ":"L","Ĺ":"L","Ľ":"L","Ḷ":"L","Ḹ":"L","Ļ":"L","Ḽ":"L","Ḻ":"L","Ł":"L","Ƚ":"L","Ɫ":"L","Ⱡ":"L","Ꝉ":"L","Ꝇ":"L","Ꞁ":"L","Ǉ":"LJ","ǈ":"Lj","Ⓜ":"M","Ｍ":"M","Ḿ":"M","Ṁ":"M","Ṃ":"M","Ɱ":"M","Ɯ":"M","ϻ":"M","Ꞥ":"N","Ƞ":"N","Ⓝ":"N","Ｎ":"N","Ǹ":"N","Ń":"N","Ñ":"N","Ṅ":"N","Ň":"N","Ṇ":"N","Ņ":"N","Ṋ":"N","Ṉ":"N","Ɲ":"N","Ꞑ":"N","ᴎ":"N","Ǌ":"NJ","ǋ":"Nj","Ⓞ":"O","Ｏ":"O","Ò":"O","Ó":"O","Ô":"O","Ồ":"O","Ố":"O","Ỗ":"O","Ổ":"O","Õ":"O","Ṍ":"O","Ȭ":"O","Ṏ":"O","Ō":"O","Ṑ":"O","Ṓ":"O","Ŏ":"O","Ȯ":"O","Ȱ":"O","Ö":"O","Ȫ":"O","Ỏ":"O","Ő":"O","Ǒ":"O","Ȍ":"O","Ȏ":"O","Ơ":"O","Ờ":"O","Ớ":"O","Ỡ":"O","Ở":"O","Ợ":"O","Ọ":"O","Ộ":"O","Ǫ":"O","Ǭ":"O","Ø":"O","Ǿ":"O","Ɔ":"O","Ɵ":"O","Ꝋ":"O","Ꝍ":"O","Œ":"OE","Ƣ":"OI","Ꝏ":"OO","Ȣ":"OU","Ⓟ":"P","Ｐ":"P","Ṕ":"P","Ṗ":"P","Ƥ":"P","Ᵽ":"P","Ꝑ":"P","Ꝓ":"P","Ꝕ":"P","Ⓠ":"Q","Ｑ":"Q","Ꝗ":"Q","Ꝙ":"Q","Ɋ":"Q","Ⓡ":"R","Ｒ":"R","Ŕ":"R","Ṙ":"R","Ř":"R","Ȑ":"R","Ȓ":"R","Ṛ":"R","Ṝ":"R","Ŗ":"R","Ṟ":"R","Ɍ":"R","Ɽ":"R","Ꝛ":"R","Ꞧ":"R","Ꞃ":"R","Ⓢ":"S","Ｓ":"S","ẞ":"S","Ś":"S","Ṥ":"S","Ŝ":"S","Ṡ":"S","Š":"S","Ṧ":"S","Ṣ":"S","Ṩ":"S","Ș":"S","Ş":"S","Ȿ":"S","Ꞩ":"S","Ꞅ":"S","Ⓣ":"T","Ｔ":"T","Ṫ":"T","Ť":"T","Ṭ":"T","Ț":"T","Ţ":"T","Ṱ":"T","Ṯ":"T","Ŧ":"T","Ƭ":"T","Ʈ":"T","Ⱦ":"T","Ꞇ":"T","Þ":"Th","Ꜩ":"TZ","Ⓤ":"U","Ｕ":"U","Ù":"U","Ú":"U","Û":"U","Ũ":"U","Ṹ":"U","Ū":"U","Ṻ":"U","Ŭ":"U","Ü":"U","Ǜ":"U","Ǘ":"U","Ǖ":"U","Ǚ":"U","Ủ":"U","Ů":"U","Ű":"U","Ǔ":"U","Ȕ":"U","Ȗ":"U","Ư":"U","Ừ":"U","Ứ":"U","Ữ":"U","Ử":"U","Ự":"U","Ụ":"U","Ṳ":"U","Ų":"U","Ṷ":"U","Ṵ":"U","Ʉ":"U","Ⓥ":"V","Ｖ":"V","Ṽ":"V","Ṿ":"V","Ʋ":"V","Ꝟ":"V","Ʌ":"V","Ꝡ":"VY","Ⓦ":"W","Ｗ":"W","Ẁ":"W","Ẃ":"W","Ŵ":"W","Ẇ":"W","Ẅ":"W","Ẉ":"W","Ⱳ":"W","Ⓧ":"X","Ｘ":"X","Ẋ":"X","Ẍ":"X","Ⓨ":"Y","Ｙ":"Y","Ỳ":"Y","Ý":"Y","Ŷ":"Y","Ỹ":"Y","Ȳ":"Y","Ẏ":"Y","Ÿ":"Y","Ỷ":"Y","Ỵ":"Y","Ƴ":"Y","Ɏ":"Y","Ỿ":"Y","Ⓩ":"Z","Ｚ":"Z","Ź":"Z","Ẑ":"Z","Ż":"Z","Ž":"Z","Ẓ":"Z","Ẕ":"Z","Ƶ":"Z","Ȥ":"Z","Ɀ":"Z","Ⱬ":"Z","Ꝣ":"Z","ⓐ":"a","ａ":"a","ẚ":"a","à":"a","á":"a","â":"a","ầ":"a","ấ":"a","ẫ":"a","ẩ":"a","ã":"a","ā":"a","ă":"a","ằ":"a","ắ":"a","ẵ":"a","ẳ":"a","ȧ":"a","ǡ":"a","ä":"a","ǟ":"a","ả":"a","å":"a","ǻ":"a","ǎ":"a","ȁ":"a","ȃ":"a","ạ":"a","ậ":"a","ặ":"a","ḁ":"a","ą":"a","ⱥ":"a","ɐ":"a","ɑ":"a","ꜳ":"aa","æ":"ae","ǽ":"ae","ǣ":"ae","ꜵ":"ao","ꜷ":"au","ꜹ":"av","ꜻ":"av","ꜽ":"ay","ⓑ":"b","ｂ":"b","ḃ":"b","ḅ":"b","ḇ":"b","ƀ":"b","ƃ":"b","ɓ":"b","Ƃ":"b","ⓒ":"c","ć":"c","ĉ":"c","ċ":"c","č":"c","ç":"c","ḉ":"c","ƈ":"c","ȼ":"c","ꜿ":"c","ↄ":"c","C":"c","Ć":"c","Ĉ":"c","Ċ":"c","Č":"c","Ƈ":"c","Ȼ":"c","ⓓ":"d","ｄ":"d","ḋ":"d","ď":"d","ḍ":"d","ḑ":"d","ḓ":"d","ḏ":"d","đ":"d","ƌ":"d","ɖ":"d","ɗ":"d","Ƌ":"d","Ꮷ":"d","ԁ":"d","Ɦ":"d","ð":"dh","ǳ":"dz","ǆ":"dz","ⓔ":"e","ｅ":"e","è":"e","é":"e","ê":"e","ề":"e","ế":"e","ễ":"e","ể":"e","ẽ":"e","ē":"e","ḕ":"e","ḗ":"e","ĕ":"e","ė":"e","ë":"e","ẻ":"e","ě":"e","ȅ":"e","ȇ":"e","ẹ":"e","ệ":"e","ȩ":"e","ḝ":"e","ę":"e","ḙ":"e","ḛ":"e","ɇ":"e","ǝ":"e","ⓕ":"f","ｆ":"f","ḟ":"f","ƒ":"f","ﬀ":"ff","ﬁ":"fi","ﬂ":"fl","ﬃ":"ffi","ﬄ":"ffl","ⓖ":"g","ｇ":"g","ǵ":"g","ĝ":"g","ḡ":"g","ğ":"g","ġ":"g","ǧ":"g","ģ":"g","ǥ":"g","ɠ":"g","ꞡ":"g","ꝿ":"g","ᵹ":"g","ⓗ":"h","ｈ":"h","ĥ":"h","ḣ":"h","ḧ":"h","ȟ":"h","ḥ":"h","ḩ":"h","ḫ":"h","ẖ":"h","ħ":"h","ⱨ":"h","ⱶ":"h","ɥ":"h","ƕ":"hv","ⓘ":"i","ｉ":"i","ì":"i","í":"i","î":"i","ĩ":"i","ī":"i","ĭ":"i","ï":"i","ḯ":"i","ỉ":"i","ǐ":"i","ȉ":"i","ȋ":"i","ị":"i","į":"i","ḭ":"i","ɨ":"i","ı":"i","ⓙ":"j","ｊ":"j","ĵ":"j","ǰ":"j","ɉ":"j","ⓚ":"k","ｋ":"k","ḱ":"k","ǩ":"k","ḳ":"k","ķ":"k","ḵ":"k","ƙ":"k","ⱪ":"k","ꝁ":"k","ꝃ":"k","ꝅ":"k","ꞣ":"k","ⓛ":"l","ｌ":"l","ŀ":"l","ĺ":"l","ľ":"l","ḷ":"l","ḹ":"l","ļ":"l","ḽ":"l","ḻ":"l","ſ":"l","ł":"l","ƚ":"l","ɫ":"l","ⱡ":"l","ꝉ":"l","ꞁ":"l","ꝇ":"l","ɭ":"l","ǉ":"lj","ⓜ":"m","ｍ":"m","ḿ":"m","ṁ":"m","ṃ":"m","ɱ":"m","ɯ":"m","ⓝ":"n","ｎ":"n","ǹ":"n","ń":"n","ñ":"n","ṅ":"n","ň":"n","ṇ":"n","ņ":"n","ṋ":"n","ṉ":"n","ƞ":"n","ɲ":"n","ŉ":"n","ꞑ":"n","ꞥ":"n","ԉ":"n","ǌ":"nj","ⓞ":"o","ｏ":"o","ò":"o","ó":"o","ô":"o","ồ":"o","ố":"o","ỗ":"o","ổ":"o","õ":"o","ṍ":"o","ȭ":"o","ṏ":"o","ō":"o","ṑ":"o","ṓ":"o","ŏ":"o","ȯ":"o","ȱ":"o","ö":"o","ȫ":"o","ỏ":"o","ő":"o","ǒ":"o","ȍ":"o","ȏ":"o","ơ":"o","ờ":"o","ớ":"o","ỡ":"o","ở":"o","ợ":"o","ọ":"o","ộ":"o","ǫ":"o","ǭ":"o","ø":"o","ǿ":"o","ꝋ":"o","ꝍ":"o","ɵ":"o","ɔ":"o","ᴑ":"o","œ":"oe","ƣ":"oi","ꝏ":"oo","ȣ":"ou","ⓟ":"p","ｐ":"p","ṕ":"p","ṗ":"p","ƥ":"p","ᵽ":"p","ꝑ":"p","ꝓ":"p","ꝕ":"p","ρ":"p","ⓠ":"q","ｑ":"q","ɋ":"q","ꝗ":"q","ꝙ":"q","ⓡ":"r","ｒ":"r","ŕ":"r","ṙ":"r","ř":"r","ȑ":"r","ȓ":"r","ṛ":"r","ṝ":"r","ŗ":"r","ṟ":"r","ɍ":"r","ɽ":"r","ꝛ":"r","ꞧ":"r","ꞃ":"r","ⓢ":"s","ｓ":"s","ś":"s","ṥ":"s","ŝ":"s","ṡ":"s","š":"s","ṧ":"s","ṣ":"s","ṩ":"s","ș":"s","ş":"s","ȿ":"s","ꞩ":"s","ꞅ":"s","ẛ":"s","ʂ":"s","ß":"ss","ⓣ":"t","ｔ":"t","ṫ":"t","ẗ":"t","ť":"t","ṭ":"t","ț":"t","ţ":"t","ṱ":"t","ṯ":"t","ŧ":"t","ƭ":"t","ʈ":"t","ⱦ":"t","ꞇ":"t","þ":"th","ꜩ":"tz","ⓤ":"u","ｕ":"u","ù":"u","ú":"u","û":"u","ũ":"u","ṹ":"u","ū":"u","ṻ":"u","ŭ":"u","ü":"u","ǜ":"u","ǘ":"u","ǖ":"u","ǚ":"u","ủ":"u","ů":"u","ű":"u","ǔ":"u","ȕ":"u","ȗ":"u","ư":"u","ừ":"u","ứ":"u","ữ":"u","ử":"u","ự":"u","ụ":"u","ṳ":"u","ų":"u","ṷ":"u","ṵ":"u","ʉ":"u","ⓥ":"v","ｖ":"v","ṽ":"v","ṿ":"v","ʋ":"v","ꝟ":"v","ʌ":"v","ꝡ":"vy","ⓦ":"w","ｗ":"w","ẁ":"w","ẃ":"w","ŵ":"w","ẇ":"w","ẅ":"w","ẘ":"w","ẉ":"w","ⱳ":"w","ⓧ":"x","ｘ":"x","ẋ":"x","ẍ":"x","ⓨ":"y","ｙ":"y","ỳ":"y","ý":"y","ŷ":"y","ỹ":"y","ȳ":"y","ẏ":"y","ÿ":"y","ỷ":"y","ẙ":"y","ỵ":"y","ƴ":"y","ɏ":"y","ỿ":"y","ⓩ":"z","ｚ":"z","ź":"z","ẑ":"z","ż":"z","ž":"z","ẓ":"z","ẕ":"z","ƶ":"z","ȥ":"z","ɀ":"z","ⱬ":"z","ꝣ":"z"}
-},{}],49:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
 /*
 	String Kit
 
@@ -29620,7 +32399,7 @@ module.exports = function( str ) {
 
 
 
-},{"./latinize-map.json":48}],50:[function(require,module,exports){
+},{"./latinize-map.json":58}],60:[function(require,module,exports){
 /*
 	String Kit
 
@@ -29680,7 +32459,7 @@ exports.occurrenceCount = function( str , subStr , overlap = false ) {
 } ;
 
 
-},{}],51:[function(require,module,exports){
+},{}],61:[function(require,module,exports){
 /*
 	String Kit
 
@@ -29827,7 +32606,7 @@ function naturalSort( a , b ) {
 module.exports = naturalSort ;
 
 
-},{}],52:[function(require,module,exports){
+},{}],62:[function(require,module,exports){
 /*
 	String Kit
 
@@ -29884,7 +32663,7 @@ exports.regexp.array2alternatives = function array2alternatives( array ) {
 
 
 
-},{"./escape.js":44}],53:[function(require,module,exports){
+},{"./escape.js":54}],63:[function(require,module,exports){
 /*
 	String Kit
 
@@ -29977,7 +32756,7 @@ stringKit.installPolyfills = function installPolyfills() {
 //*/
 
 
-},{"./StringNumber.js":41,"./ansi.js":42,"./camel.js":43,"./escape.js":44,"./format.js":45,"./fuzzy.js":46,"./inspect.js":47,"./latinize.js":49,"./misc.js":50,"./naturalSort.js":51,"./regexp.js":52,"./toTitleCase.js":54,"./unicode.js":56,"./wordwrap.js":57}],54:[function(require,module,exports){
+},{"./StringNumber.js":51,"./ansi.js":52,"./camel.js":53,"./escape.js":54,"./format.js":55,"./fuzzy.js":56,"./inspect.js":57,"./latinize.js":59,"./misc.js":60,"./naturalSort.js":61,"./regexp.js":62,"./toTitleCase.js":64,"./unicode.js":66,"./wordwrap.js":67}],64:[function(require,module,exports){
 /*
 	String Kit
 
@@ -30066,10 +32845,10 @@ module.exports = ( str , options = DEFAULT_OPTIONS ) => {
 } ;
 
 
-},{}],55:[function(require,module,exports){
+},{}],65:[function(require,module,exports){
 module.exports=[{"s":9728,"e":9747,"w":1},{"s":9748,"e":9749,"w":2},{"s":9750,"e":9799,"w":1},{"s":9800,"e":9811,"w":2},{"s":9812,"e":9854,"w":1},{"s":9855,"e":9855,"w":2},{"s":9856,"e":9874,"w":1},{"s":9875,"e":9875,"w":2},{"s":9876,"e":9888,"w":1},{"s":9889,"e":9889,"w":2},{"s":9890,"e":9897,"w":1},{"s":9898,"e":9899,"w":2},{"s":9900,"e":9916,"w":1},{"s":9917,"e":9918,"w":2},{"s":9919,"e":9923,"w":1},{"s":9924,"e":9925,"w":2},{"s":9926,"e":9933,"w":1},{"s":9934,"e":9934,"w":2},{"s":9935,"e":9939,"w":1},{"s":9940,"e":9940,"w":2},{"s":9941,"e":9961,"w":1},{"s":9962,"e":9962,"w":2},{"s":9963,"e":9969,"w":1},{"s":9970,"e":9971,"w":2},{"s":9972,"e":9972,"w":1},{"s":9973,"e":9973,"w":2},{"s":9974,"e":9977,"w":1},{"s":9978,"e":9978,"w":2},{"s":9979,"e":9980,"w":1},{"s":9981,"e":9981,"w":2},{"s":9982,"e":9983,"w":1},{"s":9984,"e":9988,"w":1},{"s":9989,"e":9989,"w":2},{"s":9990,"e":9993,"w":1},{"s":9994,"e":9995,"w":2},{"s":9996,"e":10023,"w":1},{"s":10024,"e":10024,"w":2},{"s":10025,"e":10059,"w":1},{"s":10060,"e":10060,"w":2},{"s":10061,"e":10061,"w":1},{"s":10062,"e":10062,"w":2},{"s":10063,"e":10066,"w":1},{"s":10067,"e":10069,"w":2},{"s":10070,"e":10070,"w":1},{"s":10071,"e":10071,"w":2},{"s":10072,"e":10132,"w":1},{"s":10133,"e":10135,"w":2},{"s":10136,"e":10159,"w":1},{"s":10160,"e":10160,"w":2},{"s":10161,"e":10174,"w":1},{"s":10175,"e":10175,"w":2},{"s":126976,"e":126979,"w":1},{"s":126980,"e":126980,"w":2},{"s":126981,"e":127182,"w":1},{"s":127183,"e":127183,"w":2},{"s":127184,"e":127373,"w":1},{"s":127374,"e":127374,"w":2},{"s":127375,"e":127376,"w":1},{"s":127377,"e":127386,"w":2},{"s":127387,"e":127487,"w":1},{"s":127744,"e":127776,"w":2},{"s":127777,"e":127788,"w":1},{"s":127789,"e":127797,"w":2},{"s":127798,"e":127798,"w":1},{"s":127799,"e":127868,"w":2},{"s":127869,"e":127869,"w":1},{"s":127870,"e":127891,"w":2},{"s":127892,"e":127903,"w":1},{"s":127904,"e":127946,"w":2},{"s":127947,"e":127950,"w":1},{"s":127951,"e":127955,"w":2},{"s":127956,"e":127967,"w":1},{"s":127968,"e":127984,"w":2},{"s":127985,"e":127987,"w":1},{"s":127988,"e":127988,"w":2},{"s":127989,"e":127991,"w":1},{"s":127992,"e":127994,"w":2},{"s":128000,"e":128062,"w":2},{"s":128063,"e":128063,"w":1},{"s":128064,"e":128064,"w":2},{"s":128065,"e":128065,"w":1},{"s":128066,"e":128252,"w":2},{"s":128253,"e":128254,"w":1},{"s":128255,"e":128317,"w":2},{"s":128318,"e":128330,"w":1},{"s":128331,"e":128334,"w":2},{"s":128335,"e":128335,"w":1},{"s":128336,"e":128359,"w":2},{"s":128360,"e":128377,"w":1},{"s":128378,"e":128378,"w":2},{"s":128379,"e":128404,"w":1},{"s":128405,"e":128406,"w":2},{"s":128407,"e":128419,"w":1},{"s":128420,"e":128420,"w":2},{"s":128421,"e":128506,"w":1},{"s":128507,"e":128591,"w":2},{"s":128592,"e":128639,"w":1},{"s":128640,"e":128709,"w":2},{"s":128710,"e":128715,"w":1},{"s":128716,"e":128716,"w":2},{"s":128717,"e":128719,"w":1},{"s":128720,"e":128722,"w":2},{"s":128723,"e":128724,"w":1},{"s":128725,"e":128727,"w":2},{"s":128728,"e":128746,"w":1},{"s":128747,"e":128748,"w":2},{"s":128749,"e":128755,"w":1},{"s":128756,"e":128764,"w":2},{"s":128765,"e":128991,"w":1},{"s":128992,"e":129003,"w":2},{"s":129004,"e":129291,"w":1},{"s":129292,"e":129338,"w":2},{"s":129339,"e":129339,"w":1},{"s":129340,"e":129349,"w":2},{"s":129350,"e":129350,"w":1},{"s":129351,"e":129400,"w":2},{"s":129401,"e":129401,"w":1},{"s":129402,"e":129483,"w":2},{"s":129484,"e":129484,"w":1},{"s":129485,"e":129535,"w":2},{"s":129536,"e":129647,"w":1},{"s":129648,"e":129652,"w":2},{"s":129653,"e":129655,"w":1},{"s":129656,"e":129658,"w":2},{"s":129659,"e":129663,"w":1},{"s":129664,"e":129670,"w":2},{"s":129671,"e":129679,"w":1},{"s":129680,"e":129704,"w":2},{"s":129705,"e":129711,"w":1},{"s":129712,"e":129718,"w":2},{"s":129719,"e":129727,"w":1},{"s":129728,"e":129730,"w":2},{"s":129731,"e":129743,"w":1},{"s":129744,"e":129750,"w":2},{"s":129751,"e":129791,"w":1}]
 
-},{}],56:[function(require,module,exports){
+},{}],66:[function(require,module,exports){
 /*
 	String Kit
 
@@ -30417,7 +33196,7 @@ unicode.isEmojiModifierCodePoint = code =>
 	code === 0xfe0f ;	// VARIATION SELECTOR-16 [VS16] {emoji variation selector}
 
 
-},{"./unicode-emoji-width-ranges.json":55}],57:[function(require,module,exports){
+},{"./unicode-emoji-width-ranges.json":65}],67:[function(require,module,exports){
 /*
 	String Kit
 
@@ -30621,7 +33400,7 @@ module.exports = function wordwrap( str , options ) {
 } ;
 
 
-},{"./unicode.js":56}],58:[function(require,module,exports){
+},{"./unicode.js":66}],68:[function(require,module,exports){
 module.exports={
   "name": "svg-kit",
   "version": "0.5.1",
@@ -30663,9 +33442,9 @@ module.exports={
   }
 }
 
-},{}],59:[function(require,module,exports){
+},{}],69:[function(require,module,exports){
 
-},{}],60:[function(require,module,exports){
+},{}],70:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -30817,7 +33596,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],61:[function(require,module,exports){
+},{}],71:[function(require,module,exports){
 (function (Buffer){(function (){
 /*!
  * The buffer module from node.js, for the browser.
@@ -32598,7 +35377,7 @@ function numberIsNaN (obj) {
 }
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"base64-js":60,"buffer":61,"ieee754":62}],62:[function(require,module,exports){
+},{"base64-js":70,"buffer":71,"ieee754":72}],72:[function(require,module,exports){
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
@@ -32685,7 +35464,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],63:[function(require,module,exports){
+},{}],73:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -32708,7 +35487,7 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],64:[function(require,module,exports){
+},{}],74:[function(require,module,exports){
 (function (process){(function (){
 // 'path' module extracted from Node.js v8.11.1 (only the posix part)
 // transplited with Babel
@@ -33241,7 +36020,7 @@ posix.posix = posix;
 module.exports = posix;
 
 }).call(this)}).call(this,require('_process'))
-},{"_process":65}],65:[function(require,module,exports){
+},{"_process":75}],75:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -33427,5 +36206,84 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}]},{},[3])(3)
+},{}],76:[function(require,module,exports){
+(function (setImmediate,clearImmediate){(function (){
+var nextTick = require('process/browser.js').nextTick;
+var apply = Function.prototype.apply;
+var slice = Array.prototype.slice;
+var immediateIds = {};
+var nextImmediateId = 0;
+
+// DOM APIs, for completeness
+
+exports.setTimeout = function() {
+  return new Timeout(apply.call(setTimeout, window, arguments), clearTimeout);
+};
+exports.setInterval = function() {
+  return new Timeout(apply.call(setInterval, window, arguments), clearInterval);
+};
+exports.clearTimeout =
+exports.clearInterval = function(timeout) { timeout.close(); };
+
+function Timeout(id, clearFn) {
+  this._id = id;
+  this._clearFn = clearFn;
+}
+Timeout.prototype.unref = Timeout.prototype.ref = function() {};
+Timeout.prototype.close = function() {
+  this._clearFn.call(window, this._id);
+};
+
+// Does not start the time, just sets up the members needed.
+exports.enroll = function(item, msecs) {
+  clearTimeout(item._idleTimeoutId);
+  item._idleTimeout = msecs;
+};
+
+exports.unenroll = function(item) {
+  clearTimeout(item._idleTimeoutId);
+  item._idleTimeout = -1;
+};
+
+exports._unrefActive = exports.active = function(item) {
+  clearTimeout(item._idleTimeoutId);
+
+  var msecs = item._idleTimeout;
+  if (msecs >= 0) {
+    item._idleTimeoutId = setTimeout(function onTimeout() {
+      if (item._onTimeout)
+        item._onTimeout();
+    }, msecs);
+  }
+};
+
+// That's not how node.js implements it but the exposed api is the same.
+exports.setImmediate = typeof setImmediate === "function" ? setImmediate : function(fn) {
+  var id = nextImmediateId++;
+  var args = arguments.length < 2 ? false : slice.call(arguments, 1);
+
+  immediateIds[id] = true;
+
+  nextTick(function onNextTick() {
+    if (immediateIds[id]) {
+      // fn.call() is faster so we optimize for the common use-case
+      // @see http://jsperf.com/call-apply-segu
+      if (args) {
+        fn.apply(null, args);
+      } else {
+        fn.call(null);
+      }
+      // Prevent ids from leaking
+      exports.clearImmediate(id);
+    }
+  });
+
+  return id;
+};
+
+exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate : function(id) {
+  delete immediateIds[id];
+};
+}).call(this)}).call(this,require("timers").setImmediate,require("timers").clearImmediate)
+},{"process/browser.js":75,"timers":76}]},{},[3])(3)
 });
