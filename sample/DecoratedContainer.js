@@ -32,14 +32,18 @@ async function createScene() {
 	// GUI
 	var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI( 'UI' ) ;
 
-	var decoratedContainer = new BABYLON.GUI.DecoratedContainer( 'decoratedContainer' ) ;
-	decoratedContainer.width = "300px" ;
-	decoratedContainer.height = "200px" ;
-	decoratedContainer.height = "200px" ;
-	decoratedContainer.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
-	decoratedContainer._createRectangle() ;
+	var ctl = new BABYLON.GUI.DecoratedContainer( 'decoratedContainer' ) ;
+	ctl.width = "300px" ;
+	ctl.height = "200px" ;
+	ctl.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
+	ctl.backgroundColor = 'green' ;
+	ctl.borderColor = 'orange' ;
+	ctl.borderThickness = 8 ;
+	ctl.cornerRadius = 4 ;
+	
+	//ctl._createRectangle() ;
 
-	advancedTexture.addControl( decoratedContainer ) ;
+	advancedTexture.addControl( ctl ) ;
 
 	return scene ;
 }
