@@ -31,8 +31,8 @@
 
 
 
-//const VG = require( './VG.js' ) ;
-//const svgKit = require( 'svg-kit' ) ;
+const VG = require( './VG.js' ) ;
+
 const Promise = require( 'seventh' ) ;
 
 
@@ -46,6 +46,9 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 	_borderColor = null ;
 	_borderThickness = null ;
 	_cornerRadius = null ;
+	
+	_source = null ;
+	_stretch = VG.STRETCH_FILL ;
 
 	static RECTANGLE = 0 ;
 	static IMAGE = 1 ;
@@ -121,19 +124,41 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 			this._decoration.thickness = this._cornerRadius ;
 		}
 	}
+	
+	get source() { return this._source ; }
+	set source( v ) {
+		this._source = v || null ;
+		if ( this._decoration && this._type === DecoratedContainer.IMAGE ) {
+			this._decoration.source = this._source ;
+		}
+	}
+
+	get stretch() { return this._stretch ; }
+	set stretch( v ) {
+		this._stretch = v || VG.STRETCH_FILL ;
+		if ( this._decoration && this._type === DecoratedContainer.IMAGE || this._type === DecoratedContainer.VG ) {
+			this._decoration.stretch = this._stretch ;
+		}
+	}
 
 	_createDecorationNow() {
 		switch ( this._type ) {
 			case DecoratedContainer.RECTANGLE :
-				return this._createRectangle() ;
+				this._createRectangle() ;
+				break ;
 			case DecoratedContainer.IMAGE :
-				return this._createImage() ;
+				this._createImage() ;
+				break ;
 			case DecoratedContainer.VG :
-				return this._createVg() ;
+				this._createVg() ;
+				break ;
 			default :
 				this.decoration = null ;
 				break ;
 		}
+
+		// Should return a Promise ATM
+		return Promise.resolved ;
 	}
 
 	_setRectangleProperties( rect = this._decoration ) {
@@ -155,15 +180,14 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 	_setImageProperties( image = this._decoration ) {
 		image.width = this._width ;
 		image.height = this._height ;
-		image.stretch = BABYLON.GUI.Image.STRETCH_NINE_PATCH ;
+		image.stretch = this._stretch ;
+		image.source = this._source ;
 	}
 
 	_createImage() {
-		var image = new BABYLON.GUI.Image( this.name + ':image' , this._imageUrl ) ;
-		image.width = this._width ;
-		image.height = this._height ;
-		image.stretch = BABYLON.GUI.Image.STRETCH_NINE_PATCH ;
-
+		//var image = new BABYLON.GUI.Image( this.name + ':image' , this._source ) ;
+		var image = new BABYLON.GUI.Image( this.name + ':image' ) ;
+		this._setImageProperties( image ) ;
 		// Call the setter
 		this.decoration = image ;
 	}
@@ -176,7 +200,7 @@ BABYLON.GUI.DecoratedContainer = DecoratedContainer ;
 BABYLON.RegisterClass( 'BABYLON.GUI.DecoratedContainer' , DecoratedContainer ) ;
 
 
-},{"seventh":13}],2:[function(require,module,exports){
+},{"./VG.js":3,"seventh":13}],2:[function(require,module,exports){
 /*
 	Babylon Game GUI
 

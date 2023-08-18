@@ -36,13 +36,19 @@ async function createScene() {
 	ctl.width = "300px" ;
 	ctl.height = "200px" ;
 	ctl.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
+	
+	/*
 	ctl.backgroundColor = 'green' ;
 	ctl.borderColor = 'orange' ;
 	ctl.borderThickness = 8 ;
 	ctl.cornerRadius = 4 ;
+	//*/
 	
-	//ctl._createRectangle() ;
-
+	//*
+	ctl.type = BABYLON.GUI.DecoratedContainer.IMAGE ;
+	ctl.source = "/sample/9p.png" ;
+	//*/
+	
 	advancedTexture.addControl( ctl ) ;
 
 	return scene ;
