@@ -33,8 +33,8 @@ async function createScene() {
 	var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI( 'UI' ) ;
 
 	var ctl = new BABYLON.GUI.DecoratedContainer( 'decoratedContainer' ) ;
-	ctl.width = "300px" ;
-	ctl.height = "200px" ;
+	ctl.width = "700px" ;
+	ctl.height = "250px" ;
 	ctl.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
 	
 	/*
@@ -47,10 +47,16 @@ async function createScene() {
 	//*
 	ctl.type = BABYLON.GUI.DecoratedContainer.IMAGE ;
 	ctl.source = "/sample/9p.png" ;
+	ctl.stretch = BABYLON.GUI.Image.STRETCH_NINE_PATCH ;
+	let sliceMargin = 70 ;
+	ctl.sliceLeft = sliceMargin ;
+	ctl.sliceTop = sliceMargin ;
+	ctl.sliceRight = 256 - sliceMargin ;
+	ctl.sliceBottom = 256 - sliceMargin ;
 	//*/
-	
-	advancedTexture.addControl( ctl ) ;
 
+	advancedTexture.addControl( ctl ) ;
+	
 	return scene ;
 }
 
