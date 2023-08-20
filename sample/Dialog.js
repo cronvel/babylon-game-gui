@@ -3,6 +3,8 @@
 
 /* global BABYLON GAMEGUI */
 
+const svgKit = GAMEGUI.svgKit ;
+
 
 
 async function createScene() {
@@ -30,39 +32,52 @@ async function createScene() {
 	// GUI
 	var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI( 'UI' ) ;
 
-	var button1 = BABYLON.GUI.Button.CreateSimpleButton( "but1" , "Click Me" ) ;
-	button1.width = "150px" ;
-	button1.height = "40px" ;
-	button1.color = "white" ;
-	button1.cornerRadius = 20 ;
-	button1.background = "green" ;
-	button1.onPointerUpObservable.add( () => {
-		alert( "button clicked!" ) ;
-	} ) ;
-	advancedTexture.addControl( button1 ) ;
-
-	//console.log( GAMEGUI , BABYLON.GUI ) ;
 	svgKit.fontLib.setFontUrl( 'serif' , './serif.ttf' ) ;
 	svgKit.fontLib.setFontUrl( 'serif' , 'italic' , './serif-italic.ttf' ) ;
 	svgKit.fontLib.setFontUrl( 'serif' , 'bold' , './serif-bold.ttf' ) ;
 	svgKit.fontLib.setFontUrl( 'serif' , 'bold' , 'italic' , './serif-bold+italic.ttf' ) ;
-	await svgKit.fontLib.preloadFontFamily( 'serif' ) ;
-	console.log( "OK!" ) ;
 
-	//var vg = createTestVg() ;
-	var dialog = new BABYLON.GUI.Dialog( 'dialog' ) ;
-	dialog.markupText = "Hello world!" ;
-	//dialog.width = vg.viewBox.width + "px" ;
-	//dialog.height = vg.viewBox.height + "px" ;
-	dialog.width = "300px" ;
-	dialog.height = "200px" ;
-	//dialog.stretch = BABYLON.GUI.VG.STRETCH_UNIFORM ;
-	dialog.stretch = BABYLON.GUI.VG.STRETCH_EXTEND ; dialog.autoScale = true ;
-	dialog.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
-	dialog.onPointerUpObservable.add( () => {
-		alert( "dialog clicked!" ) ;
-	} ) ;
-	advancedTexture.addControl( dialog ) ;
+	var ctl = new BABYLON.GUI.Dialog( 'dialog' ) ;
+	ctl.width = "700px" ;
+	ctl.height = "250px" ;
+	ctl.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
+	
+	/*
+	ctl.backgroundColor = 'green' ;
+	ctl.borderColor = 'orange' ;
+	ctl.borderThickness = 8 ;
+	ctl.cornerRadius = 4 ;
+	//*/
+	
+	//*
+	ctl.type = BABYLON.GUI.DecoratedContainer.IMAGE ;
+	ctl.source = "/sample/9p.png" ;
+	ctl.stretch = BABYLON.GUI.Image.STRETCH_NINE_PATCH ;
+	let sliceMargin = 70 ;
+	ctl.sliceLeft = sliceMargin ;
+	ctl.sliceTop = sliceMargin ;
+	ctl.sliceRight = 256 - sliceMargin ;
+	ctl.sliceBottom = 256 - sliceMargin ;
+	//*/
+
+    ctl.markupText = "^GHello^ ^/my^ ^+friend^:, ^+^/stay^ ^[bgBlue]awhile^ and ^_listen^:..." ;
+    ctl.textWrapping = "wordWrap" ;
+    ctl.textAttr = {
+        fontSize: 30 ,
+        color: '#777' ,
+        outline: true ,
+        frameCornerRadius: '0.2em' ,
+        frameOutlineWidth: '0.1em'
+        //outlineColor: '#afa' ,
+        //lineOutline: true ,
+        //lineColor: '#559'
+    } ;
+    ctl.debugContainer = true ;
+    ctl.clip = false ;
+    ctl.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
+    ctl.autoScale = true ;
+	
+	advancedTexture.addControl( ctl ) ;
 
 	return scene ;
 }

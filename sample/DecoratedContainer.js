@@ -3,7 +3,7 @@
 
 /* global BABYLON GAMEGUI */
 
-var svgKit = GAMEGUI.svgKit ;
+const svgKit = GAMEGUI.svgKit ;
 
 
 
