@@ -183,40 +183,41 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 	_createDecorationNow() {
 		switch ( this._type ) {
 			case DecoratedContainer.RECTANGLE :
-				this._createRectangle() ;
+				this._createRectangleNow() ;
 				break ;
 			case DecoratedContainer.IMAGE :
-				this._createImage() ;
+				this._createImageNow() ;
 				break ;
 			case DecoratedContainer.VG :
-				this._createVg() ;
+				this._createVgNow() ;
 				break ;
 			default :
 				this.decoration = null ;
 				break ;
 		}
 
-		// Should return a Promise ATM
 		return Promise.resolved ;
 	}
 
-	_setRectangleProperties( rect = this._decoration ) {
+	_setRectanglePropertiesNow( rect = this._decoration ) {
 		rect.width = this._width ;
 		rect.height = this._height ;
 		rect.background = this._backgroundColor ;
 		rect.color = this._borderColor ;
 		rect.thickness = this._borderThickness ;
 		rect.cornerRadius = this._cornerRadius ;
+		return Promise.resolved ;
 	}
 
-	_createRectangle() {
+	_createRectangleNow() {
 		var rect = new BABYLON.GUI.Rectangle( this.name + ':rectangle' , this._imageUrl ) ;
-		this._setRectangleProperties( rect ) ;
+		this._setRectanglePropertiesNow( rect ) ;
 		// Call the setter
 		this.decoration = rect ;
+		return Promise.resolved ;
 	}
 
-	_setImageProperties( image = this._decoration ) {
+	_setImagePropertiesNow( image = this._decoration ) {
 		image.width = this._width ;
 		image.height = this._height ;
 		image.source = this._source ;
@@ -226,18 +227,22 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		image.sliceRight = this._sliceRight ;
 		image.sliceTop = this._sliceTop ;
 		image.sliceBottom = this._sliceBottom ;
+		return Promise.resolved ;
 	}
 
-	_createImage() {
+	_createImageNow() {
 		//var image = new BABYLON.GUI.Image( this.name + ':image' , this._source ) ;
 		var image = new BABYLON.GUI.Image( this.name + ':image' ) ;
-		this._setImageProperties( image ) ;
+		this._setImagePropertiesNow( image ) ;
 		// Call the setter
 		this.decoration = image ;
+		return Promise.resolved ;
 	}
 }
 
 DecoratedContainer.prototype._createDecoration = Promise.debounceUpdate( { waitNextTick: true } , DecoratedContainer.prototype._createDecorationNow ) ;
+DecoratedContainer.prototype._setRectangleProperties = Promise.debounceUpdate( { waitNextTick: true } , DecoratedContainer.prototype._setRectanglePropertiesNow ) ;
+DecoratedContainer.prototype._setImageProperties = Promise.debounceUpdate( { waitNextTick: true } , DecoratedContainer.prototype._setImagePropertiesNow ) ;
 
 module.exports = DecoratedContainer ;
 BABYLON.GUI.DecoratedContainer = DecoratedContainer ;
@@ -286,9 +291,13 @@ const Promise = require( 'seventh' ) ;
 
 
 class Dialog extends DecoratedContainer {
+	_text = null ;
+	_markupText = null ;
+	_structuredText = null ;
+	
 	constructor( name ) {
 		super( name ) ;
-		this.createContent() ;
+		this._createContent() ;
 	}
 
 	dispose() {
@@ -297,9 +306,12 @@ class Dialog extends DecoratedContainer {
 
 	_getTypeName() { return "Dialog" ; }
 	
-	get markupText() { return this._content?.markupText ; }
+	get markupText() { return this._markupText ; }
 	set markupText( _markupText ) {
-		if ( this._content ) { this._content.markupText = _markupText ; }
+		if ( this._markupText === _markupText ) { return ; }
+		this._markupText = _markupText ;
+		if ( this._markupText ) { this._text = this._structuredText = null ; }
+		this._setContentProperties() ;
 	}
 
 	/*
@@ -321,14 +333,23 @@ class Dialog extends DecoratedContainer {
 	}
 	*/
 
+	_setContentPropertiesNow( content = this._content ) {
+		content.width = this._width ;
+		content.height = this._height ;
+		content.markupText = this._markupText ;
+		return Promise.resolved ;
+	}
+
 	_createContentNow() {
 		var flowingText = new FlowingText( this.name + ':flowingText' ) ;
-		this._setContentProperties( flowingText ) ;
+		this._setContentPropertiesNow( flowingText ) ;
 		// Call the setter
 		this.content = flowingText ;
+		return Promise.resolved ;
 	}
 }
 
+Dialog.prototype._setContentProperties = Promise.debounceUpdate( { waitNextTick: true } , Dialog.prototype._setContentPropertiesNow ) ;
 Dialog.prototype._createContent = Promise.debounceUpdate( { waitNextTick: true } , Dialog.prototype._createContentNow ) ;
 
 module.exports = Dialog ;
