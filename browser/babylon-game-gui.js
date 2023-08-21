@@ -50,10 +50,9 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 	_source = null ;
 	_stretch = VG.STRETCH_FILL ;
 	_sliceLeft = null ;
-	_sliceRight = null ;
 	_sliceTop = null ;
+	_sliceRight = null ;
 	_sliceBottom = null ;
-
 
 	static RECTANGLE = 0 ;
 	static IMAGE = 1 ;
@@ -71,6 +70,44 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 	}
 
 	_getTypeName() { return "DecoratedContainer" ; }
+	
+	get width() { return super.width ; }
+	set width( w ) {
+		super.width = w ;
+		if ( this._content ) {
+			this._content.width = w ;
+		}
+	}
+
+	get height() { return super.height ; }
+	set height( h ) {
+		super.height = h ;
+		if ( this._content ) {
+			this._content.height = h ;
+		}
+	}
+
+	/*
+	get paddingLeft() { return this._paddingLeft ; }
+	set paddingLeft( v ) {
+		this._paddingLeft = v || 0 ;
+	}
+
+	get paddingTop() { return this._paddingTop ; }
+	set paddingTop( v ) {
+		this._paddingTop = v || 0 ;
+	}
+
+	get paddingRight() { return this._paddingRight ; }
+	set paddingRight( v ) {
+		this._paddingRight = v || 0 ;
+	}
+
+	get paddingBottom() { return this._paddingBottom ; }
+	set paddingBottom( v ) {
+		this._paddingBottom = v || 0 ;
+	}
+	*/
 
 	get decoration() { return this._decoration ; }
 	set decoration( control ) {
@@ -156,19 +193,19 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		}
 	}
 
-	get sliceRight() { return this._sliceRight ; }
-	set sliceRight( v ) {
-		this._sliceRight = v || null ;
-		if ( this._decoration && this._type === DecoratedContainer.IMAGE || this._type === DecoratedContainer.VG ) {
-			this._decoration.sliceRight = this._sliceRight ;
-		}
-	}
-
 	get sliceTop() { return this._sliceTop ; }
 	set sliceTop( v ) {
 		this._sliceTop = v || null ;
 		if ( this._decoration && this._type === DecoratedContainer.IMAGE || this._type === DecoratedContainer.VG ) {
 			this._decoration.sliceTop = this._sliceTop ;
+		}
+	}
+
+	get sliceRight() { return this._sliceRight ; }
+	set sliceRight( v ) {
+		this._sliceRight = v || null ;
+		if ( this._decoration && this._type === DecoratedContainer.IMAGE || this._type === DecoratedContainer.VG ) {
+			this._decoration.sliceRight = this._sliceRight ;
 		}
 	}
 
@@ -303,18 +340,6 @@ class Dialog extends DecoratedContainer {
 
 	_getTypeName() { return "Dialog" ; }
 	
-	get width() { return super.width ; }
-	set width( w ) {
-		super.width = w ;
-		this._content.width = w ;
-	}
-
-	get height() { return super.height ; }
-	set height( h ) {
-		super.height = h ;
-		this._content.height = h ;
-	}
-
 	get markupText() { return this._content.markupText ; }
 	set markupText( _markupText ) { this._content.markupText = _markupText ; }
 
