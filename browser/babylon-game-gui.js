@@ -312,7 +312,7 @@ class Dialog extends DecoratedContainer {
 	get height() { return super.height ; }
 	set height( h ) {
 		super.height = h ;
-		this._content.width = h ;
+		this._content.height = h ;
 	}
 
 	get markupText() { return this._content.markupText ; }
@@ -333,17 +333,6 @@ class Dialog extends DecoratedContainer {
 		v = !! v ;
 		if ( this._autoScale === v ) { return ; }
 		this._autoScale = v ;
-		if ( this._autoScale && this._vgRendered ) { this.synchronizeSizeWithContent() ; }
-
-		if ( this._autoScale && this._vg ) {
-			this._vgFlowingText.getContentBoundingBox().then( bbox => {
-				this._vg.set( {
-					viewBox: {
-						x: 0 , y: 0 , width: this.widthInPixels , height: Math.min( bbox.height , this.heightInPixels )
-					}
-				} ) ;
-			} ) ;
-		}
 	}
 	*/
 
@@ -430,29 +419,13 @@ class FlowingText extends VG {
 	get width() { return super.width ; }
 	set width( w ) {
 		super.width = w ;
-		if ( this._autoScale && this._vg ) {
-			this._vgFlowingText.getContentBoundingBox().then( bbox => {
-				this._vg.set( {
-					viewBox: {
-						x: 0 , y: 0 , width: this.widthInPixels , height: Math.min( bbox.height , this.heightInPixels )
-					}
-				} ) ;
-			} ) ;
-		}
+		if ( this._autoScale ) { this._adaptVgSizeNow() ; }
 	}
 
 	get height() { return super.height ; }
 	set height( h ) {
 		super.height = h ;
-		if ( this._autoScale && this._vg ) {
-			this._vgFlowingText.getContentBoundingBox().then( bbox => {
-				this._vg.set( {
-					viewBox: {
-						x: 0 , y: 0 , width: this.widthInPixels , height: Math.min( bbox.height , this.heightInPixels )
-					}
-				} ) ;
-			} ) ;
-		}
+		if ( this._autoScale ) { this._adaptVgSizeNow() ; }
 	}
 
 	get markupText() { return this._markupText ; }
@@ -467,16 +440,9 @@ class FlowingText extends VG {
 		v = !! v ;
 		if ( this._autoScale === v ) { return ; }
 		this._autoScale = v ;
-		if ( this._autoScale && this._vgRendered ) { this.synchronizeSizeWithContent() ; }
-
-		if ( this._autoScale && this._vg ) {
-			this._vgFlowingText.getContentBoundingBox().then( bbox => {
-				this._vg.set( {
-					viewBox: {
-						x: 0 , y: 0 , width: this.widthInPixels , height: Math.min( bbox.height , this.heightInPixels )
-					}
-				} ) ;
-			} ) ;
+		if ( this._autoScale ) {
+			if ( this._vgRendered ) { this.synchronizeSizeWithContent() ; }
+			this._adaptVgSizeNow() ;
 		}
 	}
 
@@ -535,9 +501,24 @@ class FlowingText extends VG {
 		this._vg = vg ;
 		this._afterVgUpdate() ;
 	}
+
+	async _adaptVgSizeNow() {
+		if ( ! this._autoScale || ! this._vg ) { return ; }
+
+		var bbox = await this._vgFlowingText.getContentBoundingBox() ;
+
+		// The VG can be gone by the time we got the bounding box
+		if ( ! this._vg ) { return ; }
+		this._vg.set( {
+			viewBox: {
+				x: 0 , y: 0 , width: this.widthInPixels , height: Math.min( bbox.height , this.heightInPixels )
+			}
+		} ) ;
+	}
 }
 
 FlowingText.prototype._generateVg = Promise.debounceUpdate( { waitNextTick: true } , FlowingText.prototype._generateVgNow ) ;
+FlowingText.prototype._adaptVgSize = Promise.debounceUpdate( { waitNextTick: true } , FlowingText.prototype._adaptVgSizeNow ) ;
 
 module.exports = FlowingText ;
 BABYLON.GUI.FlowingText = FlowingText ;
