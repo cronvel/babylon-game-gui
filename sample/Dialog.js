@@ -40,6 +40,7 @@ async function createScene() {
 	var ctl = new BABYLON.GUI.Dialog( 'dialog' ) ;
 	ctl.width = "700px" ;
 	ctl.height = "250px" ;
+	//ctl.paddingLeft = "50px" ;
 	ctl.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
 	
 	/*

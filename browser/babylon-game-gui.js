@@ -71,6 +71,7 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 
 	_getTypeName() { return "DecoratedContainer" ; }
 	
+	//*
 	get width() { return super.width ; }
 	set width( w ) {
 		super.width = w ;
@@ -109,13 +110,18 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 
 	_updateContentWidth( content = this._content ) {
 		content.width = this.width ;
+		return ;
+		console.warn( "w:" , content.name , this.width , this.widthInPixels , this.widthInPixels - this.paddingLeftInPixels - this.paddingRightInPixels ) ;
 		//content.widthInPixels = this.widthInPixels - this.paddingLeftInPixels - this.paddingRightInPixels ;
 	}
 
 	_updateContentHeight( content = this._content ) {
 		content.height = this.height ;
+		return ;
+		console.warn( "h:" , content.name , this.height , this.heightInPixels , this.heightInPixels - this.paddingTopInPixels - this.paddingBottomInPixels ) ;
 		//content.heightInPixels = this.heightInPixels - this.paddingTopInPixels - this.paddingBottomInPixels ;
 	}
+	//*/
 
 	get decoration() { return this._decoration ; }
 	set decoration( control ) {
@@ -338,6 +344,9 @@ class Dialog extends DecoratedContainer {
 		super( name ) ;
 		var content = new FlowingText( this.name + ':flowingText' ) ;
 		content._autoScale = false ;
+		content.width = "100%" ;
+		content.height = "100%" ;
+		content.setPadding( "40px" , "50px" ) ;
 		this.content = content ;
 		//this._createContent() ;
 	}
@@ -367,17 +376,17 @@ class Dialog extends DecoratedContainer {
 		if ( this._autoScale === v ) { return ; }
 		this._autoScale = v ;
 	}
-	*/
 
 	_setContentPropertiesNow( content = this._content ) {
-		/*
-		this._updateContentWidth( content ) ;
-		this._updateContentHeight( content ) ;
-		//*/
-		//*
-		content.width = this._width ;
-		content.height = this._height ;
-		//*/
+		//this._updateContentWidth( content ) ;
+		//this._updateContentHeight( content ) ;
+		//content.width = "100%" ;
+		//content.height = "100%" ;
+		content.width = this.width ;
+		content.height = this.height ;
+		content.left = "100px" ;
+		console.warn( "content:" , content ) ;
+		//content.paddingTop = "100px" ;
 		content.markupText = this._markupText ;
 	}
 
@@ -387,10 +396,11 @@ class Dialog extends DecoratedContainer {
 		// Call the setter
 		this.content = flowingText ;
 	}
+	*/
 }
 
-Dialog.prototype._setContentProperties = Promise.debounceNextTick( Dialog.prototype._setContentPropertiesNow ) ;
-Dialog.prototype._createContent = Promise.debounceNextTick( Dialog.prototype._createContentNow ) ;
+//Dialog.prototype._setContentProperties = Promise.debounceNextTick( Dialog.prototype._setContentPropertiesNow ) ;
+//Dialog.prototype._createContent = Promise.debounceNextTick( Dialog.prototype._createContentNow ) ;
 
 module.exports = Dialog ;
 BABYLON.GUI.Dialog = Dialog ;
@@ -486,8 +496,6 @@ class FlowingText extends VG {
 	}
 
 	async _generateVgNow() {
-		var vg ;
-
 		var params = {
 			x: 0 ,
 			y: 0 ,
@@ -516,43 +524,40 @@ class FlowingText extends VG {
 
 		this._vgFlowingText = new svgKit.VGFlowingText( params ) ;
 
-		if ( this._autoScale ) {
-			let bbox = await this._vgFlowingText.getContentBoundingBox() ;
-
-			vg = new svgKit.VG( {
-				viewBox: {
-					x: 0 , y: 0 , width: this.widthInPixels , height: Math.min( bbox.height , this.heightInPixels )
-				}
-				//invertY: true
-			} ) ;
-		}
-		else {
-			vg = new svgKit.VG( {
-				viewBox: {
-					x: 0 , y: 0 , width: this.widthInPixels , height: this.heightInPixels
-				}
-				//invertY: true
-			} ) ;
-		}
-
-		vg.addEntity( this._vgFlowingText ) ;
-
-		this._vg = vg ;
+		this._vg = new svgKit.VG() ;
+		await this._adaptVgSizeNow() ;
+		this._vg.addEntity( this._vgFlowingText ) ;
 		this._afterVgUpdate() ;
 	}
 
 	async _adaptVgSizeNow() {
-		if ( ! this._autoScale || ! this._vg ) { return ; }
-
-		var bbox = await this._vgFlowingText.getContentBoundingBox() ;
-
-		// The VG can be gone by the time we got the bounding box
 		if ( ! this._vg ) { return ; }
-		this._vg.set( {
-			viewBox: {
-				x: 0 , y: 0 , width: this.widthInPixels , height: Math.min( bbox.height , this.heightInPixels )
-			}
-		} ) ;
+
+		if ( this._autoScale ) {
+			var bbox = await this._vgFlowingText.getContentBoundingBox() ;
+
+			// The VG can be gone by the time we got the bounding box
+			if ( ! this._vg ) { return ; }
+
+			this._vg.set( {
+				viewBox: {
+					x: 0 ,
+					y: 0 ,
+					width: this.widthInPixels - this.paddingLeftInPixels - this.paddingRightInPixels ,
+					height: Math.min( bbox.height , this.heightInPixels - this.paddingTopInPixels - this.paddingBottomInPixels )
+				}
+			} ) ;
+		}
+		else {
+			this._vg.set( {
+				viewBox: {
+					x: 0 ,
+					y: 0 ,
+					width: this.widthInPixels - this.paddingLeftInPixels - this.paddingRightInPixels ,
+					height: this.heightInPixels - this.paddingTopInPixels - this.paddingBottomInPixels
+				}
+			} ) ;
+		}
 	}
 }
 
