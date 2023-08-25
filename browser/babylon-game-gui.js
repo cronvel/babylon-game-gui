@@ -237,6 +237,11 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		// Call the setter
 		this.decoration = image ;
 	}
+	
+	_layout( parentMeasure , context ) {
+		console.warn( "Calling DecoratedContainer _layout()" ) ;
+		return super._layout( parentMeasure , context ) ;
+	}
 }
 
 DecoratedContainer.prototype._createContent = Promise.debounceNextTick( DecoratedContainer.prototype._createContentNow ) ;
@@ -363,20 +368,25 @@ class Dialog extends DecoratedContainer {
 	_createContentNow() {
 		var flowingText = new FlowingText( this.name + ':flowingText' ) ;
 		
-		console.warn( "Debug BF:" , this.width , this.widthInPixels , flowingText.width , flowingText.widthInPixels ) ;
+		console.warn( "Debug BF:" , this.width , this.widthInPixels , flowingText.width , flowingText.widthInPixels , flowingText._host , flowingText._cachedParentMeasure.width ) ;
 		// Call the setter
 		this.content = flowingText ;
-		console.warn( "Debug AFT:" , this.width , this.widthInPixels , flowingText.width , flowingText.widthInPixels ) ;
+		console.warn( "Debug AFT:" , this.width , this.widthInPixels , flowingText.width , flowingText.widthInPixels , flowingText._host , flowingText._cachedParentMeasure.width ) ;
 		Promise.nextTick( () => {
-			console.warn( "Debug AFT NEXT TICK:" , this.width , this.widthInPixels , flowingText.width , flowingText.widthInPixels ) ;
+			console.warn( "Debug AFT NEXT TICK:" , this.width , this.widthInPixels , flowingText.width , flowingText.widthInPixels , flowingText._host , flowingText._cachedParentMeasure.width ) ;
 		} ) ;
 		setTimeout( () => {
-			console.warn( "Debug AFT TIMEOUT:" , this.width , this.widthInPixels , flowingText.width , flowingText.widthInPixels ) ;
+			console.warn( "Debug AFT TIMEOUT:" , this.width , this.widthInPixels , flowingText.width , flowingText.widthInPixels , flowingText._host , flowingText._cachedParentMeasure.width ) ;
 		} , 0 ) ;
 		
 		this._setContentProperties( flowingText ) ;
 		//this._setContentPropertiesNow( flowingText ) ;
 		return Promise.resolved ;
+	}
+	
+	_layout( parentMeasure , context ) {
+		console.warn( "Calling Dialog _layout(), width:" , this.width , this.widthInPixels , this._content?.width , this._content?.widthInPixels ) ;
+		return super._layout( parentMeasure , context ) ;
 	}
 }
 
@@ -551,6 +561,16 @@ class FlowingText extends VG {
 			) ;
 			this._vg.set( { viewBox } ) ;
 		}
+	}
+
+	_layout( parentMeasure , context ) {
+		console.warn( "Calling FlowingText _layout() , width:" , this.width , this.widthInPixels , this._host , this._cachedParentMeasure.width ) ;
+		return super._layout( parentMeasure , context ) ;
+	}
+	
+	_processMeasures( parentMeasure , context ) {
+		console.warn( "!!!!!!! Calling FlowingText _processMeasures() , width:" , this.width , this.widthInPixels , this._host , this._cachedParentMeasure.width ) ;
+		return super._processMeasures( parentMeasure , context ) ;
 	}
 }
 
@@ -754,11 +774,13 @@ class VG extends BABYLON.GUI.Control {
 					if ( this._autoScale ) {
 						this.synchronizeSizeWithContent() ;
 					}
+
 					if ( this.parent && this.parent.parent ) {
 						// Will update root size if root is not the top root
 						this.parent.adaptWidthToChildren = true ;
 						this.parent.adaptHeightToChildren = true ;
 					}
+
 					break ;
 			}
 		}
