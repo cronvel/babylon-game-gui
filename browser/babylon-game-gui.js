@@ -38,7 +38,7 @@ const Promise = require( 'seventh' ) ;
 
 
 class DecoratedContainer extends BABYLON.GUI.Container {
-	_type = null ;
+	_type = DecoratedContainer.RECTANGLE ;
 	_decoration = null ;
 	_content = null ;
 
@@ -54,13 +54,16 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 	_sliceRight = null ;
 	_sliceBottom = null ;
 
+	_contentProperties = {} ;
+
 	static RECTANGLE = 0 ;
 	static IMAGE = 1 ;
 	static VG = 2 ;
 
 	constructor( name ) {
 		super( name ) ;
-		this.type = DecoratedContainer.RECTANGLE ;
+		this._createDecoration() ;
+		this._createContent() ;
 	}
 
 	dispose() {
@@ -71,58 +74,6 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 
 	_getTypeName() { return "DecoratedContainer" ; }
 	
-	//*
-	get width() { return super.width ; }
-	set width( w ) {
-		super.width = w ;
-		if ( this._content ) { this._updateContentWidth() ; }
-	}
-	
-	get height() { return super.height ; }
-	set height( h ) {
-		super.height = h ;
-		if ( this._content ) { this._updateContentHeight() ; }
-	}
-
-	get paddingLeft() { return super.paddingLeft ; }
-	set paddingLeft( v ) {
-		super.paddingLeft = v ;
-		if ( this._content ) { this._updateContentWidth() ; }
-	}
-
-	get paddingTop() { return super.paddingTop ; }
-	set paddingTop( v ) {
-		super.paddingTop = v ;
-		if ( this._content ) { this._updateContentHeight() ; }
-	}
-
-	get paddingRight() { return super.paddingRight ; }
-	set paddingRight( v ) {
-		super.paddingRight = v ;
-		if ( this._content ) { this._updateContentWidth() ; }
-	}
-
-	get paddingBottom() { return super.paddingBottom ; }
-	set paddingBottom( v ) {
-		super.paddingBottom = v ;
-		if ( this._content ) { this._updateContentHeight() ; }
-	}
-
-	_updateContentWidth( content = this._content ) {
-		content.width = this.width ;
-		return ;
-		console.warn( "w:" , content.name , this.width , this.widthInPixels , this.widthInPixels - this.paddingLeftInPixels - this.paddingRightInPixels ) ;
-		//content.widthInPixels = this.widthInPixels - this.paddingLeftInPixels - this.paddingRightInPixels ;
-	}
-
-	_updateContentHeight( content = this._content ) {
-		content.height = this.height ;
-		return ;
-		console.warn( "h:" , content.name , this.height , this.heightInPixels , this.heightInPixels - this.paddingTopInPixels - this.paddingBottomInPixels ) ;
-		//content.heightInPixels = this.heightInPixels - this.paddingTopInPixels - this.paddingBottomInPixels ;
-	}
-	//*/
-
 	get decoration() { return this._decoration ; }
 	set decoration( control ) {
 		control = control || null ;
@@ -231,6 +182,9 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		}
 	}
 
+	// Must be subclassed
+	_createContentNow() {}
+
 	_createDecorationNow() {
 		switch ( this._type ) {
 			case DecoratedContainer.RECTANGLE :
@@ -249,8 +203,8 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 	}
 
 	_setRectanglePropertiesNow( rect = this._decoration ) {
-		rect.width = this._width ;
-		rect.height = this._height ;
+		rect.width = "100%" ;
+		rect.height = "100%" ;
 		rect.background = this._backgroundColor ;
 		rect.color = this._borderColor ;
 		rect.thickness = this._borderThickness ;
@@ -265,8 +219,8 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 	}
 
 	_setImagePropertiesNow( image = this._decoration ) {
-		image.width = this._width ;
-		image.height = this._height ;
+		image.width = "100%" ;
+		image.height = "100%" ;
 		image.source = this._source ;
 		image.stretch = this._stretch ;
 
@@ -285,9 +239,32 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 	}
 }
 
+DecoratedContainer.prototype._createContent = Promise.debounceNextTick( DecoratedContainer.prototype._createContentNow ) ;
 DecoratedContainer.prototype._createDecoration = Promise.debounceNextTick( DecoratedContainer.prototype._createDecorationNow ) ;
 DecoratedContainer.prototype._setRectangleProperties = Promise.debounceNextTick( DecoratedContainer.prototype._setRectanglePropertiesNow ) ;
 DecoratedContainer.prototype._setImageProperties = Promise.debounceNextTick( DecoratedContainer.prototype._setImagePropertiesNow ) ;
+
+DecoratedContainer.createCommonContentGetterSetter = ( prototype , properties ) => {
+	for ( let fromProperty in properties ) {
+		let toProperty = properties[ fromProperty ] ;
+
+		Object.defineProperty( prototype , fromProperty , {
+			get: function() {
+				return this._contentProperties[ toProperty ] ;
+			} ,
+			set: function( value ) {
+				if ( this._content ) {
+					this._content[ toProperty ] = value ;
+					// It may have changed because of content's setter, so we do it in that order
+					this._contentProperties[ toProperty ] = this._content[ toProperty ] ;
+				}
+				else {
+					this._contentProperties[ toProperty ] = value ;
+				}
+			}
+		} ) ;
+	}
+} ;
 
 module.exports = DecoratedContainer ;
 BABYLON.GUI.DecoratedContainer = DecoratedContainer ;
@@ -342,13 +319,6 @@ class Dialog extends DecoratedContainer {
 	
 	constructor( name ) {
 		super( name ) ;
-		var content = new FlowingText( this.name + ':flowingText' ) ;
-		content._autoScale = false ;
-		content.width = "100%" ;
-		content.height = "100%" ;
-		content.setPadding( "40px" , "50px" ) ;
-		this.content = content ;
-		//this._createContent() ;
 	}
 
 	dispose() {
@@ -357,50 +327,67 @@ class Dialog extends DecoratedContainer {
 
 	_getTypeName() { return "Dialog" ; }
 	
-	get markupText() { return this._content.markupText ; }
-	set markupText( _markupText ) { this._content.markupText = _markupText ; }
-
-	/*
-	get markupText() { return this._markupText ; }
-	set markupText( _markupText ) {
-		if ( this._markupText === _markupText ) { return ; }
-		this._markupText = _markupText ;
-		if ( this._markupText ) { this._text = this._structuredText = null ; }
-		this._setContentProperties() ;
-	}
-	//*/
-
 	/*
 	set autoScale( v ) {
 		v = !! v ;
 		if ( this._autoScale === v ) { return ; }
 		this._autoScale = v ;
 	}
+	*/
 
 	_setContentPropertiesNow( content = this._content ) {
-		//this._updateContentWidth( content ) ;
-		//this._updateContentHeight( content ) ;
-		//content.width = "100%" ;
-		//content.height = "100%" ;
-		content.width = this.width ;
-		content.height = this.height ;
-		content.left = "100px" ;
-		console.warn( "content:" , content ) ;
-		//content.paddingTop = "100px" ;
-		content.markupText = this._markupText ;
+		content._autoScale = false ;
+		content.width = "100%" ;
+		content.height = "100%" ;
+		content.setPadding( "40px" , "50px" ) ;
+		content.markupText = this._contentProperties.markupText ;
+
+		content.textWrapping = "wordWrap" ;
+		content.textAttr = {
+			fontSize: 30 ,
+			color: '#777' ,
+			outline: true ,
+			frameCornerRadius: '0.2em' ,
+			frameOutlineWidth: '0.1em'
+			//outlineColor: '#afa' ,
+			//lineOutline: true ,
+			//lineColor: '#559'
+		} ;
+		content.debugContainer = true ;
+		content.clip = false ;
+
+		
+		console.warn( "dialog's content:" , content ) ;
 	}
 
 	_createContentNow() {
 		var flowingText = new FlowingText( this.name + ':flowingText' ) ;
-		this._setContentPropertiesNow( flowingText ) ;
+		
+		console.warn( "Debug BF:" , this.width , this.widthInPixels , flowingText.width , flowingText.widthInPixels ) ;
 		// Call the setter
 		this.content = flowingText ;
+		console.warn( "Debug AFT:" , this.width , this.widthInPixels , flowingText.width , flowingText.widthInPixels ) ;
+		Promise.nextTick( () => {
+			console.warn( "Debug AFT NEXT TICK:" , this.width , this.widthInPixels , flowingText.width , flowingText.widthInPixels ) ;
+		} ) ;
+		setTimeout( () => {
+			console.warn( "Debug AFT TIMEOUT:" , this.width , this.widthInPixels , flowingText.width , flowingText.widthInPixels ) ;
+		} , 0 ) ;
+		
+		this._setContentProperties( flowingText ) ;
+		//this._setContentPropertiesNow( flowingText ) ;
+		return Promise.resolved ;
 	}
-	*/
 }
 
-//Dialog.prototype._setContentProperties = Promise.debounceNextTick( Dialog.prototype._setContentPropertiesNow ) ;
+Dialog.prototype._setContentProperties = Promise.debounceNextTick( Dialog.prototype._setContentPropertiesNow ) ;
 //Dialog.prototype._createContent = Promise.debounceNextTick( Dialog.prototype._createContentNow ) ;
+Dialog.prototype._createContent = Promise.debounceUpdate( { waitFn: () => Promise.resolveTimeout(1000) } , Dialog.prototype._createContentNow ) ;
+
+DecoratedContainer.createCommonContentGetterSetter( Dialog.prototype , {
+	markupText: 'markupText' ,
+	
+} ) ;
 
 module.exports = Dialog ;
 BABYLON.GUI.Dialog = Dialog ;
@@ -539,24 +526,30 @@ class FlowingText extends VG {
 			// The VG can be gone by the time we got the bounding box
 			if ( ! this._vg ) { return ; }
 
-			this._vg.set( {
-				viewBox: {
-					x: 0 ,
-					y: 0 ,
-					width: this.widthInPixels - this.paddingLeftInPixels - this.paddingRightInPixels ,
-					height: Math.min( bbox.height , this.heightInPixels - this.paddingTopInPixels - this.paddingBottomInPixels )
-				}
-			} ) ;
+			let viewBox = {
+				x: 0 ,
+				y: 0 ,
+				width: Math.max( 0 , this.widthInPixels - this.paddingLeftInPixels - this.paddingRightInPixels ) ,
+				height: Math.max( 0 , Math.min( bbox.height , this.heightInPixels - this.paddingTopInPixels - this.paddingBottomInPixels ) )
+			} ;
+			console.warn( "_adaptVgSizeNow():" , viewBox ,
+				this.widthInPixels , this.paddingLeftInPixels , this.paddingRightInPixels ,
+				this.heightInPixels , this.paddingTopInPixels , this.paddingBottomInPixels
+			) ;
+			this._vg.set( { viewBox } ) ;
 		}
 		else {
-			this._vg.set( {
-				viewBox: {
-					x: 0 ,
-					y: 0 ,
-					width: this.widthInPixels - this.paddingLeftInPixels - this.paddingRightInPixels ,
-					height: this.heightInPixels - this.paddingTopInPixels - this.paddingBottomInPixels
-				}
-			} ) ;
+			let viewBox = {
+				x: 0 ,
+				y: 0 ,
+				width: Math.max( 0 , this.widthInPixels - this.paddingLeftInPixels - this.paddingRightInPixels ) ,
+				height: Math.max( 0 , this.heightInPixels - this.paddingTopInPixels - this.paddingBottomInPixels )
+			} ;
+			console.warn( "_adaptVgSizeNow():" , viewBox ,
+				this.widthInPixels , this.paddingLeftInPixels , this.paddingRightInPixels ,
+				this.heightInPixels , this.paddingTopInPixels , this.paddingBottomInPixels
+			) ;
+			this._vg.set( { viewBox } ) ;
 		}
 	}
 }
@@ -674,6 +667,7 @@ class VG extends BABYLON.GUI.Control {
 		this._vgHeight = this._vg.viewBox.height ;
 
 		if ( ! this._offscreenCanvas || this._vgWidth !== this._offscreenCanvas.width || this._vgHeight !== this._offscreenCanvas.height ) {
+			console.warn( "new OffscreenCanvas:" , this._vgWidth , this._vgHeight ) ;
 			this._offscreenCanvas = new OffscreenCanvas( this._vgWidth , this._vgHeight ) ;
 			this._context = this._offscreenCanvas.getContext( '2d' ) ;
 		}

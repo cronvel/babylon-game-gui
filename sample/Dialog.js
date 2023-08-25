@@ -62,6 +62,7 @@ async function createScene() {
 	//*/
 
     ctl.markupText = "^GHello^ ^/my^ ^+friend^:, ^+^/stay^ ^[bgBlue]awhile^ and ^_listen^:..." ;
+    /*
     ctl.textWrapping = "wordWrap" ;
     ctl.textAttr = {
         fontSize: 30 ,
@@ -77,6 +78,7 @@ async function createScene() {
     ctl.clip = false ;
     ctl.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
     ctl.autoScale = true ;
+    */
 	
 	advancedTexture.addControl( ctl ) ;
 

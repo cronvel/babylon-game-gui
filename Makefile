@@ -19,6 +19,9 @@ build: browser
 # Build the browser lib
 browser: browser/babylon-game-gui.js browser/babylon-game-gui.min.js
 
+# Browser build without the minified files
+dev-browser: browser/babylon-game-gui.js
+
 # This run the JsHint & Mocha BDD test, display it to STDOUT & save it to log/mocha.log and log/jshint.log
 test: log/jshint.log log/mocha.log
 

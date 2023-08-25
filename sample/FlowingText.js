@@ -37,10 +37,8 @@ async function createScene() {
 	svgKit.fontLib.setFontUrl( 'serif' , 'italic' , './serif-italic.ttf' ) ;
 	svgKit.fontLib.setFontUrl( 'serif' , 'bold' , './serif-bold.ttf' ) ;
 	svgKit.fontLib.setFontUrl( 'serif' , 'bold' , 'italic' , './serif-bold+italic.ttf' ) ;
-	//await svgKit.fontLib.preloadFontFamily( 'serif' ) ;
 
-	//var vg = createTestVg() ;
-	var flowingText = new BABYLON.GUI.FlowingText( 'text' ) ;
+	var flowingText = new BABYLON.GUI.FlowingText( 'flowingText' ) ;
 	flowingText.markupText = "^GHello^ ^/my^ ^+friend^:, ^+^/stay^ ^[bgBlue]awhile^ and ^_listen^:..." ;
 	flowingText.width = "300px" ;
 	flowingText.height = "200px" ;
@@ -59,15 +57,11 @@ async function createScene() {
 	flowingText.clip = false ;
 	flowingText.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
 	flowingText.autoScale = true ;
-
-	// There are huge troubles because of the asyncness, we should debounce every setter.
-	// Here, moving markupText assignment above autoScale or width/height assignment cause a lot of trouble,
-	// at best we have to call _generateVg() on our own.
-
-	//await flowingText._generateVg() ;
-
 	advancedTexture.addControl( flowingText ) ;
 
 	return scene ;
 }
+
+
+
 
