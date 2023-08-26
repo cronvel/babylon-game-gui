@@ -704,11 +704,23 @@ class VG extends BABYLON.GUI.Control {
 	_afterVgUpdate() {
 		this._vgWidth = this._vg.viewBox.width ;
 		this._vgHeight = this._vg.viewBox.height ;
+		
+		/*
+		if ( ! this._vgWidth || ! this._vgHeight ) {
+			this._vgRendered = false ;
+			return ;
+		}
+		//*/
 
-		if ( ! this._offscreenCanvas || this._vgWidth !== this._offscreenCanvas.width || this._vgHeight !== this._offscreenCanvas.height ) {
+		if ( ! this._offscreenCanvas ) {
 			console.warn( "new OffscreenCanvas:" , this._vgWidth , this._vgHeight ) ;
 			this._offscreenCanvas = new OffscreenCanvas( this._vgWidth , this._vgHeight ) ;
 			this._context = this._offscreenCanvas.getContext( '2d' ) ;
+		}
+		else if ( this._vgWidth !== this._offscreenCanvas.width || this._vgHeight !== this._offscreenCanvas.height ) {
+			console.warn( "resize OffscreenCanvas:" , this._vgWidth , this._vgHeight ) ;
+			this._offscreenCanvas.width = this._vgWidth ;
+			this._offscreenCanvas.height = this._vgHeight ;
 		}
 		
 		this._renderCanvas() ;
@@ -784,7 +796,6 @@ class VG extends BABYLON.GUI.Control {
 	_processMeasures( parentMeasure , context ) {
 		// From Babylon GUI image.ts
 		if ( this._vgRendered && ! this._isAutoVg ) {
-		//if ( this._vgRendered ) {
 			switch ( this._stretch ) {
 				case VG.STRETCH_NONE :
 				case VG.STRETCH_FILL :
