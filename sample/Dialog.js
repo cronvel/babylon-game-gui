@@ -7,6 +7,11 @@ const svgKit = GAMEGUI.svgKit ;
 
 
 
+var dialog = null ;
+var advancedTexture = null ;
+
+
+
 async function createScene() {
 	// This creates a basic Babylon Scene object (non-mesh)
 	var scene = new BABYLON.Scene( engine ) ;
@@ -30,41 +35,73 @@ async function createScene() {
 	var ground = BABYLON.MeshBuilder.CreateGround( "ground" , { width: 6 , height: 6 } , scene ) ;
 
 	// GUI
-	var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI( 'UI' ) ;
+	advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI( 'UI' ) ;
 
 	svgKit.fontLib.setFontUrl( 'serif' , './serif.ttf' ) ;
 	svgKit.fontLib.setFontUrl( 'serif' , 'italic' , './serif-italic.ttf' ) ;
 	svgKit.fontLib.setFontUrl( 'serif' , 'bold' , './serif-bold.ttf' ) ;
 	svgKit.fontLib.setFontUrl( 'serif' , 'bold' , 'italic' , './serif-bold+italic.ttf' ) ;
 
-	var ctl = new BABYLON.GUI.Dialog( 'dialog' ) ;
-	ctl.width = "700px" ;
-	ctl.height = "250px" ;
-	//ctl.paddingLeft = "50px" ;
-	ctl.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
+	createDialog(
+		"^GHello^ ^/my^ ^+friend^:, ^+^/stay^ ^[bgBlue]awhile^ and ^_listen^:... "
+		+ "Once upon a time, there was a fearsome dragon that was devastating the country..."
+	) ;
+	
+	dialog.onPointerUpObservable.add( () => {
+		createDialog(
+			"But a valiant hero deflected the dragon's fire breath with its holy shield, "
+			+ "and stabbed the dragon's heart with its divine sword... "
+			+ "and the people rejoiced!"
+		) ;
+		dialog.onPointerUpObservable.add( () => dismissDialog() ) ;
+	} ) ;
+
+	return scene ;
+}
+
+
+
+function dismissDialog() {
+	if ( dialog ) {
+		advancedTexture.removeControl( dialog ) ;
+		dialog = null ;
+	}
+}
+
+
+
+function createDialog( markupText ) {
+	dismissDialog() ;
+
+	dialog = new BABYLON.GUI.Dialog( 'dialog' ) ;
+	dialog.width = "700px" ;
+	dialog.height = "250px" ;
+	//dialog.paddingLeft = "50px" ;
+	dialog.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
 	
 	/*
-	ctl.backgroundColor = 'green' ;
-	ctl.borderColor = 'orange' ;
-	ctl.borderThickness = 8 ;
-	ctl.cornerRadius = 4 ;
+	dialog.backgroundColor = 'green' ;
+	dialog.borderColor = 'orange' ;
+	dialog.borderThickness = 8 ;
+	dialog.cornerRadius = 4 ;
 	//*/
 	
 	//*
-	ctl.type = BABYLON.GUI.DecoratedContainer.IMAGE ;
-	ctl.source = "/sample/9p.png" ;
-	ctl.stretch = BABYLON.GUI.Image.STRETCH_NINE_PATCH ;
+	dialog.type = BABYLON.GUI.DecoratedContainer.IMAGE ;
+	dialog.source = "/sample/9p.png" ;
+	dialog.stretch = BABYLON.GUI.Image.STRETCH_NINE_PATCH ;
 	let sliceMargin = 70 ;
-	ctl.sliceLeft = sliceMargin ;
-	ctl.sliceTop = sliceMargin ;
-	ctl.sliceRight = 256 - sliceMargin ;
-	ctl.sliceBottom = 256 - sliceMargin ;
+	dialog.sliceLeft = sliceMargin ;
+	dialog.sliceTop = sliceMargin ;
+	dialog.sliceRight = 256 - sliceMargin ;
+	dialog.sliceBottom = 256 - sliceMargin ;
 	//*/
 
-    ctl.markupText = "^GHello^ ^/my^ ^+friend^:, ^+^/stay^ ^[bgBlue]awhile^ and ^_listen^:..." ;
+    dialog.markupText = markupText ;
+
     /*
-    ctl.textWrapping = "wordWrap" ;
-    ctl.textAttr = {
+    dialog.textWrapping = "wordWrap" ;
+    dialog.textAttr = {
         fontSize: 30 ,
         color: '#777' ,
         outline: true ,
@@ -74,14 +111,12 @@ async function createScene() {
         //lineOutline: true ,
         //lineColor: '#559'
     } ;
-    ctl.debugContainer = true ;
-    ctl.clip = false ;
-    ctl.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
-    ctl.autoScale = true ;
+    dialog.debugContainer = true ;
+    dialog.clip = false ;
+    dialog.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
+    dialog.autoScale = true ;
     */
 	
-	advancedTexture.addControl( ctl ) ;
-
-	return scene ;
+	advancedTexture.addControl( dialog ) ;
 }
 

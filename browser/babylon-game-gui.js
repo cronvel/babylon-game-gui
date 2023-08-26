@@ -238,10 +238,12 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		this.decoration = image ;
 	}
 	
+	/*
 	_layout( parentMeasure , context ) {
 		console.warn( "Calling DecoratedContainer _layout()" ) ;
 		return super._layout( parentMeasure , context ) ;
 	}
+	*/
 }
 
 DecoratedContainer.prototype._createContent = Promise.debounceNextTick( DecoratedContainer.prototype._createContentNow ) ;
@@ -368,31 +370,25 @@ class Dialog extends DecoratedContainer {
 	_createContentNow() {
 		var flowingText = new FlowingText( this.name + ':flowingText' ) ;
 		
-		console.warn( "Debug BF:" , this.width , this.widthInPixels , flowingText.width , flowingText.widthInPixels , flowingText._host , flowingText._cachedParentMeasure.width ) ;
 		// Call the setter
 		this.content = flowingText ;
-		console.warn( "Debug AFT:" , this.width , this.widthInPixels , flowingText.width , flowingText.widthInPixels , flowingText._host , flowingText._cachedParentMeasure.width ) ;
-		Promise.nextTick( () => {
-			console.warn( "Debug AFT NEXT TICK:" , this.width , this.widthInPixels , flowingText.width , flowingText.widthInPixels , flowingText._host , flowingText._cachedParentMeasure.width ) ;
-		} ) ;
-		setTimeout( () => {
-			console.warn( "Debug AFT TIMEOUT:" , this.width , this.widthInPixels , flowingText.width , flowingText.widthInPixels , flowingText._host , flowingText._cachedParentMeasure.width ) ;
-		} , 0 ) ;
 		
-		this._setContentProperties( flowingText ) ;
-		//this._setContentPropertiesNow( flowingText ) ;
-		return Promise.resolved ;
+		//this._setContentProperties( flowingText ) ;
+		this._setContentPropertiesNow( flowingText ) ;
+		//return Promise.resolved ;
 	}
 	
+	/*
 	_layout( parentMeasure , context ) {
 		console.warn( "Calling Dialog _layout(), width:" , this.width , this.widthInPixels , this._content?.width , this._content?.widthInPixels ) ;
 		return super._layout( parentMeasure , context ) ;
 	}
+	*/
 }
 
 Dialog.prototype._setContentProperties = Promise.debounceNextTick( Dialog.prototype._setContentPropertiesNow ) ;
-//Dialog.prototype._createContent = Promise.debounceNextTick( Dialog.prototype._createContentNow ) ;
-Dialog.prototype._createContent = Promise.debounceUpdate( { waitFn: () => Promise.resolveTimeout(1000) } , Dialog.prototype._createContentNow ) ;
+Dialog.prototype._createContent = Promise.debounceNextTick( Dialog.prototype._createContentNow ) ;
+//Dialog.prototype._createContent = Promise.debounceUpdate( { waitFn: () => Promise.resolveTimeout(1000) } , Dialog.prototype._createContentNow ) ;
 
 DecoratedContainer.createCommonContentGetterSetter( Dialog.prototype , {
 	markupText: 'markupText' ,
@@ -451,6 +447,11 @@ class FlowingText extends VG {
 
 	_vgFlowingText = null ;
 	_vgGenerated = null ;
+
+	_lastWidth = null ;
+	_lastHeight = null ;
+
+	_isAutoVg = true ;
 
 	constructor( name ) {
 		super( name ) ;
@@ -547,6 +548,7 @@ class FlowingText extends VG {
 				this.heightInPixels , this.paddingTopInPixels , this.paddingBottomInPixels
 			) ;
 			this._vg.set( { viewBox } ) ;
+			this._vgFlowingText.set( viewBox ) ;
 		}
 		else {
 			let viewBox = {
@@ -560,16 +562,31 @@ class FlowingText extends VG {
 				this.heightInPixels , this.paddingTopInPixels , this.paddingBottomInPixels
 			) ;
 			this._vg.set( { viewBox } ) ;
+			this._vgFlowingText.set( viewBox ) ;
 		}
 	}
 
+	/*
 	_layout( parentMeasure , context ) {
 		console.warn( "Calling FlowingText _layout() , width:" , this.width , this.widthInPixels , this._host , this._cachedParentMeasure.width ) ;
 		return super._layout( parentMeasure , context ) ;
 	}
-	
+	*/
+
 	_processMeasures( parentMeasure , context ) {
 		console.warn( "!!!!!!! Calling FlowingText _processMeasures() , width:" , this.width , this.widthInPixels , this._host , this._cachedParentMeasure.width ) ;
+		var width = this.widthInPixels ,
+			height = this.heightInPixels ;
+
+		if ( this._lastWidth !== width || this._lastHeight !== height ) {
+			this._lastWidth = width ;
+			this._lastHeight = height ;
+
+			if ( this._vg ) {
+				this._adaptVgSizeNow().then( () => this._afterVgUpdate() ) ;
+			}
+		}
+
 		return super._processMeasures( parentMeasure , context ) ;
 	}
 }
@@ -632,6 +649,8 @@ class VG extends BABYLON.GUI.Control {
 
 	_stretch = VG.STRETCH_FILL ;
 	_autoScale = false ;
+
+	_isAutoVg = false ;		// if set, the VG is produced automatically, e.g. FlowingText
 
 	onRenderedObservable = new Observable() ;
 
@@ -764,7 +783,8 @@ class VG extends BABYLON.GUI.Control {
 
 	_processMeasures( parentMeasure , context ) {
 		// From Babylon GUI image.ts
-		if ( this._vgRendered ) {
+		if ( this._vgRendered && ! this._isAutoVg ) {
+		//if ( this._vgRendered ) {
 			switch ( this._stretch ) {
 				case VG.STRETCH_NONE :
 				case VG.STRETCH_FILL :
