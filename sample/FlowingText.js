@@ -62,6 +62,3 @@ async function createScene() {
 	return scene ;
 }
 
-
-
-

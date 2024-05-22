@@ -43,7 +43,7 @@ async function createScene() {
 	svgKit.fontLib.setFontUrl( 'serif' , 'bold' , 'italic' , './serif-bold+italic.ttf' ) ;
 
 	createDialog(
-		"^GHello^ ^/my^ ^+friend^:, ^+^/stay^ ^[bgBlue]awhile^ and ^_listen^:... "
+		"[Hello]<green> *my* **friend**, ***stay*** [awhile]<bg:blue> and _listen_... "
 		+ "Once upon a time, there was a fearsome dragon that was devastating the country..."
 	) ;
 	
