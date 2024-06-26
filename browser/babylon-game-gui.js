@@ -595,7 +595,7 @@ class FlowingText extends VG {
 	*/
 
 	_processMeasures( parentMeasure , context ) {
-		//console.warn( "!!!!!!! Calling FlowingText _processMeasures() , width:" , this.width , this.widthInPixels , this._host , this._cachedParentMeasure.width ) ;
+		console.warn( "!!!!!!! Calling FlowingText _processMeasures() , width:" , this.width , this.widthInPixels , this._host , this._cachedParentMeasure.width ) ;
 		var width = this.widthInPixels ,
 			height = this.heightInPixels ;
 
@@ -6586,6 +6586,7 @@ const DEFAULT_ATTR = {
 	fontWeight: 'regular' ,
 	fontSize: new Metric( 16 ) ,
 	color: '#000' ,
+	opacity: 1 ,
 	outline: false ,
 	outlineWidth: new Metric( 0.025 , 'em' ) ,
 	outlineColor: '#fff' ,
@@ -6615,6 +6616,7 @@ function TextAttribute( params ) {
 
 	// Styles
 	this.color = null ;
+	this.opacity = null ;
 	this.outline = null ;
 	this.outlineWidth = null ;
 	this.outlineColor = null ;
@@ -6636,19 +6638,11 @@ function TextAttribute( params ) {
 	if ( params ) { this.set( params ) ; }
 
 	/*
-	// Other attributes not ported yet, from my abandoned StructuredText code PR for BabylonJS
-
-	shadowColor?: string;
-	shadowBlur?: number;
-	shadowOffsetX?: number;
-	shadowOffsetY?: number;
-
-	// When set, change appearance of that part when the mouse is hovering it.
-	// Only property that does not change the metrics should ever be supported here.
-	hover?: {
-		color?: string | ICanvasGradient;
-		underline?: boolean;
-	};
+		Other possible attributes:
+		shadowColor
+		shadowBlur
+		shadowOffsetX
+		shadowOffsetY
 	*/
 }
 
@@ -6667,6 +6661,7 @@ TextAttribute.prototype.set = function( params ) {
 	if ( params.fontSize ) { this.setFontSize( params.fontSize ) ; }
 
 	if ( params.color ) { this.setColor( params.color ) ; }
+	if ( params.opacity ) { this.setOpacity( params.opacity ) ; }
 	if ( params.outline !== undefined ) { this.setOutline( params.outline ) ; }
 	if ( params.outlineWidth ) { this.setOutlineWidth( params.outlineWidth ) ; }
 	if ( params.outlineColor ) { this.setOutlineColor( params.outlineColor ) ; }
@@ -6717,6 +6712,7 @@ TextAttribute.prototype.isEqual = function( to ) {
 			&& TextAttribute.isColorEqual( this.outlineColor , to.outlineColor )
 		) )
 
+		&& this.opacity === to.opacity
 		&& this.underline === to.underline
 		&& this.lineThrough === to.lineThrough
 		&& ( ( ! this.underline && ! this.lineThrough ) || (
@@ -6791,6 +6787,16 @@ TextAttribute.prototype.setColor = function( v ) {
 
 TextAttribute.prototype.getColor = function( inherit = null ) {
 	return this.color ?? inherit?.color ?? DEFAULT_ATTR.color ;
+} ;
+
+
+
+TextAttribute.prototype.setOpacity = function( v ) {
+	this.opacity = typeof v === 'number' ? v : null ;
+} ;
+
+TextAttribute.prototype.getOpacity = function( inherit = null ) {
+	return this.opacity ?? inherit?.opacity ?? DEFAULT_ATTR.opacity ;
 } ;
 
 
@@ -6983,8 +6989,14 @@ TextAttribute.prototype.getTextSvgStyleString = function( inherit = null , relTo
 
 	var str = '' ,
 		color = this.getColor( inherit ) ,
+		opacity = this.getOpacity( inherit ) ,
 		outline = this.getOutline( inherit ) ,
 		outlineWidth ;
+
+	if ( opacity !== null ) {
+		//str += 'fill-opacity:' + opacity + ';' + 'stroke-opacity:' + opacity + ';' ;
+		str += 'opacity:' + opacity + ';' ;
+	}
 
 	str += 'fill:' + misc.colorToString( color , palette ) + ';' ;
 
@@ -7008,8 +7020,15 @@ TextAttribute.prototype.getTextSvgStyle = function( inherit = null , relTo = nul
 
 	var style = {} ,
 		color = this.getColor( inherit ) ,
+		opacity = this.getOpacity( inherit ) ,
 		outline = this.getOutline( inherit ) ,
 		outlineWidth ;
+
+	if ( opacity !== null ) {
+		//style.fillOpacity = opacity ;
+		//style.strokeOpacity = opacity ;
+		style.opacity = opacity ;
+	}
 
 	style.fill = misc.colorToString( color , palette ) ;
 
@@ -7032,8 +7051,14 @@ TextAttribute.prototype.getLineSvgStyleString = function( inherit = null , relTo
 
 	var str = '' ,
 		color = this.getLineColor( inherit ) ,
+		opacity = this.getOpacity( inherit ) ,
 		outline = this.getLineOutline( inherit ) ,
 		outlineWidth ;
+
+	if ( opacity !== null ) {
+		//str += 'fill-opacity:' + opacity + ';' + 'stroke-opacity:' + opacity + ';' ;
+		str += 'opacity:' + opacity + ';' ;
+	}
 
 	str += 'fill:' + misc.colorToString( color , palette ) + ';' ;
 
@@ -7056,8 +7081,15 @@ TextAttribute.prototype.getLineSvgStyle = function( inherit = null , relTo = nul
 
 	var style = {} ,
 		color = this.getLineColor( inherit ) ,
+		opacity = this.getOpacity( inherit ) ,
 		outline = this.getLineOutline( inherit ) ,
 		outlineWidth ;
+
+	if ( opacity !== null ) {
+		//style.fillOpacity = opacity ;
+		//style.strokeOpacity = opacity ;
+		style.opacity = opacity ;
+	}
 
 	style.fill = misc.colorToString( color , palette ) ;
 
@@ -7080,7 +7112,13 @@ TextAttribute.prototype.getFrameSvgStyleString = function( inherit = null , relT
 
 	var str = '' ,
 		color = this.getFrameColor( inherit ) ,
+		opacity = this.getOpacity( inherit ) ,
 		outlineWidth = this.getFrameOutlineWidth( inherit , relTo ) ;
+
+	if ( opacity !== null ) {
+		//str += 'fill-opacity:' + opacity + ';' + 'stroke-opacity:' + opacity + ';' ;
+		str += 'opacity:' + opacity + ';' ;
+	}
 
 	str += 'fill:' + misc.colorToString( color , palette ) + ';' ;
 
@@ -7103,7 +7141,14 @@ TextAttribute.prototype.getFrameSvgStyle = function( inherit = null , relTo = nu
 
 	var style = {} ,
 		color = this.getFrameColor( inherit ) ,
+		opacity = this.getOpacity( inherit ) ,
 		outlineWidth = this.getFrameOutlineWidth( inherit , relTo ) ;
+
+	if ( opacity !== null ) {
+		//style.fillOpacity = opacity ;
+		//style.strokeOpacity = opacity ;
+		style.opacity = opacity ;
+	}
 
 	style.fill = misc.colorToString( color , palette ) ;
 
@@ -8586,6 +8631,7 @@ VGFlowingTextPart.prototype.renderHookForCanvas = async function( canvasCtx , op
 		let pathData = path.toPathData() ;
 		let path2D = new Path2D( pathData ) ;
 		let textStyle = ( this.fxData.attr ?? this.attr ).getTextSvgStyle( parentAttr , fontSize , master?.palette ) ;
+		//console.log( "textStyle:" , textStyle ) ;
 
 		canvas.fillAndStrokeUsingSvgStyle( canvasCtx , textStyle , path2D ) ;
 	}
@@ -10512,6 +10558,8 @@ canvas._fillAndStroke = ( canvasCtx , style , path2d = null , convertColor = fal
 					style.stroke :
 				null ;
 
+	canvasCtx.globalAlpha = style.opacity ?? 1 ;
+
 	if ( fillStyle ) {
 		fill = true ;
 		canvasCtx.fillStyle = fillStyle ;
@@ -11042,6 +11090,37 @@ exports.slowTyping = exports['slow-typing'] = ( params ) => {
 
 
 
+exports.pulse = ( params ) => {
+	var everyTick = + params.everyTick || 1 ,
+		multiply = 1 / ( + params.period || 25 ) ;
+
+	return {
+		margin: {
+			top: 1 , bottom: 1 , left: 1 , right: 1
+		} ,
+		dynamic: {
+			everyTick ,
+			statusData: {
+				base: {
+					eachFrame: dynamicArea => {
+						if ( ! dynamicArea.entity.fxData.attr ) {
+							dynamicArea.entity.fxData.attr = new TextAttribute( dynamicArea.entity.attr ) ;
+						}
+
+						dynamicArea.entity.fxData.attr.setOpacity(
+							mathFn.transform.cycle( multiply * dynamicArea.tick )
+						) ;
+
+						return true ;
+					}
+				}
+			}
+		}
+	} ;
+} ;
+
+
+
 exports.bobbing = ( params ) => {
 	var everyTick = + params.everyTick || 1 ,
 		amplitude = + params.amplitude || 4 ,
@@ -11049,13 +11128,14 @@ exports.bobbing = ( params ) => {
 		marginTopBottom = Math.ceil( amplitude + 1 ) ;
 
 	return {
-		margin: { top: marginTopBottom , bottom: marginTopBottom , left: 1 , right: 1 } ,
+		margin: {
+			top: marginTopBottom , bottom: marginTopBottom , left: 1 , right: 1
+		} ,
 		dynamic: {
 			everyTick ,
 			statusData: {
 				base: {
 					eachFrame: dynamicArea => {
-						//dynamicArea.entity.fxData.y = Math.sin( multiply * dynamicArea.tick ) * amplitude ;
 						dynamicArea.entity.fxData.y = mathFn.transform.cycleAround( multiply * dynamicArea.tick ) * amplitude ;
 						return true ;
 					}
@@ -11141,7 +11221,9 @@ exports.waving = ( params ) => {
 		marginTopBottom = Math.ceil( amplitude + 1 ) ;
 
 	return {
-		margin: { top: marginTopBottom , bottom: marginTopBottom , left: 1 , right: 1 } ,
+		margin: {
+			top: marginTopBottom , bottom: marginTopBottom , left: 1 , right: 1
+		} ,
 		dynamic: {
 			everyTick ,
 			statusData: {
@@ -11374,6 +11456,17 @@ function positiveModulo( a , b ) { return a < 0 ? b + ( a % b ) : a % b ; }
 
 
 const transform = exports.transform = {} ;
+
+transform.cycle = ( t , easingName = 'sine' ) => {
+	let easingFn = easing[ easingName ] || easing.sine ,
+		tLoop = 2 * positiveModulo( t , 1 ) ;
+
+	return (
+		tLoop <= 1 ? easingFn( tLoop ) :
+		tLoop <= 2 ? easingFn( 2 - tLoop ) :
+		0
+	) ;
+} ;
 
 transform.cycleAround = ( t , easingName = 'sine' ) => {
 	let easingFn = easing[ easingName ] || easing.sine ,
@@ -41457,7 +41550,7 @@ unicode.isEmojiModifierCodePoint = code =>
 },{"./json-data/unicode-emoji-width-ranges.json":107}],110:[function(require,module,exports){
 module.exports={
   "name": "svg-kit",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "A SVG toolkit, with its own Vector Graphics structure, multiple renderers (svg text, DOM svg, canvas), and featuring Flowing Text.",
   "main": "lib/svg-kit.js",
   "directories": {

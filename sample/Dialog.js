@@ -44,7 +44,7 @@ async function createScene() {
 
 	createDialog(
 		"[Hello]<green> *my* **friend**, ***stay*** [awhile]<bg:blue> and _listen_... "
-		+ "Once upon a time, there was a [fearsome]<fx:jumpy> dragon that was devastating the country..."
+		+ "Once upon a time, there was a [fearsome]<fx:pulse> dragon that was devastating the country..."
 	) ;
 	
 	dialog.onPointerUpObservable.add( () => {
