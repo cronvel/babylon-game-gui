@@ -246,7 +246,7 @@ function createDialogVg() {
 	let x = 0 ,
 		y = 0 ,
 		width = 600 ,
-		height = 170 ,
+		height = 190 ,
 		padding = 40 ;
 
 	var vg = new svgKit.VG( {
@@ -283,7 +283,9 @@ function createDialogVg() {
 			//lineOutline: true ,
 			//lineColor: '#559'
 		} ,
-		markupText: "[Hello]<green> *my* **friend**, ***stay*** [awhile]<bg:blue> and _listen_..."
+		markupText:
+			"[Hello]<green> *my* **friend**, ***stay*** [awhile]<bg:blue> and _listen_... "
+			+ "I would like to introduce [some nice text effects]<fx:scramble>, nice isn't it?"
 	} ) ;
 	vg.addEntity( vgFlowingText ) ;
 

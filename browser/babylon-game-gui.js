@@ -595,7 +595,7 @@ class FlowingText extends VG {
 	*/
 
 	_processMeasures( parentMeasure , context ) {
-		console.warn( "!!!!!!! Calling FlowingText _processMeasures() , width:" , this.width , this.widthInPixels , this._host , this._cachedParentMeasure.width ) ;
+		//console.warn( "!!!!!!! Calling FlowingText _processMeasures() , width:" , this.width , this.widthInPixels , this._host , this._cachedParentMeasure.width ) ;
 		var width = this.widthInPixels ,
 			height = this.heightInPixels ;
 
@@ -750,9 +750,7 @@ class VG extends BABYLON.GUI.Control {
 		if ( this._dynamicManager ) { return ; }
 		this._dynamicManager = new svgKit.DynamicManager( this._context , this._vg , 50 ) ;
 		this._dynamicManager.manageBrowserCanvas() ;
-		this._dynamicManager.on( 'redraw' , () => {
-			this._renderCanvas() ;
-		} ) ;
+		this._dynamicManager.on( 'redraw' , () => this._markAsDirty() ) ;
 	}
 
 	async _renderCanvasNow() {
