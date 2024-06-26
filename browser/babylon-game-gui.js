@@ -595,7 +595,7 @@ class FlowingText extends VG {
 	*/
 
 	_processMeasures( parentMeasure , context ) {
-		console.warn( "!!!!!!! Calling FlowingText _processMeasures() , width:" , this.width , this.widthInPixels , this._host , this._cachedParentMeasure.width ) ;
+		//console.warn( "!!!!!!! Calling FlowingText _processMeasures() , width:" , this.width , this.widthInPixels , this._host , this._cachedParentMeasure.width ) ;
 		var width = this.widthInPixels ,
 			height = this.heightInPixels ;
 
@@ -11121,7 +11121,7 @@ exports.pulse = ( params ) => {
 
 
 
-exports.bobbing = ( params ) => {
+exports.bob = ( params ) => {
 	var everyTick = + params.everyTick || 1 ,
 		amplitude = + params.amplitude || 4 ,
 		multiply = 1 / ( + params.period || 20 ) ,
@@ -11147,7 +11147,7 @@ exports.bobbing = ( params ) => {
 
 
 
-exports.shaking = ( params ) => {
+exports.quiver = ( params ) => {
 	var everyTick = + params.everyTick || 2 ,
 		amplitude = + params.amplitude || 4 ,
 		margin = Math.ceil( amplitude + 1 ) ;
@@ -11173,7 +11173,7 @@ exports.shaking = ( params ) => {
 
 
 
-exports.scramble = ( params ) => {
+exports.shake = ( params ) => {
 	var everyTick = + params.everyTick || 2 ,
 		xAmplitude = params.amplitude ?? params.xAmplitude ?? 1 ,
 		yAmplitude = params.amplitude ?? params.yAmplitude ?? 2 ;
@@ -11213,7 +11213,7 @@ exports.scramble = ( params ) => {
 
 
 
-exports.waving = ( params ) => {
+exports.wave = ( params ) => {
 	var everyTick = + params.everyTick || 1 ,
 		amplitude = + params.amplitude || 4 ,
 		multiply = 1 / ( + params.period || 20 ) ,
@@ -11256,7 +11256,7 @@ exports.waving = ( params ) => {
 
 
 
-exports.accordion = ( params ) => {
+exports.spring = ( params ) => {
 	var everyTick = + params.everyTick || 1 ,
 		amplitude = + params.amplitude || 4 ,
 		multiply = 1 / ( + params.period || 20 ) ,
@@ -11329,7 +11329,7 @@ exports.jumpy = ( params ) => {
 							let fxData = dynamicArea.entity.fxData.perCharacter[ i ] ;
 							if ( ! fxData ) { fxData = dynamicArea.entity.fxData.perCharacter[ i ] = {} ; }
 
-							fxData.x = xShift - mathFn.transform.goPauseReturnPause( multiply * dynamicArea.tick - i * phaseShift , pause ) * amplitude ;
+							fxData.x = xShift - mathFn.transform.goPauseReturnPause( multiply * dynamicArea.tick - i * phaseShift , pause , pause ) * amplitude ;
 							fxData.y = - mathFn.transform.roundTripAndPause( 2 * ( multiply * dynamicArea.tick - i * phaseShift ) , 2 * pause ) * jumpAmplitude ;
 
 							// If we want to jump only in one direction
@@ -11396,6 +11396,54 @@ exports.rainbow = ( params ) => {
 		}
 	} ;
 } ;
+
+
+
+exports.fade = ( params ) => {
+	var everyTick = + params.everyTick || 1 ,
+		multiply = 1 / ( + params.period || 25 ) ,
+		phaseShift = + params.phaseShift || 1 / 6 ,
+		pause = + params.pause || 2 ;
+
+	return {
+		margin: {
+			top: 1 , bottom: 1 , left: 1 , right: 1
+		} ,
+		dynamic: {
+			everyTick ,
+			statusData: {
+				base: {
+					eachFrame: dynamicArea => {
+						if ( ! dynamicArea.entity.fxData.perCharacter ) { dynamicArea.entity.fxData.perCharacter = [] ; }
+
+						let i = 0 ;
+
+						for ( let char of dynamicArea.entity.text ) {
+							let fxData = dynamicArea.entity.fxData.perCharacter[ i ] ;
+							if ( ! fxData ) {
+								fxData = dynamicArea.entity.fxData.perCharacter[ i ] = {
+									attr: new TextAttribute( dynamicArea.entity.attr )
+								} ;
+							}
+
+							fxData.attr.setOpacity(
+								mathFn.transform.goPauseReturnPause( multiply * dynamicArea.tick - i * phaseShift , pause * 0.25 , pause )
+							) ;
+
+							i ++ ;
+						}
+
+						dynamicArea.entity.fxData.perCharacter.length = i ;
+
+						return true ;
+					}
+				}
+			}
+		}
+	} ;
+} ;
+
+
 
 
 },{"../VGFlowingText/TextAttribute.js":28,"./mathFn.js":43}],43:[function(require,module,exports){
@@ -11490,14 +11538,14 @@ transform.roundTripAndPause = ( t , pause = 1 , easingName = 'sine' ) => {
 	) ;
 } ;
 
-transform.goPauseReturnPause = ( t , pause = 1 , easingName = 'sine' ) => {
+transform.goPauseReturnPause = ( t , pause1 = 1 , pause2 = 1 , easingName = 'sine' ) => {
 	let easingFn = easing[ easingName ] || easing.sine ,
-		tLoop = 2 * positiveModulo( t , 1 + 2 * pause ) ;
+		tLoop = 2 * positiveModulo( t , 1 + pause1 + pause2 ) ;
 
 	return (
 		tLoop <= 1 ? easingFn( tLoop ) :
-		tLoop <= 2 * pause + 1 ? 1 :
-		tLoop <= 2 * pause + 2 ? easingFn( 2 * pause + 2 - tLoop ) :
+		tLoop <= 2 * pause1 + 1 ? 1 :
+		tLoop <= 2 * pause1 + 2 ? easingFn( 2 * pause1 + 2 - tLoop ) :
 		0
 	) ;
 } ;
@@ -41550,7 +41598,7 @@ unicode.isEmojiModifierCodePoint = code =>
 },{"./json-data/unicode-emoji-width-ranges.json":107}],110:[function(require,module,exports){
 module.exports={
   "name": "svg-kit",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "A SVG toolkit, with its own Vector Graphics structure, multiple renderers (svg text, DOM svg, canvas), and featuring Flowing Text.",
   "main": "lib/svg-kit.js",
   "directories": {

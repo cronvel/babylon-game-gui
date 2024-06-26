@@ -285,7 +285,7 @@ function createDialogVg() {
 		} ,
 		markupText:
 			"[Hello]<green> *my* **friend**, ***stay*** [awhile]<bg:blue> and _listen_... "
-			+ "I would like to introduce [some nice text effects]<fx:scramble>, nice isn't it?"
+			+ "I would like to introduce [some nice text effects]<fx:shake>, nice isn't it?"
 	} ) ;
 	vg.addEntity( vgFlowingText ) ;
 
