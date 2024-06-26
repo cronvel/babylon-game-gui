@@ -200,7 +200,7 @@ function createTestVg() {
 			//lineColor: '#559'
 		} ,
 		_text: "Hello my friend, stay awhile and listen..." ,
-		markupText: "^GHello^ ^/my^ ^+friend^:, ^+^/stay^ ^[bgBlue]awhile^ and ^_listen^:..." ,
+		markupText: "[Hello]<green> *my* **friend**, ***stay*** [awhile]<bg:blue> and _listen_..." ,
 		_structuredText: [
 			{ text: "Hello\nworld!\nWhat " } ,
 			{ text: "a wonderful " , attr: { fontSize: '0.7em' , color: '#933' } } ,
@@ -283,7 +283,7 @@ function createDialogVg() {
 			//lineOutline: true ,
 			//lineColor: '#559'
 		} ,
-		markupText: "^GHello^ ^/my^ ^+friend^:, ^+^/stay^ ^[bgBlue]awhile^ and ^_listen^:..."
+		markupText: "[Hello]<green> *my* **friend**, ***stay*** [awhile]<bg:blue> and _listen_..."
 	} ) ;
 	vg.addEntity( vgFlowingText ) ;
 

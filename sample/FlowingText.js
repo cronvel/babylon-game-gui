@@ -39,7 +39,7 @@ async function createScene() {
 	svgKit.fontLib.setFontUrl( 'serif' , 'bold' , 'italic' , './serif-bold+italic.ttf' ) ;
 
 	var flowingText = new BABYLON.GUI.FlowingText( 'flowingText' ) ;
-	flowingText.markupText = "^GHello^ ^/my^ ^+friend^:, ^+^/stay^ ^[bgBlue]awhile^ and ^_listen^:..." ;
+	flowingText.markupText = "[Hello]<green> *my* **friend**, ***stay*** [awhile]<bg:blue> and _listen_..." ;
 	flowingText.width = "300px" ;
 	flowingText.height = "200px" ;
 	flowingText.textWrapping = "wordWrap" ;

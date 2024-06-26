@@ -400,7 +400,7 @@ BABYLON.GUI.Dialog = Dialog ;
 BABYLON.RegisterClass( 'BABYLON.GUI.Dialog' , Dialog ) ;
 
 
-},{"./DecoratedContainer.js":1,"./FlowingText.js":3,"seventh":14,"svg-kit":39}],3:[function(require,module,exports){
+},{"./DecoratedContainer.js":1,"./FlowingText.js":3,"seventh":14,"svg-kit":47}],3:[function(require,module,exports){
 /*
 	Babylon Game GUI
 
@@ -543,7 +543,6 @@ class FlowingText extends VG {
 		else if ( this._text ) { params.text = this._text ; }
 
 		this._vgFlowingText = new svgKit.VGFlowingText( params ) ;
-
 		this._vg = new svgKit.VG() ;
 		await this._adaptVgSizeNow() ;
 		this._vg.addEntity( this._vgFlowingText ) ;
@@ -621,7 +620,7 @@ BABYLON.GUI.FlowingText = FlowingText ;
 BABYLON.RegisterClass( 'BABYLON.GUI.FlowingText' , FlowingText ) ;
 
 
-},{"./VG.js":4,"seventh":14,"svg-kit":39}],4:[function(require,module,exports){
+},{"./VG.js":4,"seventh":14,"svg-kit":47}],4:[function(require,module,exports){
 /*
 	Babylon Game GUI
 
@@ -674,6 +673,8 @@ class VG extends BABYLON.GUI.Control {
 
 	_isAutoVg = false ;		// if set, the VG is produced automatically, e.g. FlowingText
 
+	_dynamicManager = null ;
+
 	onRenderedObservable = new Observable() ;
 
 	// For interoperability, it should follow BABYLON.GUI.Image constants
@@ -723,7 +724,7 @@ class VG extends BABYLON.GUI.Control {
 		this._afterVgUpdate() ;
 	}
 
-	_afterVgUpdate() {
+	async _afterVgUpdate() {
 		this._vgWidth = this._vg.viewBox.width ;
 		this._vgHeight = this._vg.viewBox.height ;
 		
@@ -738,9 +739,22 @@ class VG extends BABYLON.GUI.Control {
 			this._offscreenCanvas.height = this._vgHeight ;
 		}
 		
-		this._renderCanvas() ;
+		await this._renderCanvas() ;
+
+		if ( ! this._dynamicManager && this._vg.isDynamic() ) {
+			this._generateDynamicManager() ;
+		}
 	}
 	
+	_generateDynamicManager() {
+		if ( this._dynamicManager ) { return ; }
+		this._dynamicManager = new svgKit.DynamicManager( this._context , this._vg , 50 ) ;
+		this._dynamicManager.manageBrowserCanvas() ;
+		this._dynamicManager.on( 'redraw' , () => {
+			this._renderCanvas() ;
+		} ) ;
+	}
+
 	async _renderCanvasNow() {
 		this._vgRendered = false ;
 		await this._vg.renderCanvas( this._context ) ;
@@ -878,7 +892,7 @@ exports.DecoratedContainer = require( './DecoratedContainer.js' ) ;
 exports.Dialog = require( './Dialog.js' ) ;
 
 
-},{"./DecoratedContainer.js":1,"./Dialog.js":2,"./FlowingText.js":3,"./VG.js":4,"svg-kit":39}],6:[function(require,module,exports){
+},{"./DecoratedContainer.js":1,"./Dialog.js":2,"./FlowingText.js":3,"./VG.js":4,"svg-kit":47}],6:[function(require,module,exports){
 (function (process,global){(function (){
 (function (global, undefined) {
     "use strict";
@@ -1068,7 +1082,7 @@ exports.Dialog = require( './Dialog.js' ) ;
 }(typeof self === "undefined" ? typeof global === "undefined" ? this : global : self));
 
 }).call(this)}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"_process":94}],7:[function(require,module,exports){
+},{"_process":117}],7:[function(require,module,exports){
 /*
 	Seventh
 
@@ -2776,7 +2790,7 @@ if ( process.browser ) {
 
 
 }).call(this)}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("timers").setImmediate)
-},{"_process":94,"setimmediate":6,"timers":95}],11:[function(require,module,exports){
+},{"_process":117,"setimmediate":6,"timers":118}],11:[function(require,module,exports){
 /*
 	Seventh
 
@@ -3578,7 +3592,7 @@ Promise.resolveSafeTimeout = function( timeout , value ) {
 
 
 }).call(this)}).call(this,require('_process'))
-},{"./seventh.js":14,"_process":94}],13:[function(require,module,exports){
+},{"./seventh.js":14,"_process":117}],13:[function(require,module,exports){
 /*
 	Seventh
 
@@ -3870,22 +3884,44 @@ Promise.onceEventAllOrError = ( emitter , eventName , excludeEvents ) => {
 
 
 
-function BoundingBox( xmin , ymin , xmax , ymax ) {
-	this.xmin = xmin ;
-	this.ymin = ymin ;
-	this.xmax = xmax ;
-	this.ymax = ymax ;
+function BoundingBox( xmin = 0 , ymin = 0 , xmax = 0 , ymax = 0 ) {
+	this.xmin = 0 ;
+	this.ymin = 0 ;
+	this.xmax = 0 ;
+	this.ymax = 0 ;
+
+	if ( xmin && typeof xmin === 'object' ) {
+		this.set( xmin ) ;
+	}
+	else {
+		this.xmin = xmin ;
+		this.ymin = ymin ;
+		this.xmax = xmax ;
+		this.ymax = ymax ;
+	}
 }
 
 module.exports = BoundingBox ;
 
 
 
-BoundingBox.prototype.set = function( xmin , ymin , xmax , ymax ) {
-	this.xmin = xmin ;
-	this.ymin = ymin ;
-	this.xmax = xmax ;
-	this.ymax = ymax ;
+BoundingBox.prototype.set = function( params ) {
+	if ( params instanceof BoundingBox ) {
+		this.xmin = params.xmin ;
+		this.ymin = params.ymin ;
+		this.xmax = params.xmax ;
+		this.ymax = params.ymax ;
+		return ;
+	}
+
+	if ( params.xmin !== undefined ) { this.xmin = params.xmin ; }
+	if ( params.ymin !== undefined ) { this.ymin = params.ymin ; }
+	if ( params.xmax !== undefined ) { this.xmax = params.xmax ; }
+	if ( params.ymax !== undefined ) { this.ymax = params.ymax ; }
+	if ( params.x !== undefined ) { this.x = params.x ; }
+	if ( params.y !== undefined ) { this.y = params.y ; }
+	if ( params.width !== undefined ) { this.width = params.width ; }
+	if ( params.height !== undefined ) { this.height = params.height ; }
 } ;
 
 
@@ -3893,11 +3929,21 @@ BoundingBox.prototype.set = function( xmin , ymin , xmax , ymax ) {
 Object.defineProperties( BoundingBox.prototype , {
 	x: {
 		get: function() { return this.xmin ; } ,
-		set: function( x ) { this.xmin = x ; }
+		set: function( x ) {
+			// Preserve width
+			var width = this.xmax - this.xmin ;
+			this.xmin = x ;
+			this.xmax = this.xmin + width ;
+		}
 	} ,
 	y: {
 		get: function() { return this.ymin ; } ,
-		set: function( y ) { this.ymin = y ; }
+		set: function( y ) {
+			// Preserve height
+			var height = this.ymax - this.ymin ;
+			this.ymin = y ;
+			this.ymax = this.ymin + height ;
+		}
 	} ,
 	width: {
 		get: function() { return this.xmax - this.xmin ; } ,
@@ -3905,7 +3951,7 @@ Object.defineProperties( BoundingBox.prototype , {
 	} ,
 	height: {
 		get: function() { return this.ymax - this.ymin ; } ,
-		set: function( height ) { this.height = this.ymin + height ; }
+		set: function( height ) { this.ymax = this.ymin + height ; }
 	}
 } ) ;
 
@@ -3925,7 +3971,449 @@ BoundingBox.prototype.merge = function( bbox ) {
 } ;
 
 
+
+BoundingBox.prototype.isEqualTo = function( bbox ) {
+	return bbox.xmin === this.xmin && bbox.xmax === this.xmax && bbox.ymin === this.ymin && bbox.ymax === this.ymax ;
+} ;
+
+
+
+BoundingBox.prototype.isInside = function( coords ) {
+	return coords.x >= this.xmin && coords.x <= this.xmax && coords.y >= this.ymin && coords.y <= this.ymax ;
+} ;
+
+
 },{}],17:[function(require,module,exports){
+/*
+	SVG Kit
+
+	Copyright (c) 2017 - 2023 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+//const svgKit = require( './svg-kit.js' ) ;
+const BoundingBox = require( './BoundingBox.js' ) ;
+
+
+
+function DynamicArea( entity , params ) {
+	// A status change will trigger the redraw.
+	// Can be things like on/off, or a tick number for animation.
+	this.availableStatus = new Set() ;	// The list of status that this dynamic area can have
+	this.status = 'base' ;
+
+	this.everyTick = 1 ;	// Divide the DynamicManager's tick by this value before setting up the DynamicArea's tick
+	this.tick = 0 ;		// A tick change will trigger the redraw
+
+	// Should be a Path2D, from time to time, we will have to check if some events are inside the area or not.
+	// The boundingBox act as a fast early out test.
+	this.area = null ;
+	this.boundingBox = new BoundingBox( entity.boundingBox ) ;
+
+	this.statusData = {} ;
+	this.morph = null ;
+	this.toEmit = [] ;	// Pending events to be emited
+
+	this.noRedraw = params.noRedraw || false ;		// If set, this dynamic area is not used to trigger redraw (probably just to send event back)
+	this.outdated = false ;		// If set, redraw is needed
+	this.backgroundImageData = null ;	// Image data stored for the redraw
+	this.useEntityBackgroundImageData = true ;	// Use the entity's image data instead of the dynamic area one
+
+	// Non-enumerable properties (better for displaying the data)
+	Object.defineProperties( this , {
+		entity: { value: entity }	// The entity where to apply things
+	} ) ;
+
+	this.set( params ) ;
+
+	// Force outdated back to false after .set()
+	this.outdated = false ;
+}
+
+module.exports = DynamicArea ;
+
+DynamicArea.prototype.__prototypeUID__ = 'svg-kit/DynamicArea' ;
+DynamicArea.prototype.__prototypeVersion__ = require( '../package.json' ).version ;
+
+
+
+DynamicArea.prototype.set = function( params ) {
+	if ( params.everyTick ) { this.everyTick = + params.everyTick || 1 ; }
+
+	if ( params.statusData && typeof params.statusData === 'object' ) {
+		for ( let statusName in params.statusData ) {
+			this.setStatusMorph( statusName , params.statusData[ statusName ] ) ;
+		}
+	}
+
+	if ( params.status ) { this.setStatus( params.status ) ; }
+
+	if ( params.boundingBox && typeof params.boundingBox === 'object' ) {
+		this.boundingBox.set( params.boundingBox ) ;
+
+		if ( this.useEntityBackgroundImageData && ! this.boundingBox.isEqualTo( this.entity.boundingBox ) ) {
+			this.useEntityBackgroundImageData = false ;
+		}
+	}
+} ;
+
+
+
+DynamicArea.prototype.setStatusMorph = function( statusName , data ) {
+	if ( ! this.availableStatus.has( statusName ) ) { this.availableStatus.add( statusName ) ; }
+
+	if ( data.frames ) { data.modulo = data.frames.reduce( ( v , e ) => v + ( e.ticks || 1 ) , 0 ) ; }
+
+	this.statusData[ statusName ] = data ;
+	if ( ! this.noRedraw ) { this.outdated = true ; }
+} ;
+
+
+
+DynamicArea.prototype.setStatus = function( status ) {
+	if ( status && status !== this.status && this.availableStatus.has( status ) ) {
+		//console.warn( "DynamicArea#setStatus() for:" , this.entity.__prototypeUID__ ) ;
+		this.status = status ;
+		this.updateMorph() ;
+
+		let data = this.statusData[ this.status ] ;
+		if ( data.emit ) {
+			this.toEmit.push( data.emit ) ;
+		}
+	}
+} ;
+
+
+
+DynamicArea.prototype.setTick = function( tick ) {
+	tick = Math.floor( tick / this.everyTick ) ;
+	if ( tick === this.tick ) { return ; }
+	this.tick = tick ;
+	this.updateMorph() ;
+} ;
+
+
+
+DynamicArea.prototype.updateMorph = function() {
+	//console.warn( "> DynamicArea#updateMorph() for:" , this.entity.__prototypeUID__ ) ;
+	var data = this.statusData[ this.status ] ;
+	if ( ! data ) { return ; }
+
+	var morph = null ;
+
+	if ( data.morph ) {
+		morph = data.morph ;
+	}
+	else if ( data.frames ) {
+		let tickModulo = this.tick % data.modulo ;
+		for ( let frame of data.frames ) {
+			if ( tickModulo < frame.ticks ) {
+				morph = frame.morph ;
+				break ;
+			}
+
+			tickModulo -= frame.ticks ;
+		}
+	}
+	else if ( data.eachFrame ) {
+		morph = data.eachFrame( this ) ;
+	}
+	else {
+		return ;
+	}
+
+	if ( morph === true ) {
+		// Special case: force a redraw without changing anything, mostly for special FX, or random translations like tremors
+		if ( ! this.noRedraw ) { this.outdated = true ; }
+		return ;
+	}
+
+	if ( ! morph || morph === this.morph ) { return ; }
+
+	this.morph = morph ;
+	this.entity.set( this.morph ) ;
+
+	if ( ! this.noRedraw ) { this.outdated = true ; }
+	//console.log( "==> " , this.noRedraw , this.outdated ) ;
+} ;
+
+
+
+DynamicArea.prototype.save = function( canvasCtx ) {
+	if ( this.noRedraw ) { return ; }
+
+
+	if ( this.useEntityBackgroundImageData ) {
+		if ( this.entity.backgroundImageUpdate ) { return ; }
+
+		this.entity.backgroundImageData = canvasCtx.getImageData(
+			this.boundingBox.x , this.boundingBox.y ,
+			this.boundingBox.width , this.boundingBox.height
+		) ;
+
+		this.entity.backgroundImageUpdate = true ;
+	}
+	else {
+		this.backgroundImageData = canvasCtx.getImageData(
+			this.boundingBox.x , this.boundingBox.y ,
+			this.boundingBox.width , this.boundingBox.height
+		) ;
+	}
+} ;
+
+
+
+DynamicArea.prototype.restore = function( canvasCtx ) {
+	if ( this.noRedraw ) { return ; }
+
+	if ( this.useEntityBackgroundImageData ) {
+		if ( this.entity.backgroundImageUpdate ) { return ; }
+		canvasCtx.putImageData( this.entity.backgroundImageData , this.boundingBox.x , this.boundingBox.y ) ;
+		this.entity.backgroundImageUpdate = true ;
+	}
+	else {
+		canvasCtx.putImageData( this.backgroundImageData , this.boundingBox.x , this.boundingBox.y ) ;
+	}
+} ;
+
+
+},{"../package.json":110,"./BoundingBox.js":16}],18:[function(require,module,exports){
+/*
+	SVG Kit
+
+	Copyright (c) 2017 - 2023 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+const canvas = require( './canvas.js' ) ;
+
+const LeanEvents = require( 'nextgen-events/lib/LeanEvents.js' ) ;
+const Promise = require( 'seventh' ) ;
+
+
+
+function DynamicManager( ctx , vg , tickTime ) {
+	this.ctx = ctx ;
+	this.vg = vg ;
+	this.tickTime = tickTime || 100 ;
+
+	this.tick = 0 ;
+	this.timer = null ;
+
+	this.canvasListeners = [] ;
+	this.toEmit = [] ;	// Pending events to be emited
+
+	// A debounced redraw
+	this.redraw = Promise.debounceUpdate( { delay: this.tickTime / 2 } , async () => {
+		await this.vg.redrawCanvas( this.ctx ) ;
+		this.emit( 'redraw' ) ;
+	} ) ;
+}
+
+module.exports = DynamicManager ;
+
+DynamicManager.prototype = Object.create( LeanEvents.prototype ) ;
+DynamicManager.prototype.constructor = DynamicManager ;
+DynamicManager.prototype.__prototypeUID__ = 'svg-kit/DynamicManager' ;
+DynamicManager.prototype.__prototypeVersion__ = require( '../package.json' ).version ;
+
+
+
+DynamicManager.prototype.emitPendingEvents = function() {
+	for ( let event of this.toEmit ) {
+		this.emit( event.name , event.data ) ;
+	}
+
+	this.toEmit.length = 0 ;
+} ;
+
+
+
+DynamicManager.prototype.onTick = function() {
+	this.tick ++ ;
+
+	let outdated = false ;
+
+	for ( let dynamic of this.vg.dynamicAreaIterator() ) {
+		dynamic.setTick( this.tick ) ;
+
+		if ( dynamic.outdated ) {
+			outdated = true ;
+		}
+	}
+
+	if ( outdated ) { this.redraw() ; }
+} ;
+
+
+
+DynamicManager.prototype.onPointerMove = function( x , y ) {
+	let outdated = false ;
+	let canvasCoords = canvas.screenToCanvasCoords( this.ctx.canvas , { x , y } ) ;
+	let contextCoords = canvas.canvasToContextCoords( this.ctx , canvasCoords ) ;
+
+	for ( let dynamic of this.vg.dynamicAreaIterator() ) {
+		if ( dynamic.boundingBox.isInside( contextCoords ) ) {
+			if ( dynamic.status !== 'press' ) {
+				dynamic.setStatus( 'hover' ) ;
+			}
+		}
+		else {
+			dynamic.setStatus( 'base' ) ;
+		}
+
+		if ( dynamic.outdated ) {
+			outdated = true ;
+		}
+
+		if ( dynamic.toEmit ) {
+			this.toEmit.push( ... dynamic.toEmit ) ;
+			dynamic.toEmit.length = 0 ;
+		}
+	}
+
+	if ( outdated ) { this.redraw() ; }
+	if ( this.toEmit.length ) { this.emitPendingEvents() ; }
+} ;
+
+
+
+DynamicManager.prototype.onPointerPress = function( x , y ) {
+	let outdated = false ;
+	let canvasCoords = canvas.screenToCanvasCoords( this.ctx.canvas , { x , y } ) ;
+	let contextCoords = canvas.canvasToContextCoords( this.ctx , canvasCoords ) ;
+
+	for ( let dynamic of this.vg.dynamicAreaIterator() ) {
+		if ( dynamic.boundingBox.isInside( contextCoords ) ) {
+			dynamic.setStatus( 'press' ) ;
+		}
+		else {
+			dynamic.setStatus( 'base' ) ;
+		}
+
+		if ( dynamic.outdated ) {
+			outdated = true ;
+		}
+
+		if ( dynamic.toEmit ) {
+			this.toEmit.push( ... dynamic.toEmit ) ;
+			dynamic.toEmit.length = 0 ;
+		}
+	}
+
+	if ( outdated ) { this.redraw() ; }
+	if ( this.toEmit.length ) { this.emitPendingEvents() ; }
+} ;
+
+
+
+DynamicManager.prototype.onPointerRelease = function( x , y ) {
+	let outdated = false ;
+	let canvasCoords = canvas.screenToCanvasCoords( this.ctx.canvas , { x , y } ) ;
+	let contextCoords = canvas.canvasToContextCoords( this.ctx , canvasCoords ) ;
+
+	for ( let dynamic of this.vg.dynamicAreaIterator() ) {
+		if ( dynamic.boundingBox.isInside( contextCoords ) ) {
+			dynamic.setStatus( 'release' ) ;
+		}
+		else {
+			dynamic.setStatus( 'base' ) ;
+		}
+
+		if ( dynamic.outdated ) {
+			outdated = true ;
+		}
+
+		if ( dynamic.toEmit ) {
+			this.toEmit.push( ... dynamic.toEmit ) ;
+			dynamic.toEmit.length = 0 ;
+		}
+	}
+
+	if ( outdated ) { this.redraw() ; }
+	if ( this.toEmit.length ) { this.emitPendingEvents() ; }
+} ;
+
+
+
+DynamicManager.prototype.manageBrowserCanvas = function() {
+	if ( this.timer ) {
+		clearInterval( this.timer ) ;
+		this.timer = null ;
+	}
+
+	this.timer = setInterval( () => this.onTick() , this.tickTime ) ;
+
+	this.addCanvasEventListener( 'mousemove' , event => this.onPointerMove( event.clientX , event.clientY ) ) ;
+	this.addCanvasEventListener( 'mousedown' , event => this.onPointerPress( event.clientX , event.clientY ) ) ;
+	this.addCanvasEventListener( 'mouseup' , event => this.onPointerRelease( event.clientX , event.clientY ) ) ;
+} ;
+
+
+
+DynamicManager.prototype.addCanvasEventListener = function( eventName , listener ) {
+	this.canvasListeners.push( [ eventName , listener ] ) ;
+	this.ctx.canvas.addEventListener( eventName , listener ) ;
+} ;
+
+
+
+DynamicManager.prototype.clearCanvasEventListener = function() {
+	for ( let [ eventName , listener ] of this.canvasListeners ) {
+		this.ctx.canvas.removeEventListener( eventName , listener ) ;
+	}
+
+	this.canvasListeners.length = 0 ;
+} ;
+
+
+},{"../package.json":110,"./canvas.js":40,"nextgen-events/lib/LeanEvents.js":82,"seventh":98}],19:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -4042,7 +4530,7 @@ Metric.isEqual = function( a , b ) {
 } ;
 
 
-},{}],18:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -4094,9 +4582,10 @@ function VG( params ) {
 	this.root = this ;	// This is the root element
 
 	this.id = ( params && params.id ) || 'vg_' + ( autoId ++ ) ;
-	this.viewBox = {
+	this.viewBox = this.boundingBox ;
+	this.viewBox.set( {
 		x: 0 , y: 0 , width: 100 , height: 100
-	} ;
+	} ) ;
 
 	this.palette = DEFAULT_PALETTE ;
 	this.invertY = false ;
@@ -4113,7 +4602,7 @@ VG.prototype = Object.create( VGContainer.prototype ) ;
 VG.prototype.constructor = VG ;
 VG.prototype.__prototypeUID__ = 'svg-kit/VG' ;
 VG.prototype.__prototypeVersion__ = require( '../package.json' ).version ;
-console.warn( "SVG-Kit version (experimental): " + require( '../package.json' ).version ) ;
+console.warn( "SVG-Kit version: " + require( '../package.json' ).version ) ;
 
 
 
@@ -4121,27 +4610,9 @@ VG.prototype.svgTag = 'svg' ;
 
 
 
-VG.prototype.svgAttributes = function( master = this ) {
-	var attr = {
-		xmlns: this.NS ,
-		// xlink is required for image, since href works only on the browser, everywhere else we need xlink:href instead
-		'xmlns:xlink': "http://www.w3.org/1999/xlink" ,
-		viewBox: this.viewBox.x + ' ' + ( this.root.invertY ? - this.viewBox.y - this.viewBox.height : this.viewBox.y ) + ' ' + this.viewBox.width + ' ' + this.viewBox.height
-	} ;
-
-	return attr ;
-} ;
-
-
-
 VG.prototype.set = function( params ) {
-	VGContainer.prototype.set.call( this , params ) ;
-
 	if ( params.viewBox && typeof params.viewBox === 'object' ) {
-		if ( params.viewBox.x !== undefined ) { this.viewBox.x = params.viewBox.x ; }
-		if ( params.viewBox.y !== undefined ) { this.viewBox.y = params.viewBox.y ; }
-		if ( params.viewBox.width !== undefined ) { this.viewBox.width = params.viewBox.width ; }
-		if ( params.viewBox.height !== undefined ) { this.viewBox.height = params.viewBox.height ; }
+		this.viewBox.set( params.viewBox ) ;
 	}
 
 	if ( params.palette && typeof params.palette === 'object' ) {
@@ -4161,6 +4632,8 @@ VG.prototype.set = function( params ) {
 			this.addCssRule( rule ) ;
 		}
 	}
+
+	VGContainer.prototype.set.call( this , params ) ;
 } ;
 
 
@@ -4168,11 +4641,30 @@ VG.prototype.set = function( params ) {
 VG.prototype.export = function( data = {} ) {
 	VGContainer.prototype.export.call( this , data ) ;
 
-	data.viewBox = this.viewBox ;
+	data.viewBox = {
+		x: this.viewBox.x ,
+		y: this.viewBox.y ,
+		width: this.viewBox.width ,
+		height: this.viewBox.height
+	} ;
+
 	if ( this.css.length ) { data.css = this.css ; }
 	data.invertY = this.invertY ;
 
 	return data ;
+} ;
+
+
+
+VG.prototype.svgAttributes = function( master = this ) {
+	var attr = {
+		xmlns: this.NS ,
+		// xlink is required for image, since href works only on the browser, everywhere else we need xlink:href instead
+		'xmlns:xlink': "http://www.w3.org/1999/xlink" ,
+		viewBox: this.viewBox.x + ' ' + ( this.root.invertY ? - this.viewBox.y - this.viewBox.height : this.viewBox.y ) + ' ' + this.viewBox.width + ' ' + this.viewBox.height
+	} ;
+
+	return attr ;
 } ;
 
 
@@ -4196,7 +4688,7 @@ VG.prototype.addCssRule = function( rule ) {
 } ;
 
 
-},{"../package.json":87,"./VGContainer.js":20,"palette-shade":78}],19:[function(require,module,exports){
+},{"../package.json":110,"./VGContainer.js":22,"palette-shade":89}],21:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -4305,7 +4797,7 @@ VGClip.prototype.svgContentGroupAttributes = function() {
 } ;
 
 
-},{"../package.json":87,"./VGContainer.js":20,"./VGEntity.js":22,"./svg-kit.js":39,"array-kit":61}],20:[function(require,module,exports){
+},{"../package.json":110,"./VGContainer.js":22,"./VGEntity.js":24,"./svg-kit.js":47,"array-kit":69}],22:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -4419,6 +4911,16 @@ VGContainer.prototype.removeEntity = function( entity ) {
 
 
 
+VGContainer.prototype.clearEntities = function() {
+	for ( let entity of this.entities ) {
+		entity.root = entity.parent = null ;
+	}
+
+	this.entities.length = 0 ;
+} ;
+
+
+
 VGContainer.prototype.exportMorphLog = function() {
 	var hasInner = false , inner = {} ;
 
@@ -4500,7 +5002,7 @@ VGContainer.prototype.morphSvgDom = function() {
 } ;
 
 
-},{"../package.json":87,"./VGEntity.js":22,"./svg-kit.js":39,"array-kit":61}],21:[function(require,module,exports){
+},{"../package.json":110,"./VGEntity.js":24,"./svg-kit.js":47,"array-kit":69}],23:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -4561,17 +5063,26 @@ VGEllipse.prototype.svgTag = 'ellipse' ;
 
 
 VGEllipse.prototype.set = function( params ) {
-	VGEntity.prototype.set.call( this , params ) ;
+	let bboxChanged = false ;
 
 	// Interop'
-	if ( params.cx !== undefined ) { this.x = params.cx ; }
-	if ( params.cy !== undefined ) { this.y = params.cy ; }
+	if ( params.cx !== undefined ) { this.x = params.cx ; bboxChanged = true ; }
+	if ( params.cy !== undefined ) { this.y = params.cy ; bboxChanged = true ; }
 
-	if ( params.x !== undefined ) { this.x = params.x ; }
-	if ( params.y !== undefined ) { this.y = params.y ; }
-	if ( params.r !== undefined ) { this.rx = this.ry = params.r ; }
-	if ( params.rx !== undefined ) { this.rx = params.rx ; }
-	if ( params.ry !== undefined ) { this.ry = params.ry ; }
+	if ( params.x !== undefined ) { this.x = params.x ; bboxChanged = true ; }
+	if ( params.y !== undefined ) { this.y = params.y ; bboxChanged = true ; }
+	if ( params.r !== undefined ) { this.rx = this.ry = params.r ; bboxChanged = true ; }
+	if ( params.rx !== undefined ) { this.rx = params.rx ; bboxChanged = true ; }
+	if ( params.ry !== undefined ) { this.ry = params.ry ; bboxChanged = true ; }
+
+	if ( bboxChanged ) {
+		this.boundingBox.xmin = this.x - this.rx ;
+		this.boundingBox.xmax = this.x + this.rx ;
+		this.boundingBox.ymin = this.y - this.ry ;
+		this.boundingBox.ymax = this.y + this.ry ;
+	}
+
+	VGEntity.prototype.set.call( this , params ) ;
 } ;
 
 
@@ -4602,7 +5113,7 @@ VGEllipse.prototype.svgAttributes = function( master = this ) {
 
 
 
-VGEllipse.prototype.renderHookForCanvas = function( canvasCtx , options = {} , master = this ) {
+VGEllipse.prototype.renderHookForCanvas = function( canvasCtx , options = {} , isRedraw = false , master = this ) {
 	var yOffset = this.root.invertY ? canvasCtx.canvas.height - 1 - 2 * this.y : 0 ;
 
 	canvasCtx.save() ;
@@ -4620,7 +5131,7 @@ VGEllipse.prototype.renderHookForPath2D = function( path2D , canvasCtx , options
 } ;
 
 
-},{"../package.json":87,"./VGEntity.js":22,"./canvas.js":34}],22:[function(require,module,exports){
+},{"../package.json":110,"./VGEntity.js":24,"./canvas.js":40}],24:[function(require,module,exports){
 (function (process){(function (){
 /*
 	SVG Kit
@@ -4652,8 +5163,12 @@ VGEllipse.prototype.renderHookForPath2D = function( path2D , canvasCtx , options
 
 
 
+const BoundingBox = require( './BoundingBox.js' ) ;
+const DynamicArea = require( './DynamicArea.js' ) ;
+
 const fontLib = require( './fontLib.js' ) ;
 const misc = require( './misc.js' ) ;
+const fx = require( './fx/fx.js' ) ;
 
 const dom = require( 'dom-kit' ) ;
 const camel = require( 'string-kit/lib/camel' ) ;
@@ -4668,6 +5183,7 @@ var autoId = 0 ;
 function VGEntity( params ) {
 	this._id = '_vgEntId_' + ( autoId ++ ) ;	// Used when a VG has to create unique ID automatically (e.g. creating a <clipPath>)
 	this.id = null ;
+	this.boundingBox = new BoundingBox() ;
 	this.class = new Set() ;
 	this.style = {} ;
 	this.data = null ;		// User custom data, e.g. data-* attributes
@@ -4680,6 +5196,12 @@ function VGEntity( params ) {
 	this.morphLog = [] ;
 	this.$element = null ;
 	this.$style = null ;
+
+	this.dynamicAreas = [] ;
+	this.childrenDynamic = null ;	// can be transmitted to some children (pseudoEntities)
+	this.backgroundImageData = null ;	// Image data stored for the redraw, only for dynamic areas having the same bounding box as the entity
+	this.backgroundImageUpdate = false ;	// used for draw/redraw only once
+	this.fxData = {} ;	// Data used for FX (complex dynamic effects)
 
 	// Non-enumerable properties (better for displaying the data)
 	Object.defineProperties( this , {
@@ -4705,6 +5227,8 @@ VGEntity.prototype.svgAttributes = ( master = this ) => ( {} ) ;
 
 VGEntity.prototype.set = function( params ) {
 	if ( params.id !== undefined ) { this.id = params.id || null ; }
+
+	if ( params.boundingBox ) { this.boundingBox.set( params.boundingBox ) ; }
 
 	if ( params.class ) {
 		if ( typeof params.class === 'string' ) {
@@ -4744,9 +5268,33 @@ VGEntity.prototype.set = function( params ) {
 		}
 	}
 
+	if ( params.dynamic !== undefined ) {
+		this.setDynamic( params.dynamic ) ;
+	}
+
+	if ( params.childrenDynamic && ( this.isContainer || this.isPseudoContainer ) ) {
+		this.childrenDynamic = params.childrenDynamic ;
+	}
+
+	// Useful for Spellcast SVG UI, but maybe somewhat deprecated...
 	if ( params.button !== undefined ) { this.button = params.button || null ; }
 	if ( params.hint !== undefined ) { this.hint = params.hint || null ; }
 	if ( params.area !== undefined ) { this.area = params.area || null ; }
+
+	if ( params.fx && typeof params.fx === 'object' ) {
+		for ( let type in params.fx ) {
+			if ( fx[ type ] ) {
+				this.set( fx[ type ]( params.fx[ type ] ) ) ;
+			}
+		}
+	}
+} ;
+
+
+
+VGEntity.prototype.setDynamic = function( dynamic ) {
+	this.clearDynamicAreas() ;
+	if ( dynamic ) { this.addDynamicArea( dynamic ) ; }
 } ;
 
 
@@ -4796,6 +5344,71 @@ VGEntity.prototype.exportMorphLog = function() {
 VGEntity.prototype.importMorphLog = function( log ) {
 	if ( ! log || ! log.l || ! log.l.length ) { this.morphLog.length = 0 ; }
 	else { this.morphLog = log.l ; }
+} ;
+
+
+
+VGEntity.prototype.clearDynamicAreas = function() {
+	this.dynamicAreas.length = 0 ;
+} ;
+
+
+
+VGEntity.prototype.addDynamicArea = function( params ) {
+	var dynamic = new DynamicArea( this , params ) ;
+	this.dynamicAreas.push( dynamic ) ;
+} ;
+
+
+
+VGEntity.prototype.isDynamic = function( params ) {
+	if ( this.dynamicAreas.length ) { return true ; }
+
+	if ( this.isPseudoContainer ) {
+		if ( this.pseudoEntities.some( pseudoEntity => pseudoEntity.isDynamic() ) ) { return true ; }
+	}
+
+	if ( this.isContainer ) {
+		if ( this.entities.some( entity => entity.isDynamic() ) ) { return true ; }
+	}
+
+	return false ;
+} ;
+
+
+
+VGEntity.prototype.setAllDynamicAreaStatus = function( status ) {
+	for ( let dynamic of this.dynamicAreas ) {
+		dynamic.setStatus( status ) ;
+	}
+
+	if ( this.isPseudoContainer ) {
+		this.pseudoEntities.forEach( pseudoEntity => pseudoEntity.setAllDynamicAreaStatus( status ) ) ;
+	}
+
+	if ( this.isContainer ) {
+		this.entities.forEach( entity => entity.setAllDynamicAreaStatus( status ) ) ;
+	}
+} ;
+
+
+
+VGEntity.prototype.dynamicAreaIterator = function* () {
+	for ( let dynamic of this.dynamicAreas ) {
+		yield dynamic ;
+	}
+
+	if ( this.isPseudoContainer ) {
+		for ( let pseudoEntity of this.pseudoEntities ) {
+			yield * pseudoEntity.dynamicAreaIterator() ;
+		}
+	}
+
+	if ( this.isContainer ) {
+		for ( let entity of this.entities ) {
+			yield * entity.dynamicAreaIterator() ;
+		}
+	}
 } ;
 
 
@@ -4883,7 +5496,7 @@ VGEntity.prototype.domStyle = function( $element , style , palette ) {
 VGEntity.prototype.renderSvgText = async function( options = {} , master = this ) {
 	var str = '' ;
 
-	if ( options.insideClipPath && this.isRenderingContainer && this.renderingContainerHookForSvgText ) {
+	if ( options.noGTag && this.isRenderingContainer && this.renderingContainerHookForSvgText ) {
 		str += await this.renderingContainerHookForSvgText( master ) ;
 		return str ;
 	}
@@ -4954,7 +5567,7 @@ VGEntity.prototype.renderSvgText = async function( options = {} , master = this 
 
 		if ( this.clippingEntities?.length ) {
 			for ( let clippingEntity of this.clippingEntities ) {
-				str += await clippingEntity.renderSvgText( { insideClipPath: true } , master ) ;
+				str += await clippingEntity.renderSvgText( { noGTag: true } , master ) ;
 			}
 		}
 
@@ -4964,6 +5577,22 @@ VGEntity.prototype.renderSvgText = async function( options = {} , master = this 
 		str += this.attrToString( this.svgContentGroupAttributes() , undefined , true ) ;
 		str += '>' ;
 
+		if ( this.isPseudoContainer ) {
+			if ( ! this.arePseudoEntitiesReady ) { await this.computePseudoEntities() ; }
+
+			if ( this.renderBeforeHookForSvgText ) {
+				str += await this.renderBeforeHookForSvgText( master ) ;
+			}
+
+			for ( let pseudoEntity of this.pseudoEntities ) {
+				str += await pseudoEntity.renderSvgText( options , master ) ;
+			}
+
+			if ( this.renderAfterHookForSvgText ) {
+				str += await this.renderAfterHookForSvgText( master ) ;
+			}
+		}
+
 		if ( this.isContainer && this.entities?.length ) {
 			for ( let entity of this.entities ) {
 				str += await entity.renderSvgText( options , master ) ;
@@ -4972,9 +5601,27 @@ VGEntity.prototype.renderSvgText = async function( options = {} , master = this 
 
 		str += '</' + this.svgContentGroupTag + '>' ;
 	}
-	else if ( this.isContainer && this.entities ) {
-		for ( let entity of this.entities ) {
-			str += await entity.renderSvgText( options , master ) ;
+	else {
+		if ( this.isPseudoContainer ) {
+			if ( ! this.arePseudoEntitiesReady ) { await this.computePseudoEntities() ; }
+
+			if ( this.renderBeforeHookForSvgText ) {
+				str += await this.renderBeforeHookForSvgText( master ) ;
+			}
+
+			for ( let pseudoEntity of this.pseudoEntities ) {
+				str += await pseudoEntity.renderSvgText( options , master ) ;
+			}
+
+			if ( this.renderAfterHookForSvgText ) {
+				str += await this.renderAfterHookForSvgText( master ) ;
+			}
+		}
+
+		if ( this.isContainer && this.entities ) {
+			for ( let entity of this.entities ) {
+				str += await entity.renderSvgText( options , master ) ;
+			}
 		}
 	}
 
@@ -4988,7 +5635,6 @@ VGEntity.prototype.renderSvgText = async function( options = {} , master = this 
 
 // Render the Vector Graphic inside a browser, as DOM SVG
 VGEntity.prototype.renderSvgDom = async function( options = {} , master = this ) {
-	console.warn( "entering .renderSvgDom():" , this.constructor.name , master , master?.palette ) ;
 	let attr = this.svgAttributes( master ) ;
 
 	this.$element = document.createElementNS( this.NS , options.overrideTag || this.svgTag ) ;
@@ -5010,7 +5656,7 @@ VGEntity.prototype.renderSvgDom = async function( options = {} , master = this )
 		this.$element.appendChild( document.createTextNode( this.svgTextNode() ) ) ;
 	}
 
-	if ( ! this.isContainer && ! this.isRenderingContainer ) { return this.$element ; }
+	if ( ! this.isContainer && ! this.isPseudoContainer && ! this.isRenderingContainer ) { return this.$element ; }
 
 	// StyleSheet inside a <style> tag
 	if ( this.css && this.css.length ) {
@@ -5060,11 +5706,28 @@ VGEntity.prototype.renderSvgDom = async function( options = {} , master = this )
 				let $child = await clippingEntity.renderSvgDom( options , master ) ;
 				// There is a bug in browser, they do not accept <g> inside <clipPath> (but Inkscape supports it),
 				// so we will append children of that group directly
-				if ( $child.tagName === 'g' ) {
-					while ( $child.firstChild ) { $clippingGroup.appendChild( $child.firstChild ) ; }
+				VGEntity.appendToWithoutGTag( $clippingGroup , $child ) ;
+			}
+		}
+
+		if ( this.isPseudoContainer ) {
+			if ( ! this.arePseudoEntitiesReady ) { await this.computePseudoEntities() ; }
+
+			if ( this.renderBeforeHookForSvgDom ) {
+				let subElements = await this.renderBeforeHookForSvgDom( master ) ;
+				if ( subElements ) {
+					subElements.forEach( $subElement => $contentGroup.appendChild( $subElement ) ) ;
 				}
-				else {
-					$clippingGroup.appendChild( $child ) ;
+			}
+
+			for ( let pseudoEntity of this.pseudoEntities ) {
+				$contentGroup.appendChild( await pseudoEntity.renderSvgDom( options , master ) ) ;
+			}
+
+			if ( this.renderAfterHookForSvgDom ) {
+				let subElements = await this.renderAfterHookForSvgDom( master ) ;
+				if ( subElements ) {
+					subElements.forEach( $subElement => $contentGroup.appendChild( $subElement ) ) ;
 				}
 			}
 		}
@@ -5078,9 +5741,33 @@ VGEntity.prototype.renderSvgDom = async function( options = {} , master = this )
 		this.$element.appendChild( $clippingGroup ) ;
 		this.$element.appendChild( $contentGroup ) ;
 	}
-	else if ( this.isContainer && this.entities?.length ) {
-		for ( let entity of this.entities ) {
-			this.$element.appendChild( await entity.renderSvgDom( options , master ) ) ;
+	else {
+		if ( this.isPseudoContainer ) {
+			if ( ! this.arePseudoEntitiesReady ) { await this.computePseudoEntities() ; }
+
+			if ( this.renderBeforeHookForSvgDom ) {
+				let subElements = await this.renderBeforeHookForSvgDom( master ) ;
+				if ( subElements ) {
+					subElements.forEach( $subElement => this.$element.appendChild( $subElement ) ) ;
+				}
+			}
+
+			for ( let pseudoEntity of this.pseudoEntities ) {
+				this.$element.appendChild( await pseudoEntity.renderSvgDom( options , master ) ) ;
+			}
+
+			if ( this.renderAfterHookForSvgDom ) {
+				let subElements = await this.renderAfterHookForSvgDom( master ) ;
+				if ( subElements ) {
+					subElements.forEach( $subElement => this.$element.appendChild( $subElement ) ) ;
+				}
+			}
+		}
+
+		if ( this.isContainer && this.entities?.length ) {
+			for ( let entity of this.entities ) {
+				this.$element.appendChild( await entity.renderSvgDom( options , master ) ) ;
+			}
 		}
 	}
 
@@ -5090,11 +5777,59 @@ VGEntity.prototype.renderSvgDom = async function( options = {} , master = this )
 
 
 // Render the Vector Graphic inside a browser's canvas
-VGEntity.prototype.renderCanvas = async function( canvasCtx , options = {} , master = this ) {
+VGEntity.prototype.renderCanvas = async function( canvasCtx , options = {} , isRedraw = false , master = this ) {
 	options.pixelsPerUnit = + options.pixelsPerUnit || 1 ;
 
-	if ( this.renderHookForCanvas ) {
-		await this.renderHookForCanvas( canvasCtx , options , master ) ;
+	var shouldRender = true ;
+
+	this.backgroundImageUpdate = false ;
+
+	if ( isRedraw ) {
+		shouldRender = false ;
+		for ( let dynamic of this.dynamicAreas ) {
+			if ( dynamic.outdated ) {
+				//console.log( "restore 1 area for:" , this.__prototypeUID__ ) ;
+				dynamic.restore( canvasCtx ) ;
+				shouldRender = true ;
+			}
+		}
+	}
+	else {
+		for ( let dynamic of this.dynamicAreas ) {
+			if ( ! dynamic.noRedraw ) {
+				dynamic.save( canvasCtx ) ;
+			}
+		}
+	}
+
+
+	if ( this.isPseudoContainer ) {
+		if ( ! this.arePseudoEntitiesReady ) { await this.computePseudoEntities() ; }
+
+		canvasCtx.save() ;
+
+		if ( this.renderBeforeHookForCanvas ) {
+			await this.renderBeforeHookForCanvas( canvasCtx , options , isRedraw , master ) ;
+		}
+
+		for ( let pseudoEntity of this.pseudoEntities ) {
+			await pseudoEntity.renderCanvas( canvasCtx , options , isRedraw && ! shouldRender , master ) ;
+		}
+
+		if ( this.renderAfterHookForCanvas ) {
+			await this.renderAfterHookForCanvas( canvasCtx , options , isRedraw , master ) ;
+		}
+
+		if ( shouldRender ) {
+			for ( let dynamic of this.dynamicAreas ) { dynamic.outdated = false ; }
+		}
+
+		canvasCtx.restore() ;
+	}
+	else if ( this.renderHookForCanvas && shouldRender ) {
+		//console.log( "render for:" , this.__prototypeUID__ ) ;
+		await this.renderHookForCanvas( canvasCtx , options , isRedraw , master ) ;
+		for ( let dynamic of this.dynamicAreas ) { dynamic.outdated = false ; }
 	}
 
 	if ( this.isContainer && this.entities?.length ) {
@@ -5110,14 +5845,14 @@ VGEntity.prototype.renderCanvas = async function( canvasCtx , options = {} , mas
 			canvasCtx.clip( clipPath2D ) ;
 
 			for ( let entity of this.entities ) {
-				await entity.renderCanvas( canvasCtx , options , master ) ;
+				await entity.renderCanvas( canvasCtx , options , isRedraw , master ) ;
 			}
 
 			canvasCtx.restore() ;
 		}
 		else {
 			for ( let entity of this.entities ) {
-				await entity.renderCanvas( canvasCtx , options , master ) ;
+				await entity.renderCanvas( canvasCtx , options , isRedraw , master ) ;
 			}
 		}
 	}
@@ -5125,8 +5860,29 @@ VGEntity.prototype.renderCanvas = async function( canvasCtx , options = {} , mas
 
 
 
+VGEntity.prototype.redrawCanvas = function( canvasCtx , options = {} ) {
+	return this.renderCanvas( canvasCtx , options , true ) ;
+} ;
+
+
+
 VGEntity.prototype.renderPath2D = async function( path2D , canvasCtx , options = {} , master = this ) {
-	if ( this.renderHookForPath2D ) {
+	if ( this.isPseudoContainer ) {
+		if ( ! this.arePseudoEntitiesReady ) { await this.computePseudoEntities() ; }
+
+		if ( this.renderBeforeHookForPath2D ) {
+			await this.renderBeforeHookForPath2D( path2D , canvasCtx , options , master ) ;
+		}
+
+		for ( let pseudoEntity of this.pseudoEntities ) {
+			await pseudoEntity.renderPath2D( path2D , canvasCtx , options , master ) ;
+		}
+
+		if ( this.renderAfterHookForPath2D ) {
+			await this.renderAfterHookForPath2D( path2D , canvasCtx , options , master ) ;
+		}
+	}
+	else if ( this.renderHookForPath2D ) {
 		await this.renderHookForPath2D( path2D , canvasCtx , options , master ) ;
 	}
 
@@ -5134,6 +5890,21 @@ VGEntity.prototype.renderPath2D = async function( path2D , canvasCtx , options =
 		for ( let entity of this.entities ) {
 			await entity.renderPath2D( path2D , canvasCtx , options , master ) ;
 		}
+	}
+} ;
+
+
+
+// Append a child to a parent, but if the child is a <g> tag, append all children of <g> instead.
+// Useful because of a browser bug, not supporting <g> inside <clipPath> (but Inkscape supports it).
+VGEntity.appendToWithoutGTag = function( $parent , $child ) {
+	if ( $child.tagName === 'g' ) {
+		for ( let $child2 of $child.childNodes ) {
+			VGEntity.appendToWithoutGTag( $parent , $child2 ) ;
+		}
+	}
+	else {
+		$parent.appendChild( $child ) ;
 	}
 } ;
 
@@ -5226,11 +5997,11 @@ VGEntity.prototype.preloadFonts = async function() {
 // Return null or an array of font names used by this entity
 VGEntity.prototype.getUsedFontNames = function() { return null ; } ;
 // Return null or a BoundingBox instance
-VGEntity.prototype.getBoundingBox = function() { return null ; }
+VGEntity.prototype.getBoundingBox = function() { return null ; } ;
 
 
 }).call(this)}).call(this,require('_process'))
-},{"../package.json":87,"./fontLib.js":35,"./misc.js":37,"_process":94,"dom-kit":72,"string-kit/lib/camel":79,"string-kit/lib/escape":82}],23:[function(require,module,exports){
+},{"../package.json":110,"./BoundingBox.js":16,"./DynamicArea.js":17,"./fontLib.js":41,"./fx/fx.js":42,"./misc.js":45,"_process":117,"dom-kit":81,"string-kit/lib/camel":100,"string-kit/lib/escape":103}],25:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -5280,7 +6051,7 @@ module.exports = StructuredTextLine ;
 StructuredTextLine.prototype.fuseEqualAttr = function() {
 	if ( this.parts.length <= 1 ) { return ; }
 
-	console.warn( "!!! BF .fuseEqualAttr()" , this.parts ) ;
+	//console.warn( "!!! BF .fuseEqualAttr()" , this.parts ) ;
 	let lastPart = this.parts[ 0 ] ; // IStructuredTextPart
 	let lastInsertedPart = lastPart ; // IStructuredTextPart
 	const outputParts = [ lastPart ] ; // StructuredText
@@ -5288,7 +6059,13 @@ StructuredTextLine.prototype.fuseEqualAttr = function() {
 	for ( let index = 1 ; index < this.parts.length ; index ++ ) {
 		const part = this.parts[ index ] ;
 
-		if ( ! part.imageUrl && ! lastPart.imageUrl && part.attr.isEqual( lastPart.attr ) ) {
+		if (
+			! part.imageUrl && ! lastPart.imageUrl
+			&& part.margin === lastPart.margin	// We will not compare individual margins, because a block with margin stand out of another
+			&& part.fx === lastPart.fx
+			&& part.dynamic === lastPart.dynamic
+			&& part.attr.isEqual( lastPart.attr )
+		) {
 			lastInsertedPart.text += part.text ;
 
 			// Note that it's always defined at that point
@@ -5305,11 +6082,11 @@ StructuredTextLine.prototype.fuseEqualAttr = function() {
 	}
 
 	this.parts = outputParts ;
-	console.warn( "!!! AFT .fuseEqualAttr()" , this.parts ) ;
+	//console.warn( "!!! AFT .fuseEqualAttr()" , this.parts ) ;
 } ;
 
 
-},{"./TextMetrics.js":27}],24:[function(require,module,exports){
+},{"./TextMetrics.js":29}],26:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -5343,18 +6120,23 @@ StructuredTextLine.prototype.fuseEqualAttr = function() {
 const TextAttribute = require( './TextAttribute.js' ) ;
 const TextMetrics = require( './TextMetrics.js' ) ;
 
+//const DynamicArea = require( '../DynamicArea.js' ) ;
+
 const escape = require( 'string-kit/lib/escape.js' ) ;
 
 
 
-function StructuredTextPart( params = {} ) {
+function StructuredTextPart( params = {} , textOverride = null ) {
 	this.imageUrl = params.imageUrl || params.image || null ;
-	this.text = this.imageUrl ? '' : params.text || '' ;
+	this.text = this.imageUrl ? '' : textOverride ?? ( params.text || '' ) ;
 
 	// Word-wrapping data
 	this.canLineSplitBefore = true ;
 	this.forceNoLineSplitBefore = false ;
 	this.canLineSplitAfter = true ;
+
+	this.margin = params.margin || null ;	// Mostly used for FX, it enlarges the bounding box
+	if ( this.margin ) { console.log( "StructuredTextPart() margin:" , this.margin ) ; }
 
 	this.attr = ! params.attr ? new TextAttribute( params ) :
 		params.attr instanceof TextAttribute ? params.attr :
@@ -5363,24 +6145,67 @@ function StructuredTextPart( params = {} ) {
 	// Computed metrics
 	this.metrics = params.metrics instanceof TextMetrics ? params.metrics : null ;
 
-	/*
-	// From my abandoned StructuredText code for BabylonJS
+	this.fx = params.fx || null ;
+	this.dynamic = null ;
 
-	// When set, call observers for a click event
-	href?: any;
-
-	// Force splitting this part into one part per character.
-	// This is useful for special effects.
-	splitIntoCharacters?: boolean;
-
-
-	// Userland data
-	staticCustomData?: object;
-	dynamicCustomData?: object;
-	*/
+	if ( params.dynamic ) {
+		// Complete syntax
+		this.dynamic = params.dynamic ;
+	}
+	else {
+		// Maybe shorthand syntax
+		this.dynamic = StructuredTextPart.shorthandToDynamicDef( params ) ;
+		if ( this.dynamic ) { console.warn( "::: Dynamic Set:" , this.dynamic ) ; }
+	}
 }
 
 module.exports = StructuredTextPart ;
+
+
+
+const DYNAMIC_SHORTHANDS = [ 'hover' , 'click' , 'press' , 'release' ] ;
+
+StructuredTextPart.shorthandToDynamicDef = function( params ) {
+	var def = {} ;
+
+	if ( ! DYNAMIC_SHORTHANDS.some( k => Object.hasOwn( params , k ) ) ) { return null ; }
+
+	def.base = StructuredTextPart.shorthandToDynamicStatusDef( params ) ;
+
+	if ( params.hover ) {
+		def.hover = StructuredTextPart.shorthandToDynamicStatusDef( params.hover ) ;
+	}
+
+	if ( params.press ) {
+		def.press = StructuredTextPart.shorthandToDynamicStatusDef( params.press ) ;
+	}
+
+	if ( params.release ) {
+		def.release = StructuredTextPart.shorthandToDynamicStatusDef( params.release ) ;
+	}
+
+	if ( params.click ) {
+		def.release = StructuredTextPart.shorthandToDynamicStatusDef( params.click ) ;
+		if ( ! def.press ) {
+			def.press = def.hover || def.base ;
+		}
+	}
+
+	return { statusData: def } ;
+} ;
+
+
+
+StructuredTextPart.shorthandToDynamicStatusDef = function( params ) {
+	var def = { morph: {} } ;
+
+	if ( params.attr ) { def.morph.attr = params.attr ; }
+	//if ( params.metrics ) { def.morph.metrics = params.metrics ; }
+
+	if ( params.emit ) { def.emit = params.emit ; }
+
+	return def ;
+} ;
 
 
 
@@ -5390,6 +6215,8 @@ StructuredTextPart.prototype.export = function( data = {} ) {
 
 	let attr = this.attr.export( undefined , true ) ;
 	if ( attr ) { data.attr = attr ; }
+
+	if ( this.dynamic ) { data.dynamic = this.dynamic ; }
 
 	return data ;
 } ;
@@ -5417,9 +6244,9 @@ const WORD_SPLIT_REGEXP = new RegExp(
 
 
 
-// Split the into words, suitable to compute word-wrapping
+// Split the into words, suitable to compute word-wrapping.
 // Note: This splitting function does not exclude the splitter,
-// it keeps it on the left of the right-side of the split
+// it keeps it on the left of the right-side of the split.
 StructuredTextPart.prototype.splitIntoWords = function( intoList = [] ) {
 	if ( this.imageUrl ) {
 		// Image are not splittable, and have special rules for line-split
@@ -5430,7 +6257,7 @@ StructuredTextPart.prototype.splitIntoWords = function( intoList = [] ) {
 		intoList.push( this ) ;
 		return intoList ;
 	}
-	
+
 	var match , lastIndex = 0 ;
 	WORD_SPLIT_REGEXP.lastIndex = 0 ;
 
@@ -5494,7 +6321,7 @@ StructuredTextPart.prototype.checkLineSplit = function() {
 } ;
 
 
-},{"./TextAttribute.js":26,"./TextMetrics.js":27,"string-kit/lib/escape.js":82}],25:[function(require,module,exports){
+},{"./TextAttribute.js":28,"./TextMetrics.js":29,"string-kit/lib/escape.js":103}],27:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -5612,70 +6439,74 @@ StructuredTextRenderer.prototype.orderedListItem = function( data , renderedChil
 
 
 StructuredTextRenderer.prototype.text = function( data ) {
-	console.warn( "text:" , data ) ;
 	return { text: data.text } ;
-} ;
-
-
-
-StructuredTextRenderer.prototype.emphasisText = function( data ) {
-	if ( data.level >= 3 ) {
-		return {
-			text: data.text ,
-			fontStyle: 'italic' ,
-			fontWeight: 'bold'
-		} ;
-	}
-
-	if ( data.level === 2 ) {
-		return {
-			text: data.text ,
-			fontWeight: 'bold'
-		} ;
-	}
-
-	return {
-		text: data.text ,
-		fontStyle: 'italic'
-	} ;
-} ;
-
-
-
-StructuredTextRenderer.prototype.decoratedText = function( data ) {
-	if ( data.level >= 2 ) {
-		return {
-			text: data.text ,
-			underline: true
-		} ;
-	}
-
-	return {
-		text: data.text ,
-		underline: true
-	} ;
 } ;
 
 
 
 StructuredTextRenderer.prototype.code = function( data ) {
-	return { text: data.text } ;
+	return {
+		text: data.text ,
+		isCode: true
+	} ;
 } ;
 
 
 
-StructuredTextRenderer.prototype.link = function( data ) {
-	var part = { text: data.text } ;
-	this.populateStyle( part , data.style ) ;
-	return part ;
+StructuredTextRenderer.prototype.emphasisText = function( data , renderedChildren ) {
+	renderedChildren.forEach( child => {
+		if ( child.isCode ) { return ; }
+		if ( data.level >= 3 ) {
+			child.fontWeight = 'bold' ;
+			child.fontStyle = 'italic' ;
+		}
+		else if ( data.level === 2 ) {
+			child.fontWeight = 'bold' ;
+		}
+		else {
+			child.fontStyle = 'italic' ;
+		}
+	} ) ;
+
+	return renderedChildren ;
 } ;
 
 
 
-StructuredTextRenderer.prototype.styledText = function( data ) {
-	var part = { text: data.text } ;
-	this.populateStyle( part , data.style ) ;
-	return part ;
+StructuredTextRenderer.prototype.decoratedText = function( data , renderedChildren ) {
+	renderedChildren.forEach( child => {
+		if ( child.isCode ) { return ; }
+		if ( data.level >= 2 ) {
+			child.underline = true ;
+		}
+		else {
+			child.underline = true ;
+		}
+	} ) ;
+
+	return renderedChildren ;
+} ;
+
+
+
+StructuredTextRenderer.prototype.link = function( data , renderedChildren ) {
+	renderedChildren.forEach( child => {
+		if ( child.isCode ) { return ; }
+		this.populateStyle( child , data.style ) ;
+	} ) ;
+
+	return renderedChildren ;
+} ;
+
+
+
+StructuredTextRenderer.prototype.styledText = function( data , renderedChildren ) {
+	renderedChildren.forEach( child => {
+		if ( child.isCode ) { return ; }
+		this.populateStyle( child , data.style ) ;
+	} ) ;
+
+	return renderedChildren ;
 } ;
 
 
@@ -5706,10 +6537,15 @@ StructuredTextRenderer.prototype.populateStyle = function( part , style ) {
 		part.frameOutlineColor = "#777" ;   // <-- TEMP
 		part.frameCornerRadius = 5 ;   // <-- TEMP
 	}
+
+	if ( style.fx ) {
+		part.fx = {} ;
+		part.fx[ style.fx ] = true ;
+	}
 } ;
 
 
-},{}],26:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -5833,18 +6669,18 @@ TextAttribute.prototype.set = function( params ) {
 	if ( params.fontSize ) { this.setFontSize( params.fontSize ) ; }
 
 	if ( params.color ) { this.setColor( params.color ) ; }
-	if ( params.outline ) { this.setOutline( params.outline ) ; }
+	if ( params.outline !== undefined ) { this.setOutline( params.outline ) ; }
 	if ( params.outlineWidth ) { this.setOutlineWidth( params.outlineWidth ) ; }
 	if ( params.outlineColor ) { this.setOutlineColor( params.outlineColor ) ; }
 
-	if ( params.underline ) { this.setUnderline( params.underline ) ; }
-	if ( params.lineThrough ) { this.setLineThrough( params.lineThrough ) ; }
+	if ( params.underline !== undefined ) { this.setUnderline( params.underline ) ; }
+	if ( params.lineThrough !== undefined ) { this.setLineThrough( params.lineThrough ) ; }
 	if ( params.lineColor ) { this.setLineColor( params.lineColor ) ; }
 	if ( params.lineThickness ) { this.setLineThickness( params.lineThickness ) ; }
-	if ( params.lineOutline ) { this.setLineOutline( params.lineOutline ) ; }
+	if ( params.lineOutline !== undefined ) { this.setLineOutline( params.lineOutline ) ; }
 	if ( params.lineOutlineWidth ) { this.setLineOutlineWidth( params.lineOutlineWidth ) ; }
 	if ( params.lineOutlineColor ) { this.setLineOutlineColor( params.lineOutlineColor ) ; }
-	if ( params.frame ) { this.setFrame( params.frame ) ; }
+	if ( params.frame !== undefined ) { this.setFrame( params.frame ) ; }
 	if ( params.frameColor ) { this.setFrameColor( params.frameColor ) ; }
 	if ( params.frameOutlineWidth ) { this.setFrameOutlineWidth( params.frameOutlineWidth ) ; }
 	if ( params.frameOutlineColor ) { this.setFrameOutlineColor( params.frameOutlineColor ) ; }
@@ -6286,7 +7122,7 @@ TextAttribute.prototype.getFrameSvgStyle = function( inherit = null , relTo = nu
 } ;
 
 
-},{"../Metric.js":17,"../misc.js":37,"palette-shade":78}],27:[function(require,module,exports){
+},{"../Metric.js":19,"../misc.js":45,"palette-shade":89}],29:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -6332,6 +7168,7 @@ function TextMetrics( ascender , descender , lineGap  , width , x = null , basel
 	//this.isPositionComputed = x !== null && baselineY !== null ;
 	this.x = + x || 0 ;
 	this.baselineY = + baselineY || 0 ;
+	this.charCount = 0 ;
 }
 
 module.exports = TextMetrics ;
@@ -6352,8 +7189,9 @@ TextMetrics.prototype.clear = function() {
 
 
 TextMetrics.prototype.fuseWithRightPart = function( metrics ) {
-	// widths are summed
+	// widths and charCounts are summed
 	this.width += metrics.width ;
+	this.charCount += metrics.charCount ;
 
 	// .ascender, .descender and .lineGap are maximized
 	if ( metrics.ascender > this.ascender ) { this.ascender = metrics.ascender ; }
@@ -6381,9 +7219,14 @@ TextMetrics.measureFontHeights = function( font , fontSize ) {
 
 
 TextMetrics.measureFontText = function( font , fontSize , text ) {
-	var fontOptions = null ;
+	var fontOptions = null , count = 0 ;
 	var metrics = TextMetrics.measureFontHeights( font , fontSize ) ;
 	metrics.width = font.getAdvanceWidth( text , fontSize , fontOptions ) ;
+
+	// Probably the fastest way to count chars of an unicode string (BTW text.length dosen't work because of surrogate pairs)
+	for ( let char of text ) { count ++ ; }		/* eslint-disable-line no-unused-vars */
+	metrics.charCount = count ;
+
 	return metrics ;
 } ;
 
@@ -6395,6 +7238,7 @@ TextMetrics.measureImage = async function( font , fontSize , imageUrl ) {
 	var metrics = TextMetrics.measureFontHeights( font , fontSize ) ;
 	metrics.ascender = imageSize.height ;
 	metrics.width = imageSize.width ;
+	metrics.charCount = 1 ;	// Images count as 1
 
 	return metrics ;
 } ;
@@ -6418,7 +7262,7 @@ TextMetrics.measureStructuredTextPart = async function( part , inheritedAttr ) {
 } ;
 
 
-},{"../fontLib.js":35,"../getImageSize.js":36}],28:[function(require,module,exports){
+},{"../fontLib.js":41,"../getImageSize.js":44}],30:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -6449,13 +7293,15 @@ TextMetrics.measureStructuredTextPart = async function( part , inheritedAttr ) {
 
 
 
-const VGEntity = require( '../VGEntity.js' ) ;
+const VGPseudoContainer = require( '../VGPseudoContainer.js' ) ;
 
 const StructuredTextPart = require( './StructuredTextPart.js' ) ;
 const StructuredTextLine = require( './StructuredTextLine.js' ) ;
 const TextAttribute = require( './TextAttribute.js' ) ;
 const TextMetrics = require( './TextMetrics.js' ) ;
 const BoundingBox = require( '../BoundingBox.js' ) ;
+const VGFlowingTextPart = require( './VGFlowingTextPart.js' ) ;
+const VGFlowingTextImagePart = require( './VGFlowingTextImagePart.js' ) ;
 
 const bookSource = require( 'book-source' ) ;
 const StructuredTextRenderer = require( './StructuredTextRenderer.js' ) ;
@@ -6468,7 +7314,7 @@ const dom = require( 'dom-kit' ) ;
 
 
 function VGFlowingText( params ) {
-	VGEntity.call( this , params ) ;
+	VGPseudoContainer.call( this , params ) ;
 
 	this.x = 0 ;
 	this.y = 0 ;
@@ -6482,6 +7328,9 @@ function VGFlowingText( params ) {
 	this.textVerticalAlignment = null ;	// null/top/bottom/center
 	this.textHorizontalAlignment = null ;	// null/left/right/center
 
+	// Special FX properties
+	this.charLimit = Infinity ;	// Limit how many characters will be displayed, useful for slow-typing effects
+
 	this.debugContainer = false ;
 
 	// Computed
@@ -6491,14 +7340,14 @@ function VGFlowingText( params ) {
 	this.contentY = 0 ;
 	this.contentWidth = 0 ;
 	this.contentHeight = 0 ;
-	this.characterCount = 0 ;
+	this.charCount = 0 ;
 
 	if ( params ) { this.set( params ) ; }
 }
 
 module.exports = VGFlowingText ;
 
-VGFlowingText.prototype = Object.create( VGEntity.prototype ) ;
+VGFlowingText.prototype = Object.create( VGPseudoContainer.prototype ) ;
 VGFlowingText.prototype.constructor = VGFlowingText ;
 VGFlowingText.prototype.__prototypeUID__ = 'svg-kit/VGFlowingText' ;
 VGFlowingText.prototype.__prototypeVersion__ = require( '../../package.json' ).version ;
@@ -6520,12 +7369,12 @@ const TEXT_WRAPPING = {
 
 
 VGFlowingText.prototype.set = function( params ) {
-	VGEntity.prototype.set.call( this , params ) ;
+	let dirty = false ;
 
-	if ( params.x !== undefined ) { this.x = + params.x || 0 ; this.areLinesComputed = false ; }
-	if ( params.y !== undefined ) { this.y = + params.y || 0 ; this.areLinesComputed = false ; }
-	if ( params.width !== undefined ) { this.width = + params.width || 0 ; this.areLinesComputed = false ; }
-	if ( params.height !== undefined ) { this.height = + params.height || 0 ; this.areLinesComputed = false ; }
+	if ( params.x !== undefined ) { this.boundingBox.x = this.x = + params.x || 0 ; dirty = true ; }
+	if ( params.y !== undefined ) { this.boundingBox.y = this.y = + params.y || 0 ; dirty = true ; }
+	if ( params.width !== undefined ) { this.boundingBox.width = this.width = + params.width || 0 ; dirty = true ; }
+	if ( params.height !== undefined ) { this.boundingBox.height = this.height = + params.height || 0 ; dirty = true ; }
 
 	if ( params.clip !== undefined ) { this.clip = !! params.clip ; }
 
@@ -6533,23 +7382,31 @@ VGFlowingText.prototype.set = function( params ) {
 	else if ( params.markupText ) { this.setMarkupText( params.markupText ) ; }
 	else if ( params.text ) { this.setText( params.text ) ; }
 
-	if ( params.attr ) { this.attr = new TextAttribute( params.attr ) ; this.areLinesComputed = false ; }
-	if ( params.lineSpacing !== undefined ) { this.lineSpacing = + params.lineSpacing || 0 ; this.areLinesComputed = false ; }
-	if ( params.textVerticalAlignment !== undefined ) { this.textVerticalAlignment = params.textVerticalAlignment ; this.areLinesComputed = false ; }
-	if ( params.textHorizontalAlignment !== undefined ) { this.textHorizontalAlignment = params.textHorizontalAlignment ; this.areLinesComputed = false ; }
+	if ( params.attr ) { this.attr = new TextAttribute( params.attr ) ; dirty = true ; }
+	if ( params.lineSpacing !== undefined ) { this.lineSpacing = + params.lineSpacing || 0 ; dirty = true ; }
+	if ( params.textVerticalAlignment !== undefined ) { this.textVerticalAlignment = params.textVerticalAlignment ; dirty = true ; }
+	if ( params.textHorizontalAlignment !== undefined ) { this.textHorizontalAlignment = params.textHorizontalAlignment ; dirty = true ; }
 
 	if ( params.textWrapping !== undefined ) {
 		this.textWrapping = TEXT_WRAPPING[ params.textWrapping ] || null ;
-		this.areLinesComputed = false ;
+		dirty = true ;
+	}
+
+	if ( params.charLimit !== undefined ) {
+		this.charLimit = params.charLimit === false ? Infinity : + params.charLimit ;
 	}
 
 	if ( params.debugContainer !== undefined ) { this.debugContainer = !! params.debugContainer ; }
+
+	if ( dirty ) { this.shouldComputeAgain() ; }
+
+	VGPseudoContainer.prototype.set.call( this , params ) ;
 } ;
 
 
 
 VGFlowingText.prototype.export = function( data = {} ) {
-	VGEntity.prototype.export.call( this , data ) ;
+	VGPseudoContainer.prototype.export.call( this , data ) ;
 
 	data.x = this.x ;
 	data.y = this.y ;
@@ -6572,6 +7429,13 @@ VGFlowingText.prototype.export = function( data = {} ) {
 
 
 
+VGFlowingText.prototype.shouldComputeAgain = function() {
+	this.areLinesComputed = false ;
+	this.arePseudoEntitiesReady = false ;
+} ;
+
+
+
 VGFlowingText.prototype.setStructuredText = function( structuredText_ ) {
 	if ( ! Array.isArray( structuredText_ ) ) { return ; }
 
@@ -6582,7 +7446,7 @@ VGFlowingText.prototype.setStructuredText = function( structuredText_ ) {
 		else { this.structuredText.push( new StructuredTextPart( structuredTextPart ) ) ; }
 	}
 
-	this.areLinesComputed = false ;
+	this.shouldComputeAgain() ;
 } ;
 
 
@@ -6618,9 +7482,9 @@ VGFlowingText.prototype.getContentHeight = async function() {
 
 
 
-VGFlowingText.prototype.getCharacterCount = async function() {
+VGFlowingText.prototype.getCharacterCount = VGFlowingText.prototype.getCharCount = async function() {
 	if ( ! this.areLinesComputed ) { await this.computeLines() ; }
-	return this.characterCount ;
+	return this.charCount ;
 } ;
 
 
@@ -6734,7 +7598,7 @@ VGFlowingText.prototype.parseStructuredTextLineWordWrap = async function( line )
 	for ( let part of line ) {
 		part.splitIntoWords( outputParts ) ;
 	}
-	console.warn( "??? AFT splitIntoWords()" , outputParts.map( e => ( { text: e.text , imageUrl: e.imageUrl } ) ) ) ;
+	//console.warn( "??? AFT splitIntoWords()" , outputParts.map( e => ( { text: e.text , imageUrl: e.imageUrl } ) ) ) ;
 
 	let lastTestLineMetrics = new TextMetrics() ;
 	let testLineMetrics = new TextMetrics() ;
@@ -6775,9 +7639,9 @@ VGFlowingText.prototype.parseStructuredTextLineWordWrap = async function( line )
 			let indexOfNextLine = index - removed + 1 ;
 			for ( ; indexOfNextLine <= index ; indexOfNextLine ++ ) {
 				let nextLinePart = outputParts[ indexOfNextLine ] ;
-				
+
 				if ( nextLinePart.imageUrl ) { break ; }
-				
+
 				//console.log( "nextLinePart: '" + nextLinePart.text + "'" ) ;
 				let trimmedText = nextLinePart.text.trimStart() ;
 
@@ -6851,7 +7715,7 @@ VGFlowingText.prototype.computeContentSize = function() {
 VGFlowingText.prototype.computePartsPosition = function() {
 	this.computeContentSize() ;
 
-	this.characterCount = 0 ;
+	this.charCount = 0 ;
 
 	var x , y ,
 		lastStructuredTextLine = null ;
@@ -6876,7 +7740,7 @@ VGFlowingText.prototype.computePartsPosition = function() {
 		if ( lastStructuredTextLine ) {
 			// It is a new line, offset it depending on the previous one
 			y += - lastStructuredTextLine.metrics.descender + lastStructuredTextLine.metrics.lineGap + this.lineSpacing ;
-			
+
 			// Manage empty lines
 			if ( lastStructuredTextLine.followUpEmptyLines ) {
 				y += lastStructuredTextLine.followUpEmptyLines * this.attr.getFontSize() ;
@@ -6912,7 +7776,8 @@ VGFlowingText.prototype.computePartsPosition = function() {
 				x += part.metrics.width ;
 			}
 
-			this.characterCount += part.text.length ;
+			part.charOffset = this.charCount ;
+			this.charCount += part.metrics.charCount ;
 		}
 
 		lastStructuredTextLine = structuredTextLine ;
@@ -6939,7 +7804,8 @@ VGFlowingText.parseNewLine = function( structuredText_ ) {
 					lines.push( currentLine ) ;
 				}
 
-				let newPart = new StructuredTextPart( { text: splitPart , attr: part.attr } ) ;
+				let newPart = new StructuredTextPart( part , splitPart ) ;
+				//let newPart = new StructuredTextPart( { text: splitPart , attr: part.attr , dynamic: part.dynamic , margin: part.margin , fx: part.fx } ) ;
 				currentLine.push( newPart ) ;
 
 			}
@@ -6988,14 +7854,37 @@ VGFlowingText.prototype.getUsedFontNames = function() {
 
 
 
-// Render the Vector Graphic as a text SVG
-VGFlowingText.prototype.renderingContainerHookForSvgText = async function( master = this ) {
+VGFlowingText.prototype.computePseudoEntities = async function() {
+	if ( this.arePseudoEntitiesReady ) { return ; }
+
 	if ( ! this.areLinesComputed ) { await this.computeLines() ; }
 
-	var yOffset = this.root.invertY ? - 2 * this.y - this.height : 0 ,
-		str = '' ;
+	this.clearPseudoEntities() ;
+
+	for ( let structuredTextLine of this.structuredTextLines ) {
+		for ( let part of structuredTextLine.parts ) {
+			let pseudoEntity =
+				part.imageUrl ? new VGFlowingTextImagePart( part ) :
+				new VGFlowingTextPart( part ) ;
+			if ( this.childrenDynamic ) {
+				pseudoEntity.addDynamicArea( this.childrenDynamic ) ;
+			}
+			this.addPseudoEntity( pseudoEntity ) ;
+		}
+	}
+
+	this.arePseudoEntitiesReady = true ;
+} ;
+
+
+
+// Render the Vector Graphic as a text SVG
+VGFlowingText.prototype.renderBeforeHookForSvgText = async function( master = this ) {
+	var str = '' ;
 
 	if ( this.clip ) {
+		let yOffset = this.root.invertY ? - 2 * this.y - this.height : 0 ;
+
 		// Nothing inside the <clipPath> is displayed
 		str += '<clipPath id="' + this._id + '_clipPath">' ;
 		str += '<rect' ;
@@ -7007,90 +7896,17 @@ VGFlowingText.prototype.renderingContainerHookForSvgText = async function( maste
 		str += '</clipPath>' ;
 	}
 
-	for ( let structuredTextLine of this.structuredTextLines ) {
-		for ( let part of structuredTextLine.parts ) {
-			let fontFamily = part.attr.getFontFamily( this.attr ) ,
-				fontStyle = part.attr.getFontStyle( this.attr ) ,
-				fontWeight = part.attr.getFontWeight( this.attr ) ,
-				fontSize = part.attr.getFontSize( this.attr ) ,
-				textStyleStr = part.attr.getTextSvgStyleString( this.attr , fontSize , master?.palette ) ,
-				lineStyleStr , lineThickness ,
-				underline = part.attr.getUnderline( this.attr ) ,
-				lineThrough = part.attr.getLineThrough( this.attr ) ,
-				frame = part.attr.getFrame( this.attr ) ;
+	return str ;
+} ;
 
-			let font = await fontLib.getFallbackFontAsync( fontFamily , fontStyle , fontWeight ) ;
-			if ( ! font ) { throw new Error( "Font not found: " + fontFamily + ' ' + fontStyle + ' ' + fontWeight ) ; }
 
-			if ( frame ) {
-				let frameY = part.metrics.baselineY - part.metrics.ascender + yOffset ,
-					frameHeight = part.metrics.ascender - part.metrics.descender ,
-					frameStyleStr = part.attr.getFrameSvgStyleString( this.attr , fontSize , master?.palette ) ,
-					cornerRadius = part.attr.getFrameCornerRadius( this.attr , fontSize ) ;
 
-				//console.error( "frameStyleStr:" , frameStyleStr , part.attr ) ;
-				str += '<rect' ;
-				str += ' x="' + part.metrics.x + '"' ;
-				str += ' y="' + frameY + '"' ;
-				str += ' width="' + part.metrics.width + '"' ;
-				str += ' height="' + frameHeight + '"' ;
-				if ( cornerRadius ) { str += ' rx="' + cornerRadius + '"' ; }
-				if ( frameStyleStr ) { str += ' style="' + frameStyleStr + '"' ; }
-				str += ' />' ;
-			}
-
-			if ( underline || lineThrough ) {
-				lineStyleStr = part.attr.getLineSvgStyleString( this.attr , fontSize , master?.palette ) ;
-				lineThickness = part.attr.getLineThickness( this.attr , fontSize ) ;
-			}
-
-			if ( underline ) {
-				let underlineY = part.metrics.baselineY - part.metrics.descender * 0.6 - lineThickness + yOffset ;
-
-				str += '<rect' ;
-				str += ' x="' + part.metrics.x + '"' ;
-				str += ' y="' + underlineY + '"' ;
-				str += ' width="' + part.metrics.width + '"' ;
-				str += ' height="' + lineThickness + '"' ;
-				if ( lineStyleStr ) { str += ' style="' + lineStyleStr + '"' ; }
-				str += ' />' ;
-			}
-
-			if ( part.imageUrl ) {
-				str += '<image' ;
-				str += ' x="' + ( part.metrics.x ) + '"' ;
-				str += ' y="' + ( part.metrics.baselineY - part.metrics.ascender + yOffset ) + '"' ;
-				str += ' width="' + ( part.metrics.width ) + '"' ;
-				str += ' height="' + ( part.metrics.ascender ) + '"' ;
-				//str += ' preserveAspectRatio="none"' ;
-				str += ' xlink:href="' + part.imageUrl + '"' ;
-				str += ' />' ;
-			}
-			else {
-				let path = font.getPath( part.text , part.metrics.x , part.metrics.baselineY + yOffset , fontSize ) ;
-				let pathData = path.toPathData() ;
-
-				str += '<path' ;
-				if ( textStyleStr ) { str += ' style="' + textStyleStr + '"' ; }
-				str += ' d="' + pathData + '"' ;
-				str += ' />' ;
-			}
-
-			if ( lineThrough ) {
-				let lineThroughY = part.metrics.baselineY - part.metrics.ascender * 0.25 - lineThickness + yOffset ;
-
-				str += '<rect' ;
-				str += ' x="' + part.metrics.x + '"' ;
-				str += ' y="' + lineThroughY + '"' ;
-				str += ' width="' + part.metrics.width + '"' ;
-				str += ' height="' + lineThickness + '"' ;
-				if ( lineStyleStr ) { str += ' style="' + lineStyleStr + '"' ; }
-				str += ' />' ;
-			}
-		}
-	}
+VGFlowingText.prototype.renderAfterHookForSvgText = async function( master = this ) {
+	var str = '' ;
 
 	if ( this.debugContainer ) {
+		let yOffset = this.root.invertY ? - 2 * this.y - this.height : 0 ;
+
 		str += '<rect' ;
 		str += ' x="' + this.x + '"' ;
 		str += ' y="' + ( this.y + yOffset ) + '"' ;
@@ -7105,13 +7921,12 @@ VGFlowingText.prototype.renderingContainerHookForSvgText = async function( maste
 
 
 
-VGFlowingText.prototype.renderingContainerHookForSvgDom = async function( master = this ) {
-	if ( ! this.areLinesComputed ) { await this.computeLines() ; }
-
-	var yOffset = this.root.invertY ? - 2 * this.y - this.height : 0 ,
-		elementList = [] ;
+VGFlowingText.prototype.renderBeforeHookForSvgDom = async function( master = this ) {
+	var elementList = [] ;
 
 	if ( this.clip ) {
+		let yOffset = this.root.invertY ? - 2 * this.y - this.height : 0 ;
+
 		// Nothing inside the <clipPath> is displayed
 		let $clipPath = document.createElementNS( this.NS , 'clipPath' ) ;
 		$clipPath.setAttribute( 'id' , this._id + '_clipPath' ) ;
@@ -7125,93 +7940,17 @@ VGFlowingText.prototype.renderingContainerHookForSvgDom = async function( master
 		$clipPath.appendChild( $rect ) ;
 	}
 
-	for ( let structuredTextLine of this.structuredTextLines ) {
-		for ( let part of structuredTextLine.parts ) {
-			let fontFamily = part.attr.getFontFamily( this.attr ) ,
-				fontStyle = part.attr.getFontStyle( this.attr ) ,
-				fontWeight = part.attr.getFontWeight( this.attr ) ,
-				fontSize = part.attr.getFontSize( this.attr ) ,
-				textStyleStr = part.attr.getTextSvgStyleString( this.attr , fontSize , master?.palette ) ,
-				lineStyleStr , lineThickness ,
-				underline = part.attr.getUnderline( this.attr ) ,
-				lineThrough = part.attr.getLineThrough( this.attr ) ,
-				frame = part.attr.getFrame( this.attr ) ;
+	return elementList ;
+} ;
 
-			//console.error( "???" , fontFamily , fontSize , textStyleStr ) ;
-			let font = await fontLib.getFallbackFontAsync( fontFamily , fontStyle , fontWeight ) ;
-			if ( ! font ) { throw new Error( "Font not found: " + fontFamily + ' ' + fontStyle + ' ' + fontWeight ) ; }
 
-			if ( frame ) {
-				let frameY = part.metrics.baselineY - part.metrics.ascender + yOffset ,
-					frameHeight = part.metrics.ascender - part.metrics.descender ,
-					frameStyleStr = part.attr.getFrameSvgStyleString( this.attr , fontSize , master?.palette ) ,
-					cornerRadius = part.attr.getFrameCornerRadius( this.attr , fontSize ) ;
 
-				//console.error( "frameStyleStr:" , frameStyleStr , part.attr ) ;
-				let $frame = document.createElementNS( this.NS , 'rect' ) ;
-				$frame.setAttribute( 'x' , part.metrics.x ) ;
-				$frame.setAttribute( 'y' , frameY ) ;
-				$frame.setAttribute( 'width' , part.metrics.width ) ;
-				$frame.setAttribute( 'height' , frameHeight ) ;
-				if ( cornerRadius ) { $frame.setAttribute( 'rx' , cornerRadius ) ; }
-				if ( frameStyleStr ) { $frame.setAttribute( 'style' , frameStyleStr ) ; }
-				elementList.push( $frame ) ;
-			}
-
-			if ( underline || lineThrough ) {
-				lineStyleStr = part.attr.getLineSvgStyleString( this.attr , fontSize , master?.palette ) ;
-				lineThickness = part.attr.getLineThickness( this.attr , fontSize ) ;
-			}
-
-			if ( underline ) {
-				let underlineY = part.metrics.baselineY - part.metrics.descender * 0.6 - lineThickness + yOffset ;
-
-				let $line = document.createElementNS( this.NS , 'rect' ) ;
-				$line.setAttribute( 'x' , part.metrics.x ) ;
-				$line.setAttribute( 'y' , underlineY ) ;
-				$line.setAttribute( 'width' , part.metrics.width ) ;
-				$line.setAttribute( 'height' , lineThickness ) ;
-				if ( lineStyleStr ) { $line.setAttribute( 'style' , lineStyleStr ) ; }
-				elementList.push( $line ) ;
-			}
-
-			if ( part.imageUrl ) {
-				let $image = document.createElementNS( this.NS , 'image' ) ;
-				dom.attr( $image , {
-					x: part.metrics.x ,
-					y: part.metrics.baselineY - part.metrics.ascender + yOffset ,
-					width: part.metrics.width ,
-					height: part.metrics.ascender ,
-					//preserveAspectRatio: 'none' ,
-					href: part.imageUrl
-				} ) ;
-				elementList.push( $image ) ;
-			}
-			else {
-				let path = font.getPath( part.text , part.metrics.x , part.metrics.baselineY + yOffset , fontSize ) ;
-				let pathData = path.toPathData() ;
-
-				let $textPath = document.createElementNS( this.NS , 'path' ) ;
-				if ( textStyleStr ) { $textPath.setAttribute( 'style' , textStyleStr ) ; }
-				$textPath.setAttribute( 'd' , pathData ) ;
-				elementList.push( $textPath ) ;
-			}
-
-			if ( lineThrough ) {
-				let lineThroughY = part.metrics.baselineY - part.metrics.ascender * 0.25 - lineThickness + yOffset ;
-
-				let $line = document.createElementNS( this.NS , 'rect' ) ;
-				$line.setAttribute( 'x' , part.metrics.x ) ;
-				$line.setAttribute( 'y' , lineThroughY ) ;
-				$line.setAttribute( 'width' , part.metrics.width ) ;
-				$line.setAttribute( 'height' , lineThickness ) ;
-				if ( lineStyleStr ) { $line.setAttribute( 'style' , lineStyleStr ) ; }
-				elementList.push( $line ) ;
-			}
-		}
-	}
+VGFlowingText.prototype.renderAfterHookForSvgDom = async function( master = this ) {
+	var elementList = [] ;
 
 	if ( this.debugContainer ) {
+		let yOffset = this.root.invertY ? - 2 * this.y - this.height : 0 ;
+
 		let $debugRect = document.createElementNS( this.NS , 'rect' ) ;
 		$debugRect.setAttribute( 'x' , this.x ) ;
 		$debugRect.setAttribute( 'y' , this.y + yOffset ) ;
@@ -7227,161 +7966,33 @@ VGFlowingText.prototype.renderingContainerHookForSvgDom = async function( master
 
 
 
-VGFlowingText.prototype.renderHookForCanvas = async function( canvasCtx , options = {} , master = this ) {
-	if ( ! this.areLinesComputed ) { await this.computeLines() ; }
-
-	var yOffset = this.root.invertY ? canvasCtx.canvas.height - 1 - 2 * this.y - ( this.height - 1 ) : 0 ;
-
-	// We have to save context because canvasCtx.clip() is not reversible
-	canvasCtx.save() ;
-
+VGFlowingText.prototype.renderBeforeHookForCanvas = async function( canvasCtx , options = {} , isRedraw = false , master = this ) {
 	if ( this.clip ) {
+		let yOffset = this.root.invertY ? canvasCtx.canvas.height - 1 - 2 * this.y - ( this.height - 1 ) : 0 ;
+
 		canvasCtx.beginPath() ;
 		// For some reason, it seems that the first row and column is clipped away, so we have to grow the size by one pixel
 		canvasCtx.rect( this.x - 1 , this.y - 1 + yOffset , this.width + 1 , this.height + 1 ) ;
 		canvasCtx.clip() ;
 	}
+} ;
 
-	for ( let structuredTextLine of this.structuredTextLines ) {
-		for ( let part of structuredTextLine.parts ) {
-			let fontFamily = part.attr.getFontFamily( this.attr ) ,
-				fontStyle = part.attr.getFontStyle( this.attr ) ,
-				fontWeight = part.attr.getFontWeight( this.attr ) ,
-				fontSize = part.attr.getFontSize( this.attr ) ,
-				textStyle = part.attr.getTextSvgStyle( this.attr , fontSize , master?.palette ) ,
-				lineStyle , lineThickness ,
-				underline = part.attr.getUnderline( this.attr ) ,
-				lineThrough = part.attr.getLineThrough( this.attr ) ,
-				frame = part.attr.getFrame( this.attr ) ;
 
-			//console.error( "???" , fontFamily , fontSize , textStyle ) ;
-			let font = await fontLib.getFallbackFontAsync( fontFamily , fontStyle , fontWeight ) ;
-			if ( ! font ) { throw new Error( "Font not found: " + fontFamily + ' ' + fontStyle + ' ' + fontWeight ) ; }
 
-			if ( frame ) {
-				let frameY = part.metrics.baselineY - part.metrics.ascender + yOffset ,
-					frameHeight = part.metrics.ascender - part.metrics.descender ,
-					frameStyle = part.attr.getFrameSvgStyle( this.attr , fontSize , master?.palette ) ,
-					cornerRadius = part.attr.getFrameCornerRadius( this.attr , fontSize ) ;
-
-				canvasCtx.beginPath() ;
-
-				if ( cornerRadius ) {
-					canvasCtx.roundRect( part.metrics.x , frameY , part.metrics.width , frameHeight , cornerRadius ) ;
-				}
-				else {
-					canvasCtx.rect( part.metrics.x , frameY , part.metrics.width , frameHeight ) ;
-				}
-
-				canvas.fillAndStrokeUsingSvgStyle( canvasCtx , frameStyle ) ;
-			}
-
-			if ( underline || lineThrough ) {
-				lineStyle = part.attr.getLineSvgStyle( this.attr , fontSize , master?.palette ) ;
-				lineThickness = part.attr.getLineThickness( this.attr , fontSize ) ;
-			}
-
-			if ( underline ) {
-				let underlineY = part.metrics.baselineY - part.metrics.descender * 0.6 - lineThickness + yOffset ;
-				canvasCtx.beginPath() ;
-				canvasCtx.rect( part.metrics.x , underlineY , part.metrics.width , lineThickness ) ;
-				canvas.fillAndStrokeUsingSvgStyle( canvasCtx , lineStyle ) ;
-			}
-
-			if ( part.imageUrl ) {
-				canvasCtx.save() ;
-
-				let image = new Image() ;
-				image.src = part.imageUrl ;
-
-				await new Promise( resolve => {
-					image.onload = () => {
-						canvasCtx.drawImage(
-							image ,
-							part.metrics.x ,
-							part.metrics.baselineY - part.metrics.ascender + yOffset
-						) ;
-						resolve() ;
-					} ;
-				} ) ;
-
-				canvasCtx.restore() ;
-			}
-			else {
-				let path = font.getPath( part.text , part.metrics.x , part.metrics.baselineY + yOffset , fontSize ) ;
-				let pathData = path.toPathData() ;
-				let path2D = new Path2D( pathData ) ;
-				canvas.fillAndStrokeUsingSvgStyle( canvasCtx , textStyle , path2D ) ;
-			}
-
-			if ( lineThrough ) {
-				let lineThroughY = part.metrics.baselineY - part.metrics.ascender * 0.25 - lineThickness + yOffset ;
-				canvasCtx.beginPath() ;
-				canvasCtx.rect( part.metrics.x , lineThroughY , part.metrics.width , lineThickness ) ;
-				canvas.fillAndStrokeUsingSvgStyle( canvasCtx , lineStyle ) ;
-			}
-		}
-	}
-
+VGFlowingText.prototype.renderAfterHookForCanvas = async function( canvasCtx , options = {} , isRedraw = false , master = this ) {
 	if ( this.debugContainer ) {
+		let yOffset = this.root.invertY ? canvasCtx.canvas.height - 1 - 2 * this.y - ( this.height - 1 ) : 0 ;
+
 		canvasCtx.beginPath() ;
 		canvasCtx.rect( this.x , this.y + yOffset , this.width , this.height ) ;
 		canvas.fillAndStrokeUsingSvgStyle( canvasCtx , { fill: 'none' , stroke: '#f33' } ) ;
 	}
-
-	canvasCtx.restore() ;
 } ;
 
 
 
-/*
-	This renderer does not support clipping the text, debugContainer, and frame.
-*/
-VGFlowingText.prototype.renderHookForPath2D = async function( path2D , canvasCtx , options = {} , master = this ) {
-	if ( ! this.areLinesComputed ) { await this.computeLines() ; }
-
-	var yOffset = this.root.invertY ? canvasCtx.canvas.height - 1 - 2 * this.y - ( this.height - 1 ) : 0 ;
-
-	for ( let structuredTextLine of this.structuredTextLines ) {
-		for ( let part of structuredTextLine.parts ) {
-			let fontFamily = part.attr.getFontFamily( this.attr ) ,
-				fontStyle = part.attr.getFontStyle( this.attr ) ,
-				fontWeight = part.attr.getFontWeight( this.attr ) ,
-				fontSize = part.attr.getFontSize( this.attr ) ,
-				lineThickness ,
-				underline = part.attr.getUnderline( this.attr ) ,
-				lineThrough = part.attr.getLineThrough( this.attr ) ;
-
-			//console.error( "???" , fontFamily , fontSize , textStyle ) ;
-			let font = await fontLib.getFallbackFontAsync( fontFamily , fontStyle , fontWeight ) ;
-			if ( ! font ) { throw new Error( "Font not found: " + fontFamily + ' ' + fontStyle + ' ' + fontWeight ) ; }
-
-			if ( underline || lineThrough ) {
-				lineThickness = part.attr.getLineThickness( this.attr , fontSize ) ;
-			}
-
-			if ( underline ) {
-				let underlineY = part.metrics.baselineY - part.metrics.descender * 0.6 - lineThickness + yOffset ;
-				path2D.rect( part.metrics.x , underlineY , part.metrics.width , lineThickness ) ;
-			}
-
-			if ( ! part.imageUrl ) {
-				let path = font.getPath( part.text , part.metrics.x , part.metrics.baselineY + yOffset , fontSize ) ;
-				let pathData = path.toPathData() ;
-				path2D.addPath( new Path2D( pathData ) ) ;
-			}
-
-			if ( lineThrough ) {
-				let lineThroughY = part.metrics.baselineY - part.metrics.ascender * 0.25 - lineThickness + yOffset ;
-				path2D.rect( part.metrics.x , lineThroughY , part.metrics.width , lineThickness ) ;
-			}
-		}
-	}
-} ;
-
-
-
-
+// For Path2D, everything is done on the pseudo-entities.
+// This renderer does not support clipping the text, debugContainer, frame and image.
 
 
 
@@ -7441,7 +8052,595 @@ VGFlowingText.prototype.computeXYOffset = function() {
 } ;
 
 
-},{"../../package.json":87,"../BoundingBox.js":16,"../VGEntity.js":22,"../canvas.js":34,"../fontLib.js":35,"./StructuredTextLine.js":23,"./StructuredTextPart.js":24,"./StructuredTextRenderer.js":25,"./TextAttribute.js":26,"./TextMetrics.js":27,"book-source":70,"dom-kit":72}],29:[function(require,module,exports){
+},{"../../package.json":110,"../BoundingBox.js":16,"../VGPseudoContainer.js":36,"../canvas.js":40,"../fontLib.js":41,"./StructuredTextLine.js":25,"./StructuredTextPart.js":26,"./StructuredTextRenderer.js":27,"./TextAttribute.js":28,"./TextMetrics.js":29,"./VGFlowingTextImagePart.js":31,"./VGFlowingTextPart.js":32,"book-source":78,"dom-kit":81}],31:[function(require,module,exports){
+/*
+	SVG Kit
+
+	Copyright (c) 2017 - 2023 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+const VGPseudoEntity = require( '../VGPseudoEntity.js' ) ;
+
+//const TextMetrics = require( './TextMetrics.js' ) ;
+//const BoundingBox = require( '../BoundingBox.js' ) ;
+
+const dom = require( 'dom-kit' ) ;
+
+
+
+function VGFlowingTextImagePart( params ) {
+	VGPseudoEntity.call( this , params ) ;
+
+	this.imageUrl = '' ;
+	this.metrics = null ;
+
+	if ( params ) { this.set( params ) ; }
+}
+
+module.exports = VGFlowingTextImagePart ;
+
+VGFlowingTextImagePart.prototype = Object.create( VGPseudoEntity.prototype ) ;
+VGFlowingTextImagePart.prototype.constructor = VGFlowingTextImagePart ;
+VGFlowingTextImagePart.prototype.__prototypeUID__ = 'svg-kit/VGFlowingTextImagePart' ;
+VGFlowingTextImagePart.prototype.__prototypeVersion__ = require( '../../package.json' ).version ;
+
+
+
+VGFlowingTextImagePart.prototype.isRenderingContainer = true ;
+VGFlowingTextImagePart.prototype.svgTag = 'g' ;
+
+
+
+VGFlowingTextImagePart.prototype.set = function( params ) {
+	if ( params.imageUrl ) { this.imageUrl = params.imageUrl ; }
+	if ( params.metrics ) { this.metrics = params.metrics ; }
+
+	VGPseudoEntity.prototype.set.call( this , params ) ;
+} ;
+
+
+
+// Renderers
+
+
+
+VGFlowingTextImagePart.prototype.svgAttributes = function( master = this ) {
+	var attr = {} ;
+	return attr ;
+} ;
+
+
+
+// Render the Vector Graphic as a text SVG
+VGFlowingTextImagePart.prototype.renderingContainerHookForSvgText = async function( master = this ) {
+	var yOffset = this.root.invertY ? - 2 * this.y - this.height : 0 ,
+		str = '' ;
+
+	str += '<image' ;
+	str += ' x="' + ( this.metrics.x ) + '"' ;
+	str += ' y="' + ( this.metrics.baselineY - this.metrics.ascender + yOffset ) + '"' ;
+	str += ' width="' + ( this.metrics.width ) + '"' ;
+	str += ' height="' + ( this.metrics.ascender ) + '"' ;
+	//str += ' preserveAspectRatio="none"' ;
+	str += ' xlink:href="' + this.imageUrl + '"' ;
+	str += ' />' ;
+
+	return str ;
+} ;
+
+
+
+VGFlowingTextImagePart.prototype.renderingContainerHookForSvgDom = async function( master = this ) {
+	var yOffset = this.root.invertY ? - 2 * this.y - this.height : 0 ,
+		elementList = [] ;
+
+	//console.error( "???" , fontFamily , fontSize , textStyleStr ) ;
+
+	let $image = document.createElementNS( this.NS , 'image' ) ;
+	dom.attr( $image , {
+		x: this.metrics.x ,
+		y: this.metrics.baselineY - this.metrics.ascender + yOffset ,
+		width: this.metrics.width ,
+		height: this.metrics.ascender ,
+		//preserveAspectRatio: 'none' ,
+		href: this.imageUrl
+	} ) ;
+	elementList.push( $image ) ;
+
+	//console.log( "Returning:" , elementList ) ;
+	return elementList ;
+} ;
+
+
+
+VGFlowingTextImagePart.prototype.renderHookForCanvas = async function( canvasCtx , options = {} , isRedraw = false , master = this ) {
+	var yOffset = this.root.invertY ? canvasCtx.canvas.height - 1 - 2 * this.y - ( this.height - 1 ) : 0 ;
+
+	//console.error( "???" , fontFamily , fontSize , textStyle ) ;
+
+	canvasCtx.save() ;
+
+	let image = new Image() ;
+	image.src = this.imageUrl ;
+
+	await new Promise( resolve => {
+		image.onload = () => {
+			canvasCtx.drawImage(
+				image ,
+				this.metrics.x ,
+				this.metrics.baselineY - this.metrics.ascender + yOffset
+			) ;
+			resolve() ;
+		} ;
+	} ) ;
+
+	canvasCtx.restore() ;
+} ;
+
+
+},{"../../package.json":110,"../VGPseudoEntity.js":37,"dom-kit":81}],32:[function(require,module,exports){
+/*
+	SVG Kit
+
+	Copyright (c) 2017 - 2023 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+const VGPseudoEntity = require( '../VGPseudoEntity.js' ) ;
+
+const TextAttribute = require( './TextAttribute.js' ) ;
+const TextMetrics = require( './TextMetrics.js' ) ;
+//const BoundingBox = require( '../BoundingBox.js' ) ;
+
+const fontLib = require( '../fontLib.js' ) ;
+const canvas = require( '../canvas.js' ) ;
+
+const unicode = require( 'string-kit/lib/unicode.js' ) ;
+
+//const dom = require( 'dom-kit' ) ;
+
+
+
+function VGFlowingTextPart( params ) {
+	VGPseudoEntity.call( this , params ) ;
+
+	this.text = '' ;
+	this.metrics = null ;
+	this.attr = null ;
+	this.charOffset = 0 ;	// The character offset relative to the VGFlowingText parent, used for slow-typing FX
+	this.margin = {
+		top: 0 ,
+		bottom: 0 ,
+		left: 0 ,
+		right: 0
+	} ;
+
+	if ( params ) { this.set( params ) ; }
+}
+
+module.exports = VGFlowingTextPart ;
+
+VGFlowingTextPart.prototype = Object.create( VGPseudoEntity.prototype ) ;
+VGFlowingTextPart.prototype.constructor = VGFlowingTextPart ;
+VGFlowingTextPart.prototype.__prototypeUID__ = 'svg-kit/VGFlowingTextPart' ;
+VGFlowingTextPart.prototype.__prototypeVersion__ = require( '../../package.json' ).version ;
+
+
+
+VGFlowingTextPart.prototype.isRenderingContainer = true ;
+VGFlowingTextPart.prototype.svgTag = 'g' ;
+
+
+
+VGFlowingTextPart.prototype.set = function( params ) {
+	//console.warn( "VGFlowingTextPart.prototype.set:" , params ) ;
+	if ( params.text !== undefined ) { this.text = params.text ; }
+
+	if ( params.margin && typeof params.margin === 'object' ) {
+		this.margin.top = + params.margin.top || 0 ;
+		this.margin.bottom = + params.margin.bottom || 0 ;
+		this.margin.left = + params.margin.left || 0 ;
+		this.margin.right = + params.margin.right || 0 ;
+		this.computeBoundingBox() ;
+	}
+
+	if ( params.metrics ) {
+		if ( params.metrics instanceof TextMetrics ) { this.metrics = params.metrics ; }
+		// TextMetrics.set() does not exist ATM
+		//else { this.metrics.set( params.metrics ) ; }
+		this.computeBoundingBox() ;
+	}
+
+	if ( params.attr ) {
+		if ( params.attr instanceof TextAttribute ) { this.attr = params.attr ; }
+		else { this.attr.set( params.attr ) ; }
+	}
+
+	if ( params.charOffset !== undefined ) { this.charOffset = params.charOffset ; }
+
+	if ( params.fxData ) {
+		if ( params.fxData.x ) { this.fxData.x = params.fxData.x ; }
+		if ( params.fxData.y ) { this.fxData.y = params.fxData.y ; }
+	}
+
+	VGPseudoEntity.prototype.set.call( this , params ) ;
+} ;
+
+
+
+VGFlowingTextPart.prototype.computeBoundingBox = function() {
+	if ( ! this.metrics ) { return ; }
+
+	this.boundingBox.x = this.metrics.x - this.margin.left ;
+	this.boundingBox.y = this.metrics.baselineY - this.metrics.ascender - this.margin.top ;
+	this.boundingBox.width = this.metrics.width + 1 + this.margin.left + this.margin.right ;
+	this.boundingBox.height = this.metrics.ascender - this.metrics.descender + 1 + this.margin.top + this.margin.bottom ;
+} ;
+
+
+
+// Renderers
+
+
+
+VGFlowingTextPart.prototype.svgAttributes = function( master = this ) {
+	var attr = {} ;
+	return attr ;
+} ;
+
+
+
+// Render the Vector Graphic as a text SVG
+VGFlowingTextPart.prototype.renderingContainerHookForSvgText = async function( master = this ) {
+	var parentAttr = this.parent.attr ,
+		yOffset = this.root.invertY ? - 2 * this.y - this.height : 0 ,
+		str = '' ,
+		fontFamily = this.attr.getFontFamily( parentAttr ) ,
+		fontStyle = this.attr.getFontStyle( parentAttr ) ,
+		fontWeight = this.attr.getFontWeight( parentAttr ) ,
+		fontSize = this.attr.getFontSize( parentAttr ) ,
+		textStyleStr = this.attr.getTextSvgStyleString( parentAttr , fontSize , master?.palette ) ,
+		lineStyleStr , lineThickness ,
+		underline = this.attr.getUnderline( parentAttr ) ,
+		lineThrough = this.attr.getLineThrough( parentAttr ) ,
+		frame = this.attr.getFrame( parentAttr ) ;
+
+	var font = await fontLib.getFallbackFontAsync( fontFamily , fontStyle , fontWeight ) ;
+	if ( ! font ) { throw new Error( "Font not found: " + fontFamily + ' ' + fontStyle + ' ' + fontWeight ) ; }
+
+	if ( frame ) {
+		let frameY = this.metrics.baselineY - this.metrics.ascender + yOffset ,
+			frameHeight = this.metrics.ascender - this.metrics.descender ,
+			frameStyleStr = this.attr.getFrameSvgStyleString( parentAttr , fontSize , master?.palette ) ,
+			cornerRadius = this.attr.getFrameCornerRadius( parentAttr , fontSize ) ;
+
+		//console.error( "frameStyleStr:" , frameStyleStr , this.attr ) ;
+		str += '<rect' ;
+		str += ' x="' + this.metrics.x + '"' ;
+		str += ' y="' + frameY + '"' ;
+		str += ' width="' + this.metrics.width + '"' ;
+		str += ' height="' + frameHeight + '"' ;
+		if ( cornerRadius ) { str += ' rx="' + cornerRadius + '"' ; }
+		if ( frameStyleStr ) { str += ' style="' + frameStyleStr + '"' ; }
+		str += ' />' ;
+	}
+
+	if ( underline || lineThrough ) {
+		lineStyleStr = this.attr.getLineSvgStyleString( parentAttr , fontSize , master?.palette ) ;
+		lineThickness = this.attr.getLineThickness( parentAttr , fontSize ) ;
+	}
+
+	if ( underline ) {
+		let underlineY = this.metrics.baselineY - this.metrics.descender * 0.6 - lineThickness + yOffset ;
+
+		str += '<rect' ;
+		str += ' x="' + this.metrics.x + '"' ;
+		str += ' y="' + underlineY + '"' ;
+		str += ' width="' + this.metrics.width + '"' ;
+		str += ' height="' + lineThickness + '"' ;
+		if ( lineStyleStr ) { str += ' style="' + lineStyleStr + '"' ; }
+		str += ' />' ;
+	}
+
+	let path = font.getPath( this.text , this.metrics.x , this.metrics.baselineY + yOffset , fontSize ) ;
+	let pathData = path.toPathData() ;
+
+	str += '<path' ;
+	if ( textStyleStr ) { str += ' style="' + textStyleStr + '"' ; }
+	str += ' d="' + pathData + '"' ;
+	str += ' />' ;
+
+	if ( lineThrough ) {
+		let lineThroughY = this.metrics.baselineY - this.metrics.ascender * 0.25 - lineThickness + yOffset ;
+
+		str += '<rect' ;
+		str += ' x="' + this.metrics.x + '"' ;
+		str += ' y="' + lineThroughY + '"' ;
+		str += ' width="' + this.metrics.width + '"' ;
+		str += ' height="' + lineThickness + '"' ;
+		if ( lineStyleStr ) { str += ' style="' + lineStyleStr + '"' ; }
+		str += ' />' ;
+	}
+
+	return str ;
+} ;
+
+
+
+VGFlowingTextPart.prototype.renderingContainerHookForSvgDom = async function( master = this ) {
+	var parentAttr = this.parent.attr ,
+		yOffset = this.root.invertY ? - 2 * this.y - this.height : 0 ,
+		elementList = [] ,
+		fontFamily = this.attr.getFontFamily( parentAttr ) ,
+		fontStyle = this.attr.getFontStyle( parentAttr ) ,
+		fontWeight = this.attr.getFontWeight( parentAttr ) ,
+		fontSize = this.attr.getFontSize( parentAttr ) ,
+		textStyleStr = this.attr.getTextSvgStyleString( parentAttr , fontSize , master?.palette ) ,
+		lineStyleStr , lineThickness ,
+		underline = this.attr.getUnderline( parentAttr ) ,
+		lineThrough = this.attr.getLineThrough( parentAttr ) ,
+		frame = this.attr.getFrame( parentAttr ) ;
+
+	//console.error( "???" , fontFamily , fontSize , textStyleStr ) ;
+	var font = await fontLib.getFallbackFontAsync( fontFamily , fontStyle , fontWeight ) ;
+	if ( ! font ) { throw new Error( "Font not found: " + fontFamily + ' ' + fontStyle + ' ' + fontWeight ) ; }
+
+	if ( frame ) {
+		let frameY = this.metrics.baselineY - this.metrics.ascender + yOffset ,
+			frameHeight = this.metrics.ascender - this.metrics.descender ,
+			frameStyleStr = this.attr.getFrameSvgStyleString( parentAttr , fontSize , master?.palette ) ,
+			cornerRadius = this.attr.getFrameCornerRadius( parentAttr , fontSize ) ;
+
+		//console.error( "frameStyleStr:" , frameStyleStr , this.attr ) ;
+		let $frame = document.createElementNS( this.NS , 'rect' ) ;
+		$frame.setAttribute( 'x' , this.metrics.x ) ;
+		$frame.setAttribute( 'y' , frameY ) ;
+		$frame.setAttribute( 'width' , this.metrics.width ) ;
+		$frame.setAttribute( 'height' , frameHeight ) ;
+		if ( cornerRadius ) { $frame.setAttribute( 'rx' , cornerRadius ) ; }
+		if ( frameStyleStr ) { $frame.setAttribute( 'style' , frameStyleStr ) ; }
+		elementList.push( $frame ) ;
+	}
+
+	if ( underline || lineThrough ) {
+		lineStyleStr = this.attr.getLineSvgStyleString( parentAttr , fontSize , master?.palette ) ;
+		lineThickness = this.attr.getLineThickness( parentAttr , fontSize ) ;
+	}
+
+	if ( underline ) {
+		let underlineY = this.metrics.baselineY - this.metrics.descender * 0.6 - lineThickness + yOffset ;
+
+		let $line = document.createElementNS( this.NS , 'rect' ) ;
+		$line.setAttribute( 'x' , this.metrics.x ) ;
+		$line.setAttribute( 'y' , underlineY ) ;
+		$line.setAttribute( 'width' , this.metrics.width ) ;
+		$line.setAttribute( 'height' , lineThickness ) ;
+		if ( lineStyleStr ) { $line.setAttribute( 'style' , lineStyleStr ) ; }
+		elementList.push( $line ) ;
+	}
+
+	let path = font.getPath( this.text , this.metrics.x , this.metrics.baselineY + yOffset , fontSize ) ;
+	let pathData = path.toPathData() ;
+
+	let $textPath = document.createElementNS( this.NS , 'path' ) ;
+	if ( textStyleStr ) { $textPath.setAttribute( 'style' , textStyleStr ) ; }
+	$textPath.setAttribute( 'd' , pathData ) ;
+	elementList.push( $textPath ) ;
+
+	if ( lineThrough ) {
+		let lineThroughY = this.metrics.baselineY - this.metrics.ascender * 0.25 - lineThickness + yOffset ;
+
+		let $line = document.createElementNS( this.NS , 'rect' ) ;
+		$line.setAttribute( 'x' , this.metrics.x ) ;
+		$line.setAttribute( 'y' , lineThroughY ) ;
+		$line.setAttribute( 'width' , this.metrics.width ) ;
+		$line.setAttribute( 'height' , lineThickness ) ;
+		if ( lineStyleStr ) { $line.setAttribute( 'style' , lineStyleStr ) ; }
+		elementList.push( $line ) ;
+	}
+
+	//console.log( "Returning:" , elementList ) ;
+	return elementList ;
+} ;
+
+
+
+VGFlowingTextPart.prototype.renderHookForCanvas = async function( canvasCtx , options = {} , isRedraw = false , master = this ) {
+	if ( this.charOffset >= this.parent.charLimit ) { return ; }
+
+	var text ,
+		parentAttr = this.parent.attr ,
+		yOffset = this.root.invertY ? canvasCtx.canvas.height - 1 - 2 * this.y - ( this.height - 1 ) : 0 ,
+		fontFamily = this.attr.getFontFamily( parentAttr ) ,
+		fontStyle = this.attr.getFontStyle( parentAttr ) ,
+		fontWeight = this.attr.getFontWeight( parentAttr ) ,
+		fontSize = this.attr.getFontSize( parentAttr ) ,
+		lineStyle , lineThickness ,
+		underline = false ,
+		lineThrough = false ,
+		frame = false ;
+	//console.error( "???" , fontFamily , fontSize , textStyle ) ;
+
+	if ( this.charOffset + this.metrics.charCount <= this.parent.charLimit ) {
+		// All characters are displayed and decoration are enabled
+		text = this.text ;
+		underline = this.attr.getUnderline( parentAttr ) ;
+		lineThrough = this.attr.getLineThrough( parentAttr ) ;
+		frame = this.attr.getFrame( parentAttr ) ;
+	}
+	else {
+		// Truncate the text, and do not display decoration
+		text = unicode.truncate( this.text , this.parent.charLimit - this.charOffset ) ;
+	}
+
+	var font = await fontLib.getFallbackFontAsync( fontFamily , fontStyle , fontWeight ) ;
+	if ( ! font ) { throw new Error( "Font not found: " + fontFamily + ' ' + fontStyle + ' ' + fontWeight ) ; }
+
+	if ( frame ) {
+		let frameY = this.metrics.baselineY - this.metrics.ascender + yOffset ,
+			frameHeight = this.metrics.ascender - this.metrics.descender ,
+			frameStyle = this.attr.getFrameSvgStyle( parentAttr , fontSize , master?.palette ) ,
+			cornerRadius = this.attr.getFrameCornerRadius( parentAttr , fontSize ) ;
+
+		canvasCtx.beginPath() ;
+
+		if ( cornerRadius ) {
+			canvasCtx.roundRect( this.metrics.x , frameY , this.metrics.width , frameHeight , cornerRadius ) ;
+		}
+		else {
+			canvasCtx.rect( this.metrics.x , frameY , this.metrics.width , frameHeight ) ;
+		}
+
+		canvas.fillAndStrokeUsingSvgStyle( canvasCtx , frameStyle ) ;
+	}
+
+	if ( underline || lineThrough ) {
+		lineStyle = this.attr.getLineSvgStyle( parentAttr , fontSize , master?.palette ) ;
+		lineThickness = this.attr.getLineThickness( parentAttr , fontSize ) ;
+	}
+
+	if ( underline ) {
+		let underlineY = this.metrics.baselineY - this.metrics.descender * 0.6 - lineThickness + yOffset ;
+		canvasCtx.beginPath() ;
+		canvasCtx.rect( this.metrics.x , underlineY , this.metrics.width , lineThickness ) ;
+		canvas.fillAndStrokeUsingSvgStyle( canvasCtx , lineStyle ) ;
+	}
+
+	if ( this.fxData.perCharacter ) {
+		let pathList = font.getPaths(
+			text ,
+			this.metrics.x + ( + this.fxData.x || 0 ) ,
+			this.metrics.baselineY + yOffset + ( + this.fxData.y || 0 ) ,
+			fontSize
+		) ;
+
+		let i = 0 ;
+
+		for ( let path of pathList ) {
+			let fxData = this.fxData.perCharacter[ i ] ;
+			let pathData = path.toPathData() ;
+			let path2D = new Path2D( pathData ) ;
+			let textStyle = ( fxData.attr ?? this.attr ).getTextSvgStyle( parentAttr , fontSize , master?.palette ) ;
+
+			// There is no simple way to translate a path2D, except by applying a translation to the canvas, then restoring
+			canvasCtx.save() ;
+			canvasCtx.translate( fxData.x || 0 , fxData.y || 0 ) ;
+			canvas.fillAndStrokeUsingSvgStyle( canvasCtx , textStyle , path2D ) ;
+			canvasCtx.restore() ;
+
+			i ++ ;
+		}
+	}
+	else {
+		let path = font.getPath(
+			text ,
+			this.metrics.x + ( + this.fxData.x || 0 ) ,
+			this.metrics.baselineY + yOffset + ( + this.fxData.y || 0 ) ,
+			fontSize
+		) ;
+		let pathData = path.toPathData() ;
+		let path2D = new Path2D( pathData ) ;
+		let textStyle = ( this.fxData.attr ?? this.attr ).getTextSvgStyle( parentAttr , fontSize , master?.palette ) ;
+
+		canvas.fillAndStrokeUsingSvgStyle( canvasCtx , textStyle , path2D ) ;
+	}
+
+	if ( lineThrough ) {
+		let lineThroughY = this.metrics.baselineY - this.metrics.ascender * 0.25 - lineThickness + yOffset ;
+		canvasCtx.beginPath() ;
+		canvasCtx.rect( this.metrics.x , lineThroughY , this.metrics.width , lineThickness ) ;
+		canvas.fillAndStrokeUsingSvgStyle( canvasCtx , lineStyle ) ;
+	}
+} ;
+
+
+
+/*
+	This renderer does not support clipping the text, debugContainer, and frame.
+*/
+VGFlowingTextPart.prototype.renderHookForPath2D = async function( path2D , canvasCtx , options = {} , master = this ) {
+	var parentAttr = this.parent.attr ,
+		yOffset = this.root.invertY ? canvasCtx.canvas.height - 1 - 2 * this.y - ( this.height - 1 ) : 0 ,
+		fontFamily = this.attr.getFontFamily( parentAttr ) ,
+		fontStyle = this.attr.getFontStyle( parentAttr ) ,
+		fontWeight = this.attr.getFontWeight( parentAttr ) ,
+		fontSize = this.attr.getFontSize( parentAttr ) ,
+		lineThickness ,
+		underline = this.attr.getUnderline( parentAttr ) ,
+		lineThrough = this.attr.getLineThrough( parentAttr ) ;
+
+	//console.error( "???" , fontFamily , fontSize , textStyle ) ;
+	var font = await fontLib.getFallbackFontAsync( fontFamily , fontStyle , fontWeight ) ;
+	if ( ! font ) { throw new Error( "Font not found: " + fontFamily + ' ' + fontStyle + ' ' + fontWeight ) ; }
+
+	if ( underline || lineThrough ) {
+		lineThickness = this.attr.getLineThickness( parentAttr , fontSize ) ;
+	}
+
+	if ( underline ) {
+		let underlineY = this.metrics.baselineY - this.metrics.descender * 0.6 - lineThickness + yOffset ;
+		path2D.rect( this.metrics.x , underlineY , this.metrics.width , lineThickness ) ;
+	}
+
+	let path = font.getPath( this.text , this.metrics.x , this.metrics.baselineY + yOffset , fontSize ) ;
+	let pathData = path.toPathData() ;
+	path2D.addPath( new Path2D( pathData ) ) ;
+
+	if ( lineThrough ) {
+		let lineThroughY = this.metrics.baselineY - this.metrics.ascender * 0.25 - lineThickness + yOffset ;
+		path2D.rect( this.metrics.x , lineThroughY , this.metrics.width , lineThickness ) ;
+	}
+} ;
+
+
+},{"../../package.json":110,"../VGPseudoEntity.js":37,"../canvas.js":40,"../fontLib.js":41,"./TextAttribute.js":28,"./TextMetrics.js":29,"string-kit/lib/unicode.js":109}],33:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -7498,7 +8697,7 @@ VGGroup.prototype.set = function( params ) {
 } ;
 
 
-},{"../package.json":87,"./VGContainer.js":20,"./svg-kit.js":39}],30:[function(require,module,exports){
+},{"../package.json":110,"./VGContainer.js":22,"./svg-kit.js":47}],34:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -7587,12 +8786,10 @@ const ASPECT = {
 
 
 VGImage.prototype.set = function( params ) {
-	VGEntity.prototype.set.call( this , params ) ;
-
-	if ( params.x !== undefined ) { this.x = params.x ; }
-	if ( params.y !== undefined ) { this.y = params.y ; }
-	if ( params.width !== undefined ) { this.width = params.width ; }
-	if ( params.height !== undefined ) { this.height = params.height ; }
+	if ( params.x !== undefined ) { this.boundingBox.x = this.x = params.x ; }
+	if ( params.y !== undefined ) { this.boundingBox.y = this.y = params.y ; }
+	if ( params.width !== undefined ) { this.boundingBox.width = this.width = params.width ; }
+	if ( params.height !== undefined ) { this.boundingBox.height = this.height = params.height ; }
 	if ( params.url && typeof params.url === 'string' ) { this.url = params.url ; }
 
 	if ( params.aspect !== undefined ) { this.aspect = ASPECT[ params.aspect ] || 'stretch' ; }
@@ -7618,6 +8815,8 @@ VGImage.prototype.set = function( params ) {
 			this.sourceLeftWidth !== null && this.sourceRightWidth !== null
 			&& this.sourceTopHeight !== null && this.sourceBottomHeight !== null ;
 	}
+
+	VGEntity.prototype.set.call( this , params ) ;
 } ;
 
 
@@ -7816,7 +9015,7 @@ VGImage.prototype.renderSvgDomNinePatchImage = function( imageSize , elementList
 
 
 
-VGImage.prototype.renderHookForCanvas = async function( canvasCtx , options = {} , master = this ) {
+VGImage.prototype.renderHookForCanvas = async function( canvasCtx , options = {} , isRedraw = false , master = this ) {
 	canvasCtx.save() ;
 
 	var image = new Image() ;
@@ -8079,7 +9278,7 @@ VGImage.prototype.getNinePatchCoordsList = function( imageSize ) {
 } ;
 
 
-},{"../package.json":87,"./VGEntity.js":22,"./getImageSize.js":36,"dom-kit":72}],31:[function(require,module,exports){
+},{"../package.json":110,"./VGEntity.js":24,"./getImageSize.js":44,"dom-kit":81}],35:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -8137,8 +9336,11 @@ VGPath.prototype.svgTag = 'path' ;
 
 
 VGPath.prototype.set = function( params ) {
-	VGEntity.prototype.set.call( this , params ) ;
 	if ( Array.isArray( params.commands ) ) { this.commands = params.commands ; }
+
+	// /!\ Bounding box should be calculated from path
+
+	VGEntity.prototype.set.call( this , params ) ;
 } ;
 
 
@@ -8183,7 +9385,7 @@ VGPath.prototype.toD = function() {
 
 
 
-VGPath.prototype.renderHookForCanvas = function( canvasCtx , options = {} , master = this ) {
+VGPath.prototype.renderHookForCanvas = function( canvasCtx , options = {} , isRedraw = false , master = this ) {
 	canvasCtx.save() ;
 	canvasCtx.beginPath() ;
 	canvas.fillAndStrokeUsingStyle( canvasCtx , this.style , master?.palette , new Path2D( this.toD() ) ) ;
@@ -8772,7 +9974,161 @@ VGPath.prototype.forwardNegativeTurn = function( data ) {
 } ;
 
 
-},{"../package.json":87,"./VGEntity.js":22,"./canvas.js":34}],32:[function(require,module,exports){
+},{"../package.json":110,"./VGEntity.js":24,"./canvas.js":40}],36:[function(require,module,exports){
+/*
+	SVG Kit
+
+	Copyright (c) 2017 - 2023 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+const svgKit = require( './svg-kit.js' ) ;
+const VGEntity = require( './VGEntity.js' ) ;
+
+const arrayKit = require( 'array-kit' ) ;
+
+
+
+/*
+	A pseudo-container is a container for pseudo-entities, entities that are not user-created entities
+	but on-the-fly entities created for rendering/compositing purposes.
+	A notable example is the VGFlowingText element.
+	From a rendering point-of-view, there is not much difference between pseudo-container and container,
+	but from the userland point-of-view, they do not exists and are not serialized.
+*/
+
+function VGPseudoContainer( params ) {
+	VGEntity.call( this , params ) ;
+
+	this.arePseudoEntitiesReady = false ;
+	this.pseudoEntities = [] ;
+}
+
+module.exports = VGPseudoContainer ;
+
+VGPseudoContainer.prototype = Object.create( VGEntity.prototype ) ;
+VGPseudoContainer.prototype.constructor = VGPseudoContainer ;
+VGPseudoContainer.prototype.__prototypeUID__ = 'svg-kit/VGPseudoContainer' ;
+VGPseudoContainer.prototype.__prototypeVersion__ = require( '../package.json' ).version ;
+
+
+
+VGPseudoContainer.prototype.isPseudoContainer = true ;
+
+
+
+VGPseudoContainer.prototype.addPseudoEntity = function( pseudoEntity ) {
+	if ( pseudoEntity.parent ) { pseudoEntity.parent.removePseudoEntity( pseudoEntity ) ; }
+	pseudoEntity.parent = this ;
+	pseudoEntity.root = this.root ;
+	this.pseudoEntities.push( pseudoEntity ) ;
+} ;
+
+
+
+VGPseudoContainer.prototype.removePseudoEntity = function( pseudoEntity ) {
+	arrayKit.deleteValue( this.pseudoEntities , pseudoEntity ) ;
+	pseudoEntity.root = pseudoEntity.parent = null ;
+} ;
+
+
+
+VGPseudoContainer.prototype.clearPseudoEntities = function() {
+	for ( let pseudoEntity of this.pseudoEntities ) {
+		pseudoEntity.root = pseudoEntity.parent = null ;
+	}
+
+	this.pseudoEntities.length = 0 ;
+} ;
+
+
+
+// To be derived...
+VGPseudoContainer.prototype.computePseudoEntities = async function() {} ;
+
+
+},{"../package.json":110,"./VGEntity.js":24,"./svg-kit.js":47,"array-kit":69}],37:[function(require,module,exports){
+/*
+	SVG Kit
+
+	Copyright (c) 2017 - 2023 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+const svgKit = require( './svg-kit.js' ) ;
+const VGEntity = require( './VGEntity.js' ) ;
+
+const arrayKit = require( 'array-kit' ) ;
+
+
+
+/*
+	A pseudo-entity is an entity not created by user, created internally for rendering/compositing purposes.
+	Notable examples are VGFlowingText's sub-entities.
+*/
+
+function VGPseudoEntity( params ) {
+	VGEntity.call( this , params ) ;
+}
+
+module.exports = VGPseudoEntity ;
+
+VGPseudoEntity.prototype = Object.create( VGEntity.prototype ) ;
+VGPseudoEntity.prototype.constructor = VGPseudoEntity ;
+VGPseudoEntity.prototype.__prototypeUID__ = 'svg-kit/VGPseudoEntity' ;
+VGPseudoEntity.prototype.__prototypeVersion__ = require( '../package.json' ).version ;
+
+// Useful?
+//VGPseudoEntity.prototype.isPseudoEntity = true ;
+
+
+},{"../package.json":110,"./VGEntity.js":24,"./svg-kit.js":47,"array-kit":69}],38:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -8833,17 +10189,17 @@ VGRect.prototype.__prototypeVersion__ = require( '../package.json' ).version ;
 
 
 VGRect.prototype.set = function( params ) {
-	VGEntity.prototype.set.call( this , params ) ;
-
-	if ( params.x !== undefined ) { this.x = params.x ; }
-	if ( params.y !== undefined ) { this.y = params.y ; }
-	if ( params.width !== undefined ) { this.width = params.width ; }
-	if ( params.height !== undefined ) { this.height = params.height ; }
+	if ( params.x !== undefined ) { this.boundingBox.x = this.x = params.x ; }
+	if ( params.y !== undefined ) { this.boundingBox.y = this.y = params.y ; }
+	if ( params.width !== undefined ) { this.boundingBox.width = this.width = params.width ; }
+	if ( params.height !== undefined ) { this.boundingBox.height = this.height = params.height ; }
 
 	// Round corner radius
 	if ( params.r !== undefined ) { this.rx = this.ry = params.r ; }
 	if ( params.rx !== undefined ) { this.rx = params.rx ; }
 	if ( params.ry !== undefined ) { this.ry = params.ry ; }
+
+	VGEntity.prototype.set.call( this , params ) ;
 } ;
 
 
@@ -8883,7 +10239,7 @@ VGRect.prototype.svgAttributes = function( master = this ) {
 
 
 
-VGRect.prototype.renderHookForCanvas = function( canvasCtx , options = {} , master = this ) {
+VGRect.prototype.renderHookForCanvas = function( canvasCtx , options = {} , isRedraw = false , master = this ) {
 	var yOffset = this.root.invertY ? canvasCtx.canvas.height - 1 - 2 * this.y - ( this.height - 1 ) : 0 ;
 
 	canvasCtx.save() ;
@@ -8914,7 +10270,7 @@ VGRect.prototype.renderHookForPath2D = function( path2D , canvasCtx , options = 
 } ;
 
 
-},{"../package.json":87,"./VGEntity.js":22,"./canvas.js":34}],33:[function(require,module,exports){
+},{"../package.json":110,"./VGEntity.js":24,"./canvas.js":40}],39:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -8984,8 +10340,6 @@ VGText.prototype.svgTag = 'text' ;
 
 
 VGText.prototype.set = function( params ) {
-	VGEntity.prototype.set.call( this , params ) ;
-
 	if ( params.x !== undefined ) { this.x = params.x ; }
 	if ( params.y !== undefined ) { this.y = params.y ; }
 
@@ -9003,6 +10357,10 @@ VGText.prototype.set = function( params ) {
 	if ( params.lengthAdjust === 'spacingAndGlyphs' ) { this.adjustGlyph = true ; }
 	else if ( params.lengthAdjust === 'spacing' ) { this.adjustGlyph = false ; }
 	if ( params.adjustGlyph !== undefined ) { this.adjustGlyph = !! params.adjustGlyph ; }
+
+	// /!\ Should compute bounding box, but it's not possible at this stage, since this doesn't use open-type
+
+	VGEntity.prototype.set.call( this , params ) ;
 } ;
 
 
@@ -9045,7 +10403,7 @@ VGText.prototype.svgAttributes = function( master = this ) {
 
 
 
-VGText.prototype.renderHookForCanvas = function( canvasCtx , options = {} , master = this ) {
+VGText.prototype.renderHookForCanvas = function( canvasCtx , options = {} , isRedraw = false , master = this ) {
 	var yOffset = this.root.invertY ? canvasCtx.canvas.height - 1 - 2 * this.y : 0 ,
 		style = this.style ,
 		fill = false ,
@@ -9089,7 +10447,7 @@ VGText.prototype.renderHookForCanvas = function( canvasCtx , options = {} , mast
 } ;
 
 
-},{"../package.json":87,"./VGEntity.js":22}],34:[function(require,module,exports){
+},{"../package.json":110,"./VGEntity.js":24}],40:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -9192,7 +10550,38 @@ canvas._fillAndStroke = ( canvasCtx , style , path2d = null , convertColor = fal
 } ;
 
 
-},{"./misc.js":37}],35:[function(require,module,exports){
+
+// Get the Canvas element coordinates given the screen coordinates, accounting for Canvas element
+// stretching (inner size different from displayed size).
+// For browser mouse event, .clientX and .clientY should be used.
+canvas.screenToCanvasCoords = ( $canvas , screenCoords ) => {
+	var rect = $canvas.getBoundingClientRect() ,
+		scaleX = $canvas.width / rect.width ,
+		scaleY = $canvas.height / rect.height ;
+
+	return {
+		x: ( screenCoords.x - rect.left ) * scaleX ,
+		y: ( screenCoords.y - rect.top ) * scaleY
+	} ;
+} ;
+
+
+
+// Get the context coordinates given the coordinates over a Canvas element, accounting for context matrix transformations.
+// E.g.: you have the coordinates of the mouse related to the Canvas element, you want the coordinates in the Canvas context
+// which may have transformations.
+canvas.canvasToContextCoords = ( canvasCtx , canvasCoords ) => {
+	var matrix = canvasCtx.getTransform() ;
+	matrix.invertSelf() ;
+
+	return {
+		x: canvasCoords.x * matrix.a + canvasCoords.y * matrix.c + matrix.e ,
+		y: canvasCoords.x * matrix.b + canvasCoords.y * matrix.d + matrix.f
+	} ;
+} ;
+
+
+},{"./misc.js":45}],41:[function(require,module,exports){
 (function (process,__dirname){(function (){
 /*
 	SVG Kit
@@ -9512,7 +10901,7 @@ fontLib.getFontByUrlAsync = url => {
 	if ( fontPromises[ url ] ) { return fontPromises[ url ] ; }
 	fontPromises[ url ] = fontLib._getFontByUrlAsync( url ) ;
 	return fontPromises[ url ] ;
-}
+} ;
 
 
 
@@ -9571,7 +10960,465 @@ else {
 
 
 }).call(this)}).call(this,require('_process'),"/../svg-kit/lib")
-},{"_process":94,"fs":88,"opentype.js":74,"path":93}],36:[function(require,module,exports){
+},{"_process":117,"fs":111,"opentype.js":85,"path":116}],42:[function(require,module,exports){
+/*
+	SVG Kit
+
+	Copyright (c) 2017 - 2023 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+const mathFn = require( './mathFn.js' ) ;
+const TextAttribute = require( '../VGFlowingText/TextAttribute.js' ) ;
+
+
+
+/*
+	FX set up dynamic data automatically.
+*/
+
+
+// For VGFlowingText, slow-typing displays the text letter by letter
+exports.slowTyping = exports['slow-typing'] = ( params ) => {
+	let everyTick = 1 , multiply = 1 ;
+
+	if ( params.speed ) {
+		if ( params.speed >= 1 ) { multiply = Math.round( params.speed ) ; }
+		else { everyTick = Math.round( 1 / params.speed ) ; }
+	}
+
+	return {
+		charLimit: 0 ,
+		dynamic: {
+			noRedraw: true ,
+			everyTick ,
+			statusData: {
+				base: {
+					eachFrame: dynamicArea => {
+						let charLimit = dynamicArea.tick * multiply ;
+						if ( charLimit - multiply >= dynamicArea.entity.charCount ) { return ; }
+						return { charLimit } ;
+					}
+				}
+			}
+		} ,
+		childrenDynamic: {
+			everyTick ,
+			statusData: {
+				base: {
+					eachFrame: dynamicArea => {
+						let ent = dynamicArea.entity ,
+							charLimit = ent.parent.charLimit ,
+							partOffset = ent.charOffset ,
+							partLength = ent.metrics.charCount ;
+						return charLimit > partOffset && charLimit - multiply < partOffset + partLength ;
+					}
+				}
+			}
+		}
+	} ;
+} ;
+
+
+
+exports.bobbing = ( params ) => {
+	var everyTick = + params.everyTick || 1 ,
+		amplitude = + params.amplitude || 4 ,
+		multiply = 1 / ( + params.period || 20 ) ,
+		marginTopBottom = Math.ceil( amplitude + 1 ) ;
+
+	return {
+		margin: { top: marginTopBottom , bottom: marginTopBottom , left: 1 , right: 1 } ,
+		dynamic: {
+			everyTick ,
+			statusData: {
+				base: {
+					eachFrame: dynamicArea => {
+						//dynamicArea.entity.fxData.y = Math.sin( multiply * dynamicArea.tick ) * amplitude ;
+						dynamicArea.entity.fxData.y = mathFn.transform.cycleAround( multiply * dynamicArea.tick ) * amplitude ;
+						return true ;
+					}
+				}
+			}
+		}
+	} ;
+} ;
+
+
+
+exports.shaking = ( params ) => {
+	var everyTick = + params.everyTick || 2 ,
+		amplitude = + params.amplitude || 4 ,
+		margin = Math.ceil( amplitude + 1 ) ;
+
+	return {
+		margin: {
+			top: margin , bottom: margin , left: margin , right: margin
+		} ,
+		dynamic: {
+			everyTick ,
+			statusData: {
+				base: {
+					eachFrame: dynamicArea => {
+						dynamicArea.entity.fxData.x = ( 2 * Math.random() - 1 ) * amplitude ;
+						dynamicArea.entity.fxData.y = ( 2 * Math.random() - 1 ) * amplitude ;
+						return true ;
+					}
+				}
+			}
+		}
+	} ;
+} ;
+
+
+
+exports.scramble = ( params ) => {
+	var everyTick = + params.everyTick || 2 ,
+		xAmplitude = params.amplitude ?? params.xAmplitude ?? 1 ,
+		yAmplitude = params.amplitude ?? params.yAmplitude ?? 2 ;
+
+	return {
+		margin: {
+			top: xAmplitude + 1 , bottom: xAmplitude + 1 , left: yAmplitude + 1 , right: yAmplitude + 1
+		} ,
+		dynamic: {
+			everyTick ,
+			statusData: {
+				base: {
+					eachFrame: dynamicArea => {
+						if ( ! dynamicArea.entity.fxData.perCharacter ) { dynamicArea.entity.fxData.perCharacter = [] ; }
+
+						let i = 0 ;
+
+						for ( let char of dynamicArea.entity.text ) {
+							let fxData = dynamicArea.entity.fxData.perCharacter[ i ] ;
+							if ( ! fxData ) { fxData = dynamicArea.entity.fxData.perCharacter[ i ] = {} ; }
+
+							fxData.x = ( 2 * Math.random() - 1 ) * xAmplitude ;
+							fxData.y = ( 2 * Math.random() - 1 ) * yAmplitude ;
+
+							i ++ ;
+						}
+
+						dynamicArea.entity.fxData.perCharacter.length = i ;
+
+						return true ;
+					}
+				}
+			}
+		}
+	} ;
+} ;
+
+
+
+exports.waving = ( params ) => {
+	var everyTick = + params.everyTick || 1 ,
+		amplitude = + params.amplitude || 4 ,
+		multiply = 1 / ( + params.period || 20 ) ,
+		phaseShift = + params.phaseShift || 1 / 24 ,
+		marginTopBottom = Math.ceil( amplitude + 1 ) ;
+
+	return {
+		margin: { top: marginTopBottom , bottom: marginTopBottom , left: 1 , right: 1 } ,
+		dynamic: {
+			everyTick ,
+			statusData: {
+				base: {
+					eachFrame: dynamicArea => {
+						if ( ! dynamicArea.entity.fxData.perCharacter ) { dynamicArea.entity.fxData.perCharacter = [] ; }
+
+						let i = 0 ;
+
+						for ( let char of dynamicArea.entity.text ) {
+							let fxData = dynamicArea.entity.fxData.perCharacter[ i ] ;
+							if ( ! fxData ) { fxData = dynamicArea.entity.fxData.perCharacter[ i ] = {} ; }
+
+							fxData.x = 0 ;
+							//fxData.y = Math.sin( multiply * dynamicArea.tick - i * phaseShift ) * amplitude ;
+							fxData.y = mathFn.transform.cycleAround( multiply * dynamicArea.tick - i * phaseShift ) * amplitude ;
+
+							i ++ ;
+						}
+
+						dynamicArea.entity.fxData.perCharacter.length = i ;
+
+						return true ;
+					}
+				}
+			}
+		}
+	} ;
+} ;
+
+
+
+exports.accordion = ( params ) => {
+	var everyTick = + params.everyTick || 1 ,
+		amplitude = + params.amplitude || 4 ,
+		multiply = 1 / ( + params.period || 20 ) ,
+		phaseShift = + params.phaseShift || 1 / 6 ,
+		pause = + params.pause || 3 ,
+		marginLeftRight = Math.ceil( amplitude + 1 ) ,
+		xShift = amplitude / 2 ;
+
+	return {
+		margin: {
+			top: 1 , bottom: 1 , left: marginLeftRight , right: marginLeftRight
+		} ,
+		dynamic: {
+			everyTick ,
+			statusData: {
+				base: {
+					eachFrame: dynamicArea => {
+						if ( ! dynamicArea.entity.fxData.perCharacter ) { dynamicArea.entity.fxData.perCharacter = [] ; }
+
+						let i = 0 ;
+
+						for ( let char of dynamicArea.entity.text ) {
+							let fxData = dynamicArea.entity.fxData.perCharacter[ i ] ;
+							if ( ! fxData ) { fxData = dynamicArea.entity.fxData.perCharacter[ i ] = {} ; }
+
+							fxData.x = xShift - mathFn.transform.roundTripAndPause( multiply * dynamicArea.tick - i * phaseShift , pause ) * amplitude ;
+							fxData.y = 0 ;
+
+							i ++ ;
+						}
+
+						dynamicArea.entity.fxData.perCharacter.length = i ;
+
+						return true ;
+					}
+				}
+			}
+		}
+	} ;
+} ;
+
+
+
+exports.jumpy = ( params ) => {
+	var everyTick = + params.everyTick || 1 ,
+		amplitude = + params.amplitude || 4 ,
+		jumpAmplitude = + params.jumpAmplitude || 4 ,
+		multiply = 1 / ( + params.period || 20 ) ,
+		phaseShift = + params.phaseShift || 1 / 6 ,
+		pause = + params.pause || 2 ,
+		//jumpPause = 4 * pause + 1 ,	// If we want to jump only in one direction
+		marginLeftRight = Math.ceil( amplitude + 1 ) ,
+		marginTop = Math.ceil( jumpAmplitude + 1 ) ,
+		xShift = amplitude / 2 ;
+
+	return {
+		margin: {
+			top: marginTop , bottom: 1 , left: marginLeftRight , right: marginLeftRight
+		} ,
+		dynamic: {
+			everyTick ,
+			statusData: {
+				base: {
+					eachFrame: dynamicArea => {
+						if ( ! dynamicArea.entity.fxData.perCharacter ) { dynamicArea.entity.fxData.perCharacter = [] ; }
+
+						let i = 0 ;
+
+						for ( let char of dynamicArea.entity.text ) {
+							let fxData = dynamicArea.entity.fxData.perCharacter[ i ] ;
+							if ( ! fxData ) { fxData = dynamicArea.entity.fxData.perCharacter[ i ] = {} ; }
+
+							fxData.x = xShift - mathFn.transform.goPauseReturnPause( multiply * dynamicArea.tick - i * phaseShift , pause ) * amplitude ;
+							fxData.y = - mathFn.transform.roundTripAndPause( 2 * ( multiply * dynamicArea.tick - i * phaseShift ) , 2 * pause ) * jumpAmplitude ;
+
+							// If we want to jump only in one direction
+							//fxData.y = - mathFn.transform.roundTripAndPause( 2 * ( multiply * dynamicArea.tick - i * phaseShift ) , jumpPause ) * jumpAmplitude ;
+
+							i ++ ;
+						}
+
+						dynamicArea.entity.fxData.perCharacter.length = i ;
+
+						return true ;
+					}
+				}
+			}
+		}
+	} ;
+} ;
+
+
+
+const RAINBOW_COLOR_CYCLE = [
+	'#ff0000' ,
+	'#ff7f00' ,
+	'#ffff02' ,
+	'#00ff02' ,
+	'#00abcd' ,
+	'#0000e2' ,
+	'#9900ff'
+] ;
+
+exports.rainbow = ( params ) => {
+	var everyTick = + params.everyTick || 2 ,
+		colors = Array.isArray( params.colors ) ? params.colors : RAINBOW_COLOR_CYCLE ;
+
+	return {
+		dynamic: {
+			everyTick ,
+			statusData: {
+				base: {
+					eachFrame: dynamicArea => {
+						if ( ! dynamicArea.entity.fxData.perCharacter ) { dynamicArea.entity.fxData.perCharacter = [] ; }
+
+						let i = 0 ;
+
+						for ( let char of dynamicArea.entity.text ) {
+							let fxData = dynamicArea.entity.fxData.perCharacter[ i ] ;
+							if ( ! fxData ) {
+								fxData = dynamicArea.entity.fxData.perCharacter[ i ] = {
+									attr: new TextAttribute( dynamicArea.entity.attr )
+								} ;
+							}
+
+							fxData.attr.setColor( colors[ ( dynamicArea.tick + i ) % colors.length ] ) ;
+
+							i ++ ;
+						}
+
+						dynamicArea.entity.fxData.perCharacter.length = i ;
+
+						return true ;
+					}
+				}
+			}
+		}
+	} ;
+} ;
+
+
+},{"../VGFlowingText/TextAttribute.js":28,"./mathFn.js":43}],43:[function(require,module,exports){
+/*
+	SVG Kit
+
+	Copyright (c) 2017 - 2023 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+const PI = Math.PI ;
+const PI_2 = 2 * Math.PI ;
+const PI_OVER_2 = Math.PI / 2 ;
+
+/*
+	Shape: /\___
+*/
+exports.sineOneOutOfX = ( v , div = 2 ) =>
+	Math.floor( v / PI_2 ) % div ? 0 :
+	1 + Math.sin( v - PI_OVER_2 ) / 2 ;
+
+/*	        ____
+	Shape: /    \_____
+*/
+exports.sineHalfOutOfX = ( v , div = 2 ) =>
+	Math.floor( v / PI ) % div ? (
+		Math.floor( v / ( PI *  div ) ) % 2
+	) :
+		1 + Math.sin( v - PI_OVER_2 ) / 2 ;
+
+
+
+function positiveModulo( a , b ) { return a < 0 ? b + ( a % b ) : a % b ; }
+
+
+
+const transform = exports.transform = {} ;
+
+transform.cycleAround = ( t , easingName = 'sine' ) => {
+	let easingFn = easing[ easingName ] || easing.sine ,
+		tLoop = 2 * positiveModulo( t , 1 ) ;
+
+	return (
+		tLoop <= 1 ? - 1 + 2 * easingFn( tLoop ) :
+		tLoop <= 2 ? - 1 + 2 * easingFn( 2 - tLoop ) :
+		0
+	) ;
+} ;
+
+transform.roundTripAndPause = ( t , pause = 1 , easingName = 'sine' ) => {
+	let easingFn = easing[ easingName ] || easing.sine ,
+		tLoop = 2 * positiveModulo( t , 1 + pause ) ;
+
+	return (
+		tLoop <= 1 ? easingFn( tLoop ) :
+		tLoop <= 2 ? easingFn( 2 - tLoop ) :
+		0
+	) ;
+} ;
+
+transform.goPauseReturnPause = ( t , pause = 1 , easingName = 'sine' ) => {
+	let easingFn = easing[ easingName ] || easing.sine ,
+		tLoop = 2 * positiveModulo( t , 1 + 2 * pause ) ;
+
+	return (
+		tLoop <= 1 ? easingFn( tLoop ) :
+		tLoop <= 2 * pause + 1 ? 1 :
+		tLoop <= 2 * pause + 2 ? easingFn( 2 * pause + 2 - tLoop ) :
+		0
+	) ;
+} ;
+
+const easing = exports.easing = {} ;
+
+easing.linear = t => t ;
+easing.sine = t => 0.5 + Math.sin( - PI_OVER_2 + t * PI ) / 2 ;
+
+
+
+},{}],44:[function(require,module,exports){
 (function (process){(function (){
 /*
 	SVG Kit
@@ -9629,7 +11476,7 @@ else {
 
 
 }).call(this)}).call(this,require('_process'))
-},{"_process":94,"image-size":88}],37:[function(require,module,exports){
+},{"_process":117,"image-size":111}],45:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -9688,7 +11535,7 @@ misc.colorToString = ( color , palette = null ) => {
 		if ( ! palette ) { return FALLBACK_COLOR ; }
 		return palette.getHex( color ) ;
 	}
-	
+
 	return FALLBACK_COLOR ;
 } ;
 
@@ -9772,7 +11619,7 @@ misc.getContrastColorCode = ( colorStr , rate = 0.5 ) => {
 } ;
 
 
-},{"palette-shade":78}],38:[function(require,module,exports){
+},{"palette-shade":89}],46:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -9820,7 +11667,7 @@ path.dFromPoints = ( points , invertY ) => {
 } ;
 
 
-},{}],39:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 (function (process){(function (){
 /*
 	SVG Kit
@@ -9883,6 +11730,11 @@ svgKit.StructuredTextPart = require( './VGFlowingText/StructuredTextPart.js' ) ;
 svgKit.TextAttribute = require( './VGFlowingText/TextAttribute.js' ) ;
 svgKit.TextMetrics = require( './VGFlowingText/TextMetrics.js' ) ;
 svgKit.BoundingBox = require( './BoundingBox.js' ) ;
+
+svgKit.DynamicArea = require( './DynamicArea.js' ) ;
+svgKit.DynamicManager = require( './DynamicManager.js' ) ;
+
+svgKit.fx = require( './fx/fx.js' ) ;
 
 svgKit.domKit = domKit ;
 svgKit.opentype = require( 'opentype.js' ) ;
@@ -10318,7 +12170,7 @@ svgKit.objectToVG = function( object , clone = false ) {
 
 
 }).call(this)}).call(this,require('_process'))
-},{"./BoundingBox.js":16,"./VG.js":18,"./VGClip.js":19,"./VGContainer.js":20,"./VGEllipse.js":21,"./VGEntity.js":22,"./VGFlowingText/StructuredTextLine.js":23,"./VGFlowingText/StructuredTextPart.js":24,"./VGFlowingText/TextAttribute.js":26,"./VGFlowingText/TextMetrics.js":27,"./VGFlowingText/VGFlowingText.js":28,"./VGGroup.js":29,"./VGImage.js":30,"./VGPath.js":31,"./VGRect.js":32,"./VGText.js":33,"./canvas.js":34,"./fontLib.js":35,"./misc.js":37,"./path.js":38,"_process":94,"dom-kit":72,"fs":88,"opentype.js":74,"string-kit/lib/escape.js":82}],40:[function(require,module,exports){
+},{"./BoundingBox.js":16,"./DynamicArea.js":17,"./DynamicManager.js":18,"./VG.js":20,"./VGClip.js":21,"./VGContainer.js":22,"./VGEllipse.js":23,"./VGEntity.js":24,"./VGFlowingText/StructuredTextLine.js":25,"./VGFlowingText/StructuredTextPart.js":26,"./VGFlowingText/TextAttribute.js":28,"./VGFlowingText/TextMetrics.js":29,"./VGFlowingText/VGFlowingText.js":30,"./VGGroup.js":33,"./VGImage.js":34,"./VGPath.js":35,"./VGRect.js":38,"./VGText.js":39,"./canvas.js":40,"./fontLib.js":41,"./fx/fx.js":42,"./misc.js":45,"./path.js":46,"_process":117,"dom-kit":81,"fs":111,"opentype.js":85,"string-kit/lib/escape.js":103}],48:[function(require,module,exports){
 function DOMParser(options){
 	this.options = options ||{locator:{}};
 	
@@ -10572,7 +12424,7 @@ exports.XMLSerializer = require('./dom').XMLSerializer ;
 exports.DOMParser = DOMParser;
 //}
 
-},{"./dom":41,"./entities":42,"./sax":60}],41:[function(require,module,exports){
+},{"./dom":49,"./entities":50,"./sax":68}],49:[function(require,module,exports){
 
 "use strict" ;
 
@@ -11980,7 +13832,7 @@ try{
 	exports.XMLSerializer = XMLSerializer;
 //}
 
-},{"nwmatcher":73,"string-kit":55}],42:[function(require,module,exports){
+},{"nwmatcher":84,"string-kit":63}],50:[function(require,module,exports){
 exports.entityMap = {
        lt: '<',
        gt: '>',
@@ -12225,7 +14077,7 @@ exports.entityMap = {
        diams: "♦"
 };
 //for(var  n in exports.entityMap){console.log(exports.entityMap[n].charCodeAt())}
-},{}],43:[function(require,module,exports){
+},{}],51:[function(require,module,exports){
 /*
 	String Kit
 
@@ -12639,7 +14491,7 @@ function arrayConcatSlice( intoArray , sourceArray , start = 0 , end = sourceArr
 }
 
 
-},{}],44:[function(require,module,exports){
+},{}],52:[function(require,module,exports){
 /*
 	String Kit
 
@@ -12908,7 +14760,7 @@ ansi.parse = str => {
 } ;
 
 
-},{}],45:[function(require,module,exports){
+},{}],53:[function(require,module,exports){
 /*
 	String Kit
 
@@ -12997,7 +14849,7 @@ camel.camelCaseToDash =
 camel.camelCaseToDashed = ( str ) => camel.camelCaseToSeparated( str , '-' , false ) ;
 
 
-},{}],46:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
 /*
 	String Kit
 
@@ -13102,7 +14954,7 @@ exports.unicodePercentEncode = str => str.replace( /[\x00-\x1f\u0100-\uffff\x7f%
 exports.httpHeaderValue = str => exports.unicodePercentEncode( str ) ;
 
 
-},{}],47:[function(require,module,exports){
+},{}],55:[function(require,module,exports){
 (function (Buffer){(function (){
 /*
 	String Kit
@@ -14343,7 +16195,7 @@ function round( v , step ) {
 
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"./StringNumber.js":43,"./ansi.js":44,"./escape.js":46,"./inspect.js":49,"./naturalSort.js":53,"./unicode.js":58,"buffer":90}],48:[function(require,module,exports){
+},{"./StringNumber.js":51,"./ansi.js":52,"./escape.js":54,"./inspect.js":57,"./naturalSort.js":61,"./unicode.js":66,"buffer":113}],56:[function(require,module,exports){
 /*
 	String Kit
 
@@ -14659,7 +16511,7 @@ fuzzy.levenshtein = ( left , right ) => {
 } ;
 
 
-},{}],49:[function(require,module,exports){
+},{}],57:[function(require,module,exports){
 (function (Buffer,process){(function (){
 /*
 	String Kit
@@ -15423,9 +17275,9 @@ inspectStyle.html = Object.assign( {} , inspectStyle.none , {
 
 
 }).call(this)}).call(this,{"isBuffer":require("../../../../../../../../../../../opt/node-v20.11.0/lib/node_modules/browserify/node_modules/is-buffer/index.js")},require('_process'))
-},{"../../../../../../../../../../../opt/node-v20.11.0/lib/node_modules/browserify/node_modules/is-buffer/index.js":92,"./ansi.js":44,"./escape.js":46,"_process":94}],50:[function(require,module,exports){
+},{"../../../../../../../../../../../opt/node-v20.11.0/lib/node_modules/browserify/node_modules/is-buffer/index.js":115,"./ansi.js":52,"./escape.js":54,"_process":117}],58:[function(require,module,exports){
 module.exports={"߀":"0","́":""," ":" ","Ⓐ":"A","Ａ":"A","À":"A","Á":"A","Â":"A","Ầ":"A","Ấ":"A","Ẫ":"A","Ẩ":"A","Ã":"A","Ā":"A","Ă":"A","Ằ":"A","Ắ":"A","Ẵ":"A","Ẳ":"A","Ȧ":"A","Ǡ":"A","Ä":"A","Ǟ":"A","Ả":"A","Å":"A","Ǻ":"A","Ǎ":"A","Ȁ":"A","Ȃ":"A","Ạ":"A","Ậ":"A","Ặ":"A","Ḁ":"A","Ą":"A","Ⱥ":"A","Ɐ":"A","Ꜳ":"AA","Æ":"AE","Ǽ":"AE","Ǣ":"AE","Ꜵ":"AO","Ꜷ":"AU","Ꜹ":"AV","Ꜻ":"AV","Ꜽ":"AY","Ⓑ":"B","Ｂ":"B","Ḃ":"B","Ḅ":"B","Ḇ":"B","Ƀ":"B","Ɓ":"B","ｃ":"C","Ⓒ":"C","Ｃ":"C","Ꜿ":"C","Ḉ":"C","Ç":"C","Ⓓ":"D","Ｄ":"D","Ḋ":"D","Ď":"D","Ḍ":"D","Ḑ":"D","Ḓ":"D","Ḏ":"D","Đ":"D","Ɗ":"D","Ɖ":"D","ᴅ":"D","Ꝺ":"D","Ð":"Dh","Ǳ":"DZ","Ǆ":"DZ","ǲ":"Dz","ǅ":"Dz","ɛ":"E","Ⓔ":"E","Ｅ":"E","È":"E","É":"E","Ê":"E","Ề":"E","Ế":"E","Ễ":"E","Ể":"E","Ẽ":"E","Ē":"E","Ḕ":"E","Ḗ":"E","Ĕ":"E","Ė":"E","Ë":"E","Ẻ":"E","Ě":"E","Ȅ":"E","Ȇ":"E","Ẹ":"E","Ệ":"E","Ȩ":"E","Ḝ":"E","Ę":"E","Ḙ":"E","Ḛ":"E","Ɛ":"E","Ǝ":"E","ᴇ":"E","ꝼ":"F","Ⓕ":"F","Ｆ":"F","Ḟ":"F","Ƒ":"F","Ꝼ":"F","Ⓖ":"G","Ｇ":"G","Ǵ":"G","Ĝ":"G","Ḡ":"G","Ğ":"G","Ġ":"G","Ǧ":"G","Ģ":"G","Ǥ":"G","Ɠ":"G","Ꞡ":"G","Ᵹ":"G","Ꝿ":"G","ɢ":"G","Ⓗ":"H","Ｈ":"H","Ĥ":"H","Ḣ":"H","Ḧ":"H","Ȟ":"H","Ḥ":"H","Ḩ":"H","Ḫ":"H","Ħ":"H","Ⱨ":"H","Ⱶ":"H","Ɥ":"H","Ⓘ":"I","Ｉ":"I","Ì":"I","Í":"I","Î":"I","Ĩ":"I","Ī":"I","Ĭ":"I","İ":"I","Ï":"I","Ḯ":"I","Ỉ":"I","Ǐ":"I","Ȉ":"I","Ȋ":"I","Ị":"I","Į":"I","Ḭ":"I","Ɨ":"I","Ⓙ":"J","Ｊ":"J","Ĵ":"J","Ɉ":"J","ȷ":"J","Ⓚ":"K","Ｋ":"K","Ḱ":"K","Ǩ":"K","Ḳ":"K","Ķ":"K","Ḵ":"K","Ƙ":"K","Ⱪ":"K","Ꝁ":"K","Ꝃ":"K","Ꝅ":"K","Ꞣ":"K","Ⓛ":"L","Ｌ":"L","Ŀ":"L","Ĺ":"L","Ľ":"L","Ḷ":"L","Ḹ":"L","Ļ":"L","Ḽ":"L","Ḻ":"L","Ł":"L","Ƚ":"L","Ɫ":"L","Ⱡ":"L","Ꝉ":"L","Ꝇ":"L","Ꞁ":"L","Ǉ":"LJ","ǈ":"Lj","Ⓜ":"M","Ｍ":"M","Ḿ":"M","Ṁ":"M","Ṃ":"M","Ɱ":"M","Ɯ":"M","ϻ":"M","Ꞥ":"N","Ƞ":"N","Ⓝ":"N","Ｎ":"N","Ǹ":"N","Ń":"N","Ñ":"N","Ṅ":"N","Ň":"N","Ṇ":"N","Ņ":"N","Ṋ":"N","Ṉ":"N","Ɲ":"N","Ꞑ":"N","ᴎ":"N","Ǌ":"NJ","ǋ":"Nj","Ⓞ":"O","Ｏ":"O","Ò":"O","Ó":"O","Ô":"O","Ồ":"O","Ố":"O","Ỗ":"O","Ổ":"O","Õ":"O","Ṍ":"O","Ȭ":"O","Ṏ":"O","Ō":"O","Ṑ":"O","Ṓ":"O","Ŏ":"O","Ȯ":"O","Ȱ":"O","Ö":"O","Ȫ":"O","Ỏ":"O","Ő":"O","Ǒ":"O","Ȍ":"O","Ȏ":"O","Ơ":"O","Ờ":"O","Ớ":"O","Ỡ":"O","Ở":"O","Ợ":"O","Ọ":"O","Ộ":"O","Ǫ":"O","Ǭ":"O","Ø":"O","Ǿ":"O","Ɔ":"O","Ɵ":"O","Ꝋ":"O","Ꝍ":"O","Œ":"OE","Ƣ":"OI","Ꝏ":"OO","Ȣ":"OU","Ⓟ":"P","Ｐ":"P","Ṕ":"P","Ṗ":"P","Ƥ":"P","Ᵽ":"P","Ꝑ":"P","Ꝓ":"P","Ꝕ":"P","Ⓠ":"Q","Ｑ":"Q","Ꝗ":"Q","Ꝙ":"Q","Ɋ":"Q","Ⓡ":"R","Ｒ":"R","Ŕ":"R","Ṙ":"R","Ř":"R","Ȑ":"R","Ȓ":"R","Ṛ":"R","Ṝ":"R","Ŗ":"R","Ṟ":"R","Ɍ":"R","Ɽ":"R","Ꝛ":"R","Ꞧ":"R","Ꞃ":"R","Ⓢ":"S","Ｓ":"S","ẞ":"S","Ś":"S","Ṥ":"S","Ŝ":"S","Ṡ":"S","Š":"S","Ṧ":"S","Ṣ":"S","Ṩ":"S","Ș":"S","Ş":"S","Ȿ":"S","Ꞩ":"S","Ꞅ":"S","Ⓣ":"T","Ｔ":"T","Ṫ":"T","Ť":"T","Ṭ":"T","Ț":"T","Ţ":"T","Ṱ":"T","Ṯ":"T","Ŧ":"T","Ƭ":"T","Ʈ":"T","Ⱦ":"T","Ꞇ":"T","Þ":"Th","Ꜩ":"TZ","Ⓤ":"U","Ｕ":"U","Ù":"U","Ú":"U","Û":"U","Ũ":"U","Ṹ":"U","Ū":"U","Ṻ":"U","Ŭ":"U","Ü":"U","Ǜ":"U","Ǘ":"U","Ǖ":"U","Ǚ":"U","Ủ":"U","Ů":"U","Ű":"U","Ǔ":"U","Ȕ":"U","Ȗ":"U","Ư":"U","Ừ":"U","Ứ":"U","Ữ":"U","Ử":"U","Ự":"U","Ụ":"U","Ṳ":"U","Ų":"U","Ṷ":"U","Ṵ":"U","Ʉ":"U","Ⓥ":"V","Ｖ":"V","Ṽ":"V","Ṿ":"V","Ʋ":"V","Ꝟ":"V","Ʌ":"V","Ꝡ":"VY","Ⓦ":"W","Ｗ":"W","Ẁ":"W","Ẃ":"W","Ŵ":"W","Ẇ":"W","Ẅ":"W","Ẉ":"W","Ⱳ":"W","Ⓧ":"X","Ｘ":"X","Ẋ":"X","Ẍ":"X","Ⓨ":"Y","Ｙ":"Y","Ỳ":"Y","Ý":"Y","Ŷ":"Y","Ỹ":"Y","Ȳ":"Y","Ẏ":"Y","Ÿ":"Y","Ỷ":"Y","Ỵ":"Y","Ƴ":"Y","Ɏ":"Y","Ỿ":"Y","Ⓩ":"Z","Ｚ":"Z","Ź":"Z","Ẑ":"Z","Ż":"Z","Ž":"Z","Ẓ":"Z","Ẕ":"Z","Ƶ":"Z","Ȥ":"Z","Ɀ":"Z","Ⱬ":"Z","Ꝣ":"Z","ⓐ":"a","ａ":"a","ẚ":"a","à":"a","á":"a","â":"a","ầ":"a","ấ":"a","ẫ":"a","ẩ":"a","ã":"a","ā":"a","ă":"a","ằ":"a","ắ":"a","ẵ":"a","ẳ":"a","ȧ":"a","ǡ":"a","ä":"a","ǟ":"a","ả":"a","å":"a","ǻ":"a","ǎ":"a","ȁ":"a","ȃ":"a","ạ":"a","ậ":"a","ặ":"a","ḁ":"a","ą":"a","ⱥ":"a","ɐ":"a","ɑ":"a","ꜳ":"aa","æ":"ae","ǽ":"ae","ǣ":"ae","ꜵ":"ao","ꜷ":"au","ꜹ":"av","ꜻ":"av","ꜽ":"ay","ⓑ":"b","ｂ":"b","ḃ":"b","ḅ":"b","ḇ":"b","ƀ":"b","ƃ":"b","ɓ":"b","Ƃ":"b","ⓒ":"c","ć":"c","ĉ":"c","ċ":"c","č":"c","ç":"c","ḉ":"c","ƈ":"c","ȼ":"c","ꜿ":"c","ↄ":"c","C":"c","Ć":"c","Ĉ":"c","Ċ":"c","Č":"c","Ƈ":"c","Ȼ":"c","ⓓ":"d","ｄ":"d","ḋ":"d","ď":"d","ḍ":"d","ḑ":"d","ḓ":"d","ḏ":"d","đ":"d","ƌ":"d","ɖ":"d","ɗ":"d","Ƌ":"d","Ꮷ":"d","ԁ":"d","Ɦ":"d","ð":"dh","ǳ":"dz","ǆ":"dz","ⓔ":"e","ｅ":"e","è":"e","é":"e","ê":"e","ề":"e","ế":"e","ễ":"e","ể":"e","ẽ":"e","ē":"e","ḕ":"e","ḗ":"e","ĕ":"e","ė":"e","ë":"e","ẻ":"e","ě":"e","ȅ":"e","ȇ":"e","ẹ":"e","ệ":"e","ȩ":"e","ḝ":"e","ę":"e","ḙ":"e","ḛ":"e","ɇ":"e","ǝ":"e","ⓕ":"f","ｆ":"f","ḟ":"f","ƒ":"f","ﬀ":"ff","ﬁ":"fi","ﬂ":"fl","ﬃ":"ffi","ﬄ":"ffl","ⓖ":"g","ｇ":"g","ǵ":"g","ĝ":"g","ḡ":"g","ğ":"g","ġ":"g","ǧ":"g","ģ":"g","ǥ":"g","ɠ":"g","ꞡ":"g","ꝿ":"g","ᵹ":"g","ⓗ":"h","ｈ":"h","ĥ":"h","ḣ":"h","ḧ":"h","ȟ":"h","ḥ":"h","ḩ":"h","ḫ":"h","ẖ":"h","ħ":"h","ⱨ":"h","ⱶ":"h","ɥ":"h","ƕ":"hv","ⓘ":"i","ｉ":"i","ì":"i","í":"i","î":"i","ĩ":"i","ī":"i","ĭ":"i","ï":"i","ḯ":"i","ỉ":"i","ǐ":"i","ȉ":"i","ȋ":"i","ị":"i","į":"i","ḭ":"i","ɨ":"i","ı":"i","ⓙ":"j","ｊ":"j","ĵ":"j","ǰ":"j","ɉ":"j","ⓚ":"k","ｋ":"k","ḱ":"k","ǩ":"k","ḳ":"k","ķ":"k","ḵ":"k","ƙ":"k","ⱪ":"k","ꝁ":"k","ꝃ":"k","ꝅ":"k","ꞣ":"k","ⓛ":"l","ｌ":"l","ŀ":"l","ĺ":"l","ľ":"l","ḷ":"l","ḹ":"l","ļ":"l","ḽ":"l","ḻ":"l","ſ":"l","ł":"l","ƚ":"l","ɫ":"l","ⱡ":"l","ꝉ":"l","ꞁ":"l","ꝇ":"l","ɭ":"l","ǉ":"lj","ⓜ":"m","ｍ":"m","ḿ":"m","ṁ":"m","ṃ":"m","ɱ":"m","ɯ":"m","ⓝ":"n","ｎ":"n","ǹ":"n","ń":"n","ñ":"n","ṅ":"n","ň":"n","ṇ":"n","ņ":"n","ṋ":"n","ṉ":"n","ƞ":"n","ɲ":"n","ŉ":"n","ꞑ":"n","ꞥ":"n","ԉ":"n","ǌ":"nj","ⓞ":"o","ｏ":"o","ò":"o","ó":"o","ô":"o","ồ":"o","ố":"o","ỗ":"o","ổ":"o","õ":"o","ṍ":"o","ȭ":"o","ṏ":"o","ō":"o","ṑ":"o","ṓ":"o","ŏ":"o","ȯ":"o","ȱ":"o","ö":"o","ȫ":"o","ỏ":"o","ő":"o","ǒ":"o","ȍ":"o","ȏ":"o","ơ":"o","ờ":"o","ớ":"o","ỡ":"o","ở":"o","ợ":"o","ọ":"o","ộ":"o","ǫ":"o","ǭ":"o","ø":"o","ǿ":"o","ꝋ":"o","ꝍ":"o","ɵ":"o","ɔ":"o","ᴑ":"o","œ":"oe","ƣ":"oi","ꝏ":"oo","ȣ":"ou","ⓟ":"p","ｐ":"p","ṕ":"p","ṗ":"p","ƥ":"p","ᵽ":"p","ꝑ":"p","ꝓ":"p","ꝕ":"p","ρ":"p","ⓠ":"q","ｑ":"q","ɋ":"q","ꝗ":"q","ꝙ":"q","ⓡ":"r","ｒ":"r","ŕ":"r","ṙ":"r","ř":"r","ȑ":"r","ȓ":"r","ṛ":"r","ṝ":"r","ŗ":"r","ṟ":"r","ɍ":"r","ɽ":"r","ꝛ":"r","ꞧ":"r","ꞃ":"r","ⓢ":"s","ｓ":"s","ś":"s","ṥ":"s","ŝ":"s","ṡ":"s","š":"s","ṧ":"s","ṣ":"s","ṩ":"s","ș":"s","ş":"s","ȿ":"s","ꞩ":"s","ꞅ":"s","ẛ":"s","ʂ":"s","ß":"ss","ⓣ":"t","ｔ":"t","ṫ":"t","ẗ":"t","ť":"t","ṭ":"t","ț":"t","ţ":"t","ṱ":"t","ṯ":"t","ŧ":"t","ƭ":"t","ʈ":"t","ⱦ":"t","ꞇ":"t","þ":"th","ꜩ":"tz","ⓤ":"u","ｕ":"u","ù":"u","ú":"u","û":"u","ũ":"u","ṹ":"u","ū":"u","ṻ":"u","ŭ":"u","ü":"u","ǜ":"u","ǘ":"u","ǖ":"u","ǚ":"u","ủ":"u","ů":"u","ű":"u","ǔ":"u","ȕ":"u","ȗ":"u","ư":"u","ừ":"u","ứ":"u","ữ":"u","ử":"u","ự":"u","ụ":"u","ṳ":"u","ų":"u","ṷ":"u","ṵ":"u","ʉ":"u","ⓥ":"v","ｖ":"v","ṽ":"v","ṿ":"v","ʋ":"v","ꝟ":"v","ʌ":"v","ꝡ":"vy","ⓦ":"w","ｗ":"w","ẁ":"w","ẃ":"w","ŵ":"w","ẇ":"w","ẅ":"w","ẘ":"w","ẉ":"w","ⱳ":"w","ⓧ":"x","ｘ":"x","ẋ":"x","ẍ":"x","ⓨ":"y","ｙ":"y","ỳ":"y","ý":"y","ŷ":"y","ỹ":"y","ȳ":"y","ẏ":"y","ÿ":"y","ỷ":"y","ẙ":"y","ỵ":"y","ƴ":"y","ɏ":"y","ỿ":"y","ⓩ":"z","ｚ":"z","ź":"z","ẑ":"z","ż":"z","ž":"z","ẓ":"z","ẕ":"z","ƶ":"z","ȥ":"z","ɀ":"z","ⱬ":"z","ꝣ":"z"}
-},{}],51:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
 /*
 	String Kit
 
@@ -15464,7 +17316,7 @@ module.exports = function( str ) {
 
 
 
-},{"./latinize-map.json":50}],52:[function(require,module,exports){
+},{"./latinize-map.json":58}],60:[function(require,module,exports){
 /*
 	String Kit
 
@@ -15524,7 +17376,7 @@ exports.occurrenceCount = function( str , subStr , overlap = false ) {
 } ;
 
 
-},{}],53:[function(require,module,exports){
+},{}],61:[function(require,module,exports){
 /*
 	String Kit
 
@@ -15671,7 +17523,7 @@ function naturalSort( a , b ) {
 module.exports = naturalSort ;
 
 
-},{}],54:[function(require,module,exports){
+},{}],62:[function(require,module,exports){
 /*
 	String Kit
 
@@ -15728,7 +17580,7 @@ exports.regexp.array2alternatives = function array2alternatives( array ) {
 
 
 
-},{"./escape.js":46}],55:[function(require,module,exports){
+},{"./escape.js":54}],63:[function(require,module,exports){
 /*
 	String Kit
 
@@ -15821,7 +17673,7 @@ stringKit.installPolyfills = function installPolyfills() {
 //*/
 
 
-},{"./StringNumber.js":43,"./ansi.js":44,"./camel.js":45,"./escape.js":46,"./format.js":47,"./fuzzy.js":48,"./inspect.js":49,"./latinize.js":51,"./misc.js":52,"./naturalSort.js":53,"./regexp.js":54,"./toTitleCase.js":56,"./unicode.js":58,"./wordwrap.js":59}],56:[function(require,module,exports){
+},{"./StringNumber.js":51,"./ansi.js":52,"./camel.js":53,"./escape.js":54,"./format.js":55,"./fuzzy.js":56,"./inspect.js":57,"./latinize.js":59,"./misc.js":60,"./naturalSort.js":61,"./regexp.js":62,"./toTitleCase.js":64,"./unicode.js":66,"./wordwrap.js":67}],64:[function(require,module,exports){
 /*
 	String Kit
 
@@ -15910,10 +17762,10 @@ module.exports = ( str , options = DEFAULT_OPTIONS ) => {
 } ;
 
 
-},{}],57:[function(require,module,exports){
+},{}],65:[function(require,module,exports){
 module.exports=[{"s":9728,"e":9747,"w":1},{"s":9748,"e":9749,"w":2},{"s":9750,"e":9799,"w":1},{"s":9800,"e":9811,"w":2},{"s":9812,"e":9854,"w":1},{"s":9855,"e":9855,"w":2},{"s":9856,"e":9874,"w":1},{"s":9875,"e":9875,"w":2},{"s":9876,"e":9888,"w":1},{"s":9889,"e":9889,"w":2},{"s":9890,"e":9897,"w":1},{"s":9898,"e":9899,"w":2},{"s":9900,"e":9916,"w":1},{"s":9917,"e":9918,"w":2},{"s":9919,"e":9923,"w":1},{"s":9924,"e":9925,"w":2},{"s":9926,"e":9933,"w":1},{"s":9934,"e":9934,"w":2},{"s":9935,"e":9939,"w":1},{"s":9940,"e":9940,"w":2},{"s":9941,"e":9961,"w":1},{"s":9962,"e":9962,"w":2},{"s":9963,"e":9969,"w":1},{"s":9970,"e":9971,"w":2},{"s":9972,"e":9972,"w":1},{"s":9973,"e":9973,"w":2},{"s":9974,"e":9977,"w":1},{"s":9978,"e":9978,"w":2},{"s":9979,"e":9980,"w":1},{"s":9981,"e":9981,"w":2},{"s":9982,"e":9983,"w":1},{"s":9984,"e":9988,"w":1},{"s":9989,"e":9989,"w":2},{"s":9990,"e":9993,"w":1},{"s":9994,"e":9995,"w":2},{"s":9996,"e":10023,"w":1},{"s":10024,"e":10024,"w":2},{"s":10025,"e":10059,"w":1},{"s":10060,"e":10060,"w":2},{"s":10061,"e":10061,"w":1},{"s":10062,"e":10062,"w":2},{"s":10063,"e":10066,"w":1},{"s":10067,"e":10069,"w":2},{"s":10070,"e":10070,"w":1},{"s":10071,"e":10071,"w":2},{"s":10072,"e":10132,"w":1},{"s":10133,"e":10135,"w":2},{"s":10136,"e":10159,"w":1},{"s":10160,"e":10160,"w":2},{"s":10161,"e":10174,"w":1},{"s":10175,"e":10175,"w":2},{"s":126976,"e":126979,"w":1},{"s":126980,"e":126980,"w":2},{"s":126981,"e":127182,"w":1},{"s":127183,"e":127183,"w":2},{"s":127184,"e":127373,"w":1},{"s":127374,"e":127374,"w":2},{"s":127375,"e":127376,"w":1},{"s":127377,"e":127386,"w":2},{"s":127387,"e":127487,"w":1},{"s":127744,"e":127776,"w":2},{"s":127777,"e":127788,"w":1},{"s":127789,"e":127797,"w":2},{"s":127798,"e":127798,"w":1},{"s":127799,"e":127868,"w":2},{"s":127869,"e":127869,"w":1},{"s":127870,"e":127891,"w":2},{"s":127892,"e":127903,"w":1},{"s":127904,"e":127946,"w":2},{"s":127947,"e":127950,"w":1},{"s":127951,"e":127955,"w":2},{"s":127956,"e":127967,"w":1},{"s":127968,"e":127984,"w":2},{"s":127985,"e":127987,"w":1},{"s":127988,"e":127988,"w":2},{"s":127989,"e":127991,"w":1},{"s":127992,"e":127994,"w":2},{"s":128000,"e":128062,"w":2},{"s":128063,"e":128063,"w":1},{"s":128064,"e":128064,"w":2},{"s":128065,"e":128065,"w":1},{"s":128066,"e":128252,"w":2},{"s":128253,"e":128254,"w":1},{"s":128255,"e":128317,"w":2},{"s":128318,"e":128330,"w":1},{"s":128331,"e":128334,"w":2},{"s":128335,"e":128335,"w":1},{"s":128336,"e":128359,"w":2},{"s":128360,"e":128377,"w":1},{"s":128378,"e":128378,"w":2},{"s":128379,"e":128404,"w":1},{"s":128405,"e":128406,"w":2},{"s":128407,"e":128419,"w":1},{"s":128420,"e":128420,"w":2},{"s":128421,"e":128506,"w":1},{"s":128507,"e":128591,"w":2},{"s":128592,"e":128639,"w":1},{"s":128640,"e":128709,"w":2},{"s":128710,"e":128715,"w":1},{"s":128716,"e":128716,"w":2},{"s":128717,"e":128719,"w":1},{"s":128720,"e":128722,"w":2},{"s":128723,"e":128724,"w":1},{"s":128725,"e":128727,"w":2},{"s":128728,"e":128746,"w":1},{"s":128747,"e":128748,"w":2},{"s":128749,"e":128755,"w":1},{"s":128756,"e":128764,"w":2},{"s":128765,"e":128991,"w":1},{"s":128992,"e":129003,"w":2},{"s":129004,"e":129291,"w":1},{"s":129292,"e":129338,"w":2},{"s":129339,"e":129339,"w":1},{"s":129340,"e":129349,"w":2},{"s":129350,"e":129350,"w":1},{"s":129351,"e":129400,"w":2},{"s":129401,"e":129401,"w":1},{"s":129402,"e":129483,"w":2},{"s":129484,"e":129484,"w":1},{"s":129485,"e":129535,"w":2},{"s":129536,"e":129647,"w":1},{"s":129648,"e":129652,"w":2},{"s":129653,"e":129655,"w":1},{"s":129656,"e":129658,"w":2},{"s":129659,"e":129663,"w":1},{"s":129664,"e":129670,"w":2},{"s":129671,"e":129679,"w":1},{"s":129680,"e":129704,"w":2},{"s":129705,"e":129711,"w":1},{"s":129712,"e":129718,"w":2},{"s":129719,"e":129727,"w":1},{"s":129728,"e":129730,"w":2},{"s":129731,"e":129743,"w":1},{"s":129744,"e":129750,"w":2},{"s":129751,"e":129791,"w":1}]
 
-},{}],58:[function(require,module,exports){
+},{}],66:[function(require,module,exports){
 /*
 	String Kit
 
@@ -16261,7 +18113,7 @@ unicode.isEmojiModifierCodePoint = code =>
 	code === 0xfe0f ;	// VARIATION SELECTOR-16 [VS16] {emoji variation selector}
 
 
-},{"./unicode-emoji-width-ranges.json":57}],59:[function(require,module,exports){
+},{"./unicode-emoji-width-ranges.json":65}],67:[function(require,module,exports){
 /*
 	String Kit
 
@@ -16465,7 +18317,7 @@ module.exports = function wordwrap( str , options ) {
 } ;
 
 
-},{"./unicode.js":58}],60:[function(require,module,exports){
+},{"./unicode.js":66}],68:[function(require,module,exports){
 //[4]   	NameStartChar	   ::=   	":" | [A-Z] | "_" | [a-z] | [#xC0-#xD6] | [#xD8-#xF6] | [#xF8-#x2FF] | [#x370-#x37D] | [#x37F-#x1FFF] | [#x200C-#x200D] | [#x2070-#x218F] | [#x2C00-#x2FEF] | [#x3001-#xD7FF] | [#xF900-#xFDCF] | [#xFDF0-#xFFFD] | [#x10000-#xEFFFF]
 //[4a]   	NameChar	   ::=   	NameStartChar | "-" | "." | [0-9] | #xB7 | [#x0300-#x036F] | [#x203F-#x2040]
 //[5]   	Name	   ::=   	NameStartChar (NameChar)*
@@ -17083,7 +18935,7 @@ function split(source,start){
 exports.XMLReader = XMLReader;
 
 
-},{}],61:[function(require,module,exports){
+},{}],69:[function(require,module,exports){
 /*
 	Array Kit
 
@@ -17131,7 +18983,7 @@ arrayKit.shuffle = array => arrayKit.sample( array , array.length , true ) ;
 arrayKit.randomSampleSize = ( array , min , max , inPlace ) => arrayKit.sample( array , arrayKit.randomInteger( min , max ) , inPlace ) ;
 
 
-},{"./delete.js":62,"./deleteValue.js":63,"./inPlaceFilter.js":64,"./range.js":65,"./sample.js":66}],62:[function(require,module,exports){
+},{"./delete.js":70,"./deleteValue.js":71,"./inPlaceFilter.js":72,"./range.js":73,"./sample.js":74}],70:[function(require,module,exports){
 /*
 	Array Kit
 
@@ -17183,7 +19035,7 @@ module.exports = ( src , index ) => {
 } ;
 
 
-},{}],63:[function(require,module,exports){
+},{}],71:[function(require,module,exports){
 /*
 	Array Kit
 
@@ -17247,7 +19099,7 @@ module.exports = ( src , value ) => {
 } ;
 
 
-},{}],64:[function(require,module,exports){
+},{}],72:[function(require,module,exports){
 /*
 	Array Kit
 
@@ -17312,7 +19164,7 @@ module.exports = ( src , fn , thisArg , forceKey ) => {
 } ;
 
 
-},{}],65:[function(require,module,exports){
+},{}],73:[function(require,module,exports){
 /*
 	Array Kit
 
@@ -17379,7 +19231,7 @@ module.exports = function( start , end , step ) {
 } ;
 
 
-},{}],66:[function(require,module,exports){
+},{}],74:[function(require,module,exports){
 /*
 	Array Kit
 
@@ -17436,7 +19288,7 @@ module.exports = ( array , count = Infinity , inPlace = false ) => {
 } ;
 
 
-},{}],67:[function(require,module,exports){
+},{}],75:[function(require,module,exports){
 /*
 	Book Source
 
@@ -17470,6 +19322,7 @@ module.exports = ( array , count = Infinity , inPlace = false ) => {
 const documentParts = require( './documentParts.js' ) ;
 const Style = require( './Style.js' ) ;
 const Theme = require( './Theme.js' ) ;
+const textPostFilters = require( './textPostFilters.js' ) ;
 
 const inPlaceFilter = require( 'array-kit/lib/inPlaceFilter.js' ) ;
 
@@ -17491,7 +19344,7 @@ StructuredDocument.prototype.render = function( renderer ) {
 		title: this.title
 	} ;
 
-	var output = this.renderParts( renderer , this.parts , [] ) ;
+	var output = this.renderParts( renderer , this.parts , [] , [ {} ] ) ;
 
 	if ( renderer.document ) {
 		output = renderer.document( meta , output ) ;
@@ -17537,13 +19390,19 @@ FRAGMENT.structure = {
 	}
 } ;
 
-StructuredDocument.prototype.renderParts = function( renderer , parts , partStack ) {
+StructuredDocument.prototype.renderParts = function( renderer , parts , partStack , userlandStack ) {
 	var fragment = FRAGMENT[ renderer.type || 'string' ] ,
 		output = fragment.new() ,
 		index = 0 ;
 
 	for ( let part of parts ) {
+		let preFn = 'pre_' + part.type ;
+		let postFn = part.type ;
 		let partsOutput = fragment.new() ;
+
+		if ( renderer[ preFn ] ) {
+			renderer[ preFn ]( part , partStack , userlandStack , index , parts.length ) ;
+		}
 
 		if ( part.parts ) {
 			if ( renderer.group?.[ part.type ] ) {
@@ -17555,29 +19414,38 @@ StructuredDocument.prototype.renderParts = function( renderer , parts , partStac
 				for ( let group of groupList ) {
 					if ( renderer.group[ part.type ][ group.type ] ) {
 						partStack.push( part ) ;
-						let groupOutput = this.renderParts( renderer , group.parts , partStack ) ;
+						userlandStack.push( {} ) ;
+
+						let groupOutput = this.renderParts( renderer , group.parts , partStack , userlandStack ) ;
+
 						partStack.pop() ;
+						userlandStack.pop() ;
+
 						partsOutput = fragment.concat(
 							partsOutput ,
-							renderer.group[ part.type ][ group.type ]( part , groupOutput , partStack )
+							renderer.group[ part.type ][ group.type ]( part , groupOutput , partStack , userlandStack )
 						) ;
 					}
 				}
 			}
 			else {
 				partStack.push( part ) ;
+				userlandStack.push( {} ) ;
+
 				partsOutput = fragment.concat(
 					partsOutput ,
-					this.renderParts( renderer , part.parts , [ ... partStack , part ] )
+					this.renderParts( renderer , part.parts , partStack , userlandStack )
 				) ;
+
 				partStack.pop() ;
+				userlandStack.pop() ;
 			}
 		}
 
-		if ( renderer[ part.type ] ) {
+		if ( renderer[ postFn ] ) {
 			output = fragment.append(
 				output ,
-				renderer[ part.type ]( part , partsOutput , partStack , index )
+				renderer[ postFn ]( part , partsOutput , partStack , userlandStack , index , parts.length )
 			) ;
 		}
 
@@ -17628,7 +19496,7 @@ StructuredDocument.prototype.autoTitle = function() {
 
 
 
-StructuredDocument.prototype.getText = function( parts ) { //= this.parts ) {
+StructuredDocument.prototype.getText = function( parts = this.parts ) {
 	var str = '' ;
 
 	for ( let part of parts ) {
@@ -17637,6 +19505,36 @@ StructuredDocument.prototype.getText = function( parts ) { //= this.parts ) {
 	}
 
 	return str ;
+} ;
+
+
+
+StructuredDocument.prototype.textPostFilter = function( postFilterList , parts = this.parts ) {
+	for ( let postFilter of postFilterList ) {
+		if ( typeof postFilter === 'string' ) {
+			postFilter = textPostFilters[ postFilter ] ;
+		}
+
+		if ( typeof postFilter === 'function' ) {
+			this.oneTextPostFilter( postFilter , parts ) ;
+		}
+	}
+} ;
+
+
+
+StructuredDocument.prototype.oneTextPostFilter = function( postFilter , parts , runtime = { lastPart: null } ) {
+	for ( let part of parts ) {
+		if ( ( part instanceof documentParts.Text ) && part.text ) {
+			postFilter( part , runtime.lastPart ) ;
+
+			// Can be modified by the callback
+			if ( part.text ) { runtime.lastPart = part ; }
+		}
+		else if ( part.parts?.length ) {
+			this.oneTextPostFilter( postFilter , part.parts , runtime ) ;
+		}
+	}
 } ;
 
 
@@ -18114,12 +20012,13 @@ function parseOrderedListItem( str , ctx , indent ) {
 	var lastPart = ctx.parts[ ctx.parts.length - 1 ] ;
 
 	if ( ! lastPart || lastPart.type !== 'orderedList' ) {
-		ctx.parts.push( new documentParts.OrderedList( indent ) ) ;
+		lastPart = new documentParts.OrderedList( indent ) ;
+		ctx.parts.push( lastPart ) ;
 	}
 
 	stack( ctx ) ;
 
-	ctx.parts.push( new documentParts.OrderedListItem( indent , order ) ) ;
+	ctx.parts.push( new documentParts.OrderedListItem( indent , order , lastPart.autoIndex ++ ) ) ;
 
 	var blockEnd = detectBlockEnd( str , ctx.i , ctx.parent?.indent , LIST_ITEM_END_PARAMS ) ;
 	parseInlineChildren( str , ctx , blockEnd ) ;
@@ -18523,6 +20422,7 @@ function parseTableRowSeparator( str , ctx , thick = false ) {
 
 		if ( str[ currentBar + 1 ] === '-' && str[ currentBar + 2 ] === ' ' && str[ nextBar - 1 ] === '-' && str[ nextBar - 2 ] === ' ' ) {
 			// This is a rowSpan
+			table.hasRowSpan = true ;
 			ctx.rowSpanTables.add( table ) ;
 			if ( ! tableRow.continueRowSpan ) { tableRow.continueRowSpan = [] ; }
 
@@ -18762,8 +20662,7 @@ function parseInlineChildrenOfParent( str , ctx , parent , blockEnd , trim = fal
 // Try to parse non-block content
 function parseInline( str , ctx , blockEnd , trim = false ) {
 	//console.log( "parseInline() -- remaining:" , ctx.i , str.slice( ctx.i ) ) ;
-	var isSpace , scanEnd ,
-		lastWasSpace = WHITE_SPACES.has( str[ ctx.i - 1 ] ) ;
+	var isSpace , scanEnd ;
 
 	scanEnd = blockEnd = blockEnd ?? searchEndOfLine( str , ctx.i ) ;
 
@@ -18781,6 +20680,19 @@ function parseInline( str , ctx , blockEnd , trim = false ) {
 		ctx.i = first ;
 		scanEnd = last + 1 ;
 	}
+
+	parseNestedInline( str , ctx , scanEnd , true ) ;
+}
+
+
+
+function parseNestedInline( str , ctx , scanEnd , topLevel = false ) {
+	var isSpace ,
+		lastWasSpace = WHITE_SPACES.has( str[ ctx.i - 1 ] ) ;
+
+	//console.log( "parseInline() -- remaining:" , ctx.i , str.slice( ctx.i ) ) ;
+
+	if ( ! topLevel ) { stack( ctx ) ; }
 
 	ctx.iStartOfInlineChunk = ctx.i ;
 
@@ -18826,8 +20738,10 @@ function parseInline( str , ctx , blockEnd , trim = false ) {
 
 	addInlineTextChunk( str , ctx ) ;
 
-	ctx.i = blockEnd ;
+	ctx.i = scanEnd ;
 	if ( str[ ctx.i ] === '\n' ) { ctx.i ++ ; }
+
+	if ( ! topLevel ) { unstack( ctx ) ; }
 }
 
 
@@ -18905,44 +20819,48 @@ function parseEscape( str , ctx ) {
 
 
 
-function parseEmphasisText( str , ctx , blockEnd ) {
+function parseEmphasisText( str , ctx , scanEnd ) {
 	//console.error( "parseStyledText()" ) ;
 	var streak = countStreak( str , ctx.i , '*' ) ;
 	if ( streak > 3 ) { return ; }
-	var end = searchSwitchCloser( str , ctx.i + streak , '*' , streak , true , false , blockEnd ) ;
+	var end = searchSwitchCloser( str , ctx.i + streak , '*' , streak , true , false , scanEnd ) ;
 	if ( end < 0 ) { return ; }
 
-	var text = str.slice( ctx.i + streak , end + 1 - streak ) ;
+	ctx.parts.push( new documentParts.EmphasisText( streak ) ) ;
 
-	ctx.parts.push( new documentParts.EmphasisText( text , streak ) ) ;
+	ctx.i += streak ;
+	parseNestedInline( str , ctx , end + 1 - streak ) ;
+
 	ctx.i = end ;
 	ctx.iStartOfInlineChunk = ctx.i + 1 ;
 }
 
 
 
-function parseDecoratedText( str , ctx , blockEnd ) {
+function parseDecoratedText( str , ctx , scanEnd ) {
 	//console.error( "parseStyledText()" ) ;
 	var streak = countStreak( str , ctx.i , '_' ) ;
 	if ( streak > 2 ) { return ; }
-	var end = searchSwitchCloser( str , ctx.i + streak , '_' , streak , true , false , blockEnd ) ;
+	var end = searchSwitchCloser( str , ctx.i + streak , '_' , streak , true , false , scanEnd ) ;
 	if ( end < 0 ) { return ; }
 
-	var text = str.slice( ctx.i + streak , end + 1 - streak ) ;
+	ctx.parts.push( new documentParts.DecoratedText( streak ) ) ;
 
-	ctx.parts.push( new documentParts.DecoratedText( text , streak ) ) ;
+	ctx.i += streak ;
+	parseNestedInline( str , ctx , end + 1 - streak ) ;
+
 	ctx.i = end ;
 	ctx.iStartOfInlineChunk = ctx.i + 1 ;
 }
 
 
 
-function parseCode( str , ctx , blockEnd ) {
+function parseCode( str , ctx , scanEnd ) {
 	//console.error( "parseStyledText()" ) ;
 	var streak = countStreak( str , ctx.i , '`' ) ;
 	// Markdown supports inline code inside two pairs of backquote, to allow backquote in code, hence streak can be 2.
 	if ( streak > 2 ) { return ; }
-	var end = searchSwitchCloser( str , ctx.i + streak , '`' , streak , false , false , blockEnd ) ;
+	var end = searchSwitchCloser( str , ctx.i + streak , '`' , streak , false , false , scanEnd ) ;
 	if ( end < 0 ) { return ; }
 
 	var sliceStart = ctx.i + streak ,
@@ -18964,27 +20882,39 @@ const STYLE_DATA_MARK = {
 	text: true , href: true , style: true , extra: false
 } ;
 
-function parseStyledText( str , ctx , blockEnd ) {
+function parseStyledText( str , ctx , scanEnd ) {
 	//console.error( "parseStyledText()" ) ;
-	var end = searchCloser( str , ctx.i + 1 , '[' , ']' , false , blockEnd ) ;
+	var end = searchCloser( str , ctx.i + 1 , '[' , ']' , false , scanEnd ) ;
 	if ( end < 0 ) { return ; }
 
-	var text = str.slice( ctx.i + 1 , end ) ;
+	//var text = str.slice( ctx.i + 1 , end ) ;
 
+	var start = ctx.i + 1 ;
 	ctx.i = end ;
-	var data = parseDataMark( str , ctx , STYLE_DATA_MARK , blockEnd ) ;
+	var data = parseDataMark( str , ctx , STYLE_DATA_MARK , scanEnd ) ;
 	if ( ! data ) { return ; }
+
+	var fullMarkupEnd = ctx.i ;
 
 	var href = data.href?.[ 0 ] ,
 		style = data.style?.[ 0 ] ,
 		title = data.text?.[ 0 ] ;
 
 	if ( href ) {
-		ctx.parts.push( new documentParts.Link( text , href , style , title ) ) ;
+		ctx.parts.push( new documentParts.Link( href , style , title ) ) ;
 	}
 	else if ( style || title ) {
-		ctx.parts.push( new documentParts.StyledText( text , style , title ) ) ;
+		ctx.parts.push( new documentParts.StyledText( style , title ) ) ;
 	}
+	else {
+		return ;
+	}
+
+	ctx.i = start ;
+	parseNestedInline( str , ctx , end ) ;
+
+	ctx.i = fullMarkupEnd ;
+	ctx.iStartOfInlineChunk = ctx.i + 1 ;
 }
 
 
@@ -18993,16 +20923,16 @@ const IMAGE_DATA_MARK = {
 	text: true , href: true , style: false , extra: false
 } ;
 
-function parseImage( str , ctx , blockEnd ) {
+function parseImage( str , ctx , scanEnd ) {
 	//console.error( "parseStyledText()" ) ;
-	var end = searchCloser( str , ctx.i + 2 , '[' , ']' , false , blockEnd ) ;
+	var end = searchCloser( str , ctx.i + 2 , '[' , ']' , false , scanEnd ) ;
 	if ( end < 0 ) { return ; }
 
 	var text = str.slice( ctx.i + 2 , end ) ;
 
 	ctx.i = end ;
 	ctx.iStartOfInlineChunk = ctx.i + 1 ;
-	var data = parseDataMark( str , ctx , IMAGE_DATA_MARK , blockEnd ) ;
+	var data = parseDataMark( str , ctx , IMAGE_DATA_MARK , scanEnd ) ;
 	if ( ! data ) { return ; }
 
 	var href = data.href?.[ 0 ] ;
@@ -19017,13 +20947,13 @@ function parseImage( str , ctx , blockEnd ) {
 
 
 
-function parseDataMark( str , ctx , allow , blockEnd , forTextElement = true ) {
+function parseDataMark( str , ctx , allow , scanEnd , forTextElement = true ) {
 	var end ,
 		data = {} ;
 
 	for ( ;; ) {
 		if ( str[ ctx.i + 1 ] === '[' && allow.text ) {
-			end = searchCloser( str , ctx.i + 2 , '[' , ']' , false , blockEnd ) ;
+			end = searchCloser( str , ctx.i + 2 , '[' , ']' , false , scanEnd ) ;
 			if ( end < 0 ) { return ; }
 			if ( ! data.text ) { data.text = [] ; }
 			data.text.push( str.slice( ctx.i + 2 , end ) ) ;
@@ -19031,7 +20961,7 @@ function parseDataMark( str , ctx , allow , blockEnd , forTextElement = true ) {
 			ctx.iStartOfInlineChunk = ctx.i + 1 ;
 		}
 		else if ( str[ ctx.i + 1 ] === '(' && allow.href ) {
-			end = searchCloser( str , ctx.i + 2 , '(' , ')' , true , blockEnd ) ;
+			end = searchCloser( str , ctx.i + 2 , '(' , ')' , true , scanEnd ) ;
 			if ( end < 0 ) { return ; }
 			if ( ! data.href ) { data.href = [] ; }
 			data.href.push( str.slice( ctx.i + 2 , end ) ) ;
@@ -19039,7 +20969,7 @@ function parseDataMark( str , ctx , allow , blockEnd , forTextElement = true ) {
 			ctx.iStartOfInlineChunk = ctx.i + 1 ;
 		}
 		else if ( str[ ctx.i + 1 ] === '<' && allow.style ) {
-			end = searchCloser( str , ctx.i + 2 , '<' , '>' , true , blockEnd ) ;
+			end = searchCloser( str , ctx.i + 2 , '<' , '>' , true , scanEnd ) ;
 			if ( end < 0 ) { return ; }
 			if ( ! data.style ) { data.style = [] ; }
 			//data.style.push( str.slice( ctx.i + 2 , end ) ) ;
@@ -19051,7 +20981,7 @@ function parseDataMark( str , ctx , allow , blockEnd , forTextElement = true ) {
 		}
 		/*
 		else if ( str[ ctx.i + 1 ] === '{' && allow.extra ) {
-			end = searchCloser( str , ctx.i + 2 , '{' , '}' , false , blockEnd ) ;
+			end = searchCloser( str , ctx.i + 2 , '{' , '}' , false , scanEnd ) ;
 			if ( end < 0 ) { return ; }
 			if ( ! data.extra ) { data.extra = [] ; }
 			data.extra.push( str.slice( ctx.i + 2 , end ) ) ;
@@ -19112,9 +21042,24 @@ function mergeInlineParts( parts , extraParts ) {
 	}
 
 	var lastPart = parts[ parts.length - 1 ] ,
-		firstExtraPart = extraParts[ 0 ] ;
+		lastTextPart = lastPart ,
+		firstExtraPart = extraParts[ 0 ] ,
+		firstExtraTextPart = firstExtraPart ;
 
-	var needExtraSpace = ! WHITE_SPACES.has( lastPart.text[ lastPart.text.length - 1 ] ) && ! WHITE_SPACES.has( firstExtraPart.text[ 0 ] ) ;
+	while ( lastTextPart && lastTextPart.parts && lastTextPart.parts.length ) {
+		lastTextPart = lastTextPart.parts[ lastTextPart.parts.length - 1 ] ;
+	}
+
+	while ( firstExtraTextPart && firstExtraTextPart.parts && firstExtraTextPart.parts.length ) {
+		firstExtraTextPart = firstExtraTextPart.parts[ 0 ] ;
+	}
+
+	if ( ! lastTextPart?.text || ! firstExtraTextPart?.text ) {
+		parts.push( ... extraParts ) ;
+		return ;
+	}
+
+	var needExtraSpace = ! WHITE_SPACES.has( lastTextPart.text[ lastTextPart.text.length - 1 ] ) && ! WHITE_SPACES.has( firstExtraTextPart.text[ 0 ] ) ;
 
 	if ( lastPart.type === 'text' && firstExtraPart.type === 'text' ) {
 		// Combine the last existing with the first additional part
@@ -19442,7 +21387,7 @@ function unstackToIndent( ctx , toIndent = 0 ) {
 }
 
 
-},{"./Style.js":68,"./Theme.js":69,"./documentParts.js":71,"array-kit/lib/inPlaceFilter.js":64}],68:[function(require,module,exports){
+},{"./Style.js":76,"./Theme.js":77,"./documentParts.js":79,"./textPostFilters.js":80,"array-kit/lib/inPlaceFilter.js":72}],76:[function(require,module,exports){
 /*
 	Book Source
 
@@ -19483,6 +21428,7 @@ function Style() {
 	this.bold = null ;
 	this.italic = null ;
 	this.underline = null ;
+	this.fx = null ;
 }
 
 module.exports = Style ;
@@ -19514,6 +21460,7 @@ Style.merge = function( ... styles ) {
 const BOOLEAN_PROPERTIES = new Set( [ 'bold' , 'italic' , 'underline' ] ) ;
 const TEXT_COLOR_PROPERTIES = new Set( [ 'text' , 'tx' , 'foreground' , 'fg' ] ) ;
 const BACKGROUND_COLOR_PROPERTIES = new Set( [ 'background' , 'bg' ] ) ;
+const FX_PROPERTIES = new Set( [ 'fx' ] ) ;
 
 
 
@@ -19524,9 +21471,12 @@ Style.parse = function( str , forTextElement = true ) {
 		let [ property , value ] = part.split( ':' ) ;
 
 		if ( value ) {
-			property = TEXT_COLOR_PROPERTIES.has( property ) ? 'text' :
+			property =
+				TEXT_COLOR_PROPERTIES.has( property ) ? 'text' :
 				BACKGROUND_COLOR_PROPERTIES.has( property ) ? 'background' :
-				forTextElement ? 'text' : 'background' ;
+				FX_PROPERTIES.has( property ) ? 'fx' :
+				forTextElement ? 'text' :
+				'background' ;
 		}
 		else {
 			if ( BOOLEAN_PROPERTIES.has( property ) ) {
@@ -19545,6 +21495,9 @@ Style.parse = function( str , forTextElement = true ) {
 			case 'background' :
 				style.backgroundColor = Color.parse( value ) ;
 				break ;
+			case 'fx' :
+				style.fx = value ;
+				break ;
 		}
 	}
 
@@ -19552,7 +21505,7 @@ Style.parse = function( str , forTextElement = true ) {
 } ;
 
 
-},{"palette-shade":78}],69:[function(require,module,exports){
+},{"palette-shade":89}],77:[function(require,module,exports){
 /*
 	Book Source
 
@@ -19631,7 +21584,7 @@ function Theme( params = {} ) {
 	} ;
 
 	this.printSizes = {
-		text: '9pt' ,
+		text: '12pt' ,
 		lineHeight: '1.5' ,
 		codeLineHeight: '1.4'
 	} ;
@@ -19682,7 +21635,7 @@ Theme.prototype.substituteWithPalette = function() {
 } ;
 
 
-},{"palette-shade":78}],70:[function(require,module,exports){
+},{"palette-shade":89}],78:[function(require,module,exports){
 /*
 	Book Source
 
@@ -19719,10 +21672,11 @@ module.exports = bookSource ;
 bookSource.StructuredDocument = require( './StructuredDocument.js' ) ;
 bookSource.Style = require( './Style.js' ) ;
 bookSource.Theme = require( './Theme.js' ) ;
+bookSource.textPostFilters = require( './textPostFilters.js' ) ;
 
 Object.assign( bookSource , require( './documentParts.js' ) ) ;
 
-// Exposed external lib
+// Exposed external libs
 const paletteShade = require( 'palette-shade' ) ;
 bookSource.Color = paletteShade.Color ;
 bookSource.Palette = paletteShade.Palette ;
@@ -19730,7 +21684,7 @@ bookSource.Palette = paletteShade.Palette ;
 bookSource.parse = bookSource.StructuredDocument.parse ;
 
 
-},{"./StructuredDocument.js":67,"./Style.js":68,"./Theme.js":69,"./documentParts.js":71,"palette-shade":78}],71:[function(require,module,exports){
+},{"./StructuredDocument.js":75,"./Style.js":76,"./Theme.js":77,"./documentParts.js":79,"./textPostFilters.js":80,"palette-shade":89}],79:[function(require,module,exports){
 /*
 	Book Source
 
@@ -19766,19 +21720,27 @@ module.exports = documentParts ;
 
 
 
-function Part() {
-}
+function Part() {}
 
 documentParts.Part = Part ;
 
 
 
-function InlinePart() {
-}
+function InlinePart() {}
 
 InlinePart.prototype = Object.create( Part.prototype ) ;
 InlinePart.prototype.constructor = InlinePart ;
 documentParts.InlinePart = InlinePart ;
+
+
+
+function InlineContainerPart() {
+	this.parts = [] ;
+}
+
+InlineContainerPart.prototype = Object.create( Part.prototype ) ;
+InlineContainerPart.prototype.constructor = InlineContainerPart ;
+documentParts.InlineContainerPart = InlineContainerPart ;
 
 
 
@@ -19815,26 +21777,26 @@ documentParts.Text = Text ;
 
 
 
-function EmphasisText( text , level ) {
+function EmphasisText( level ) {
 	this.type = 'emphasisText' ;
 	this.level = level ;
-	InlineTextPart.call( this , text ) ;
+	InlineContainerPart.call( this ) ;
 }
 
-EmphasisText.prototype = Object.create( InlineTextPart.prototype ) ;
+EmphasisText.prototype = Object.create( InlineContainerPart.prototype ) ;
 EmphasisText.prototype.constructor = EmphasisText ;
 documentParts.EmphasisText = EmphasisText ;
 
 
 
-function DecoratedText( text , level ) {
+function DecoratedText( level ) {
 	this.type = 'decoratedText' ;
 	this.level = level ;
 	this.underline = true ;
-	InlineTextPart.call( this , text ) ;
+	InlineContainerPart.call( this ) ;
 }
 
-DecoratedText.prototype = Object.create( InlineTextPart.prototype ) ;
+DecoratedText.prototype = Object.create( InlineContainerPart.prototype ) ;
 DecoratedText.prototype.constructor = DecoratedText ;
 documentParts.DecoratedText = DecoratedText ;
 
@@ -19851,28 +21813,28 @@ documentParts.Code = Code ;
 
 
 
-function Link( text , href , style , title ) {
+function Link( href , style , title ) {
 	this.type = 'link' ;
 	this.href = href ;
 	this.style = style || undefined ;
-	InlineTextPart.call( this , text ) ;
+	InlineContainerPart.call( this ) ;
 	this.title = title || undefined ;
 }
 
-Link.prototype = Object.create( InlineTextPart.prototype ) ;
+Link.prototype = Object.create( InlineContainerPart.prototype ) ;
 Link.prototype.constructor = Link ;
 documentParts.Link = Link ;
 
 
 
-function StyledText( text , style , title ) {
+function StyledText( style , title ) {
 	this.type = 'styledText' ;
 	this.style = style || undefined ;
-	InlineTextPart.call( this , text ) ;
+	InlineContainerPart.call( this ) ;
 	this.title = title || undefined ;
 }
 
-StyledText.prototype = Object.create( InlineTextPart.prototype ) ;
+StyledText.prototype = Object.create( InlineContainerPart.prototype ) ;
 StyledText.prototype.constructor = StyledText ;
 documentParts.StyledText = StyledText ;
 
@@ -19980,6 +21942,7 @@ documentParts.ListItem = ListItem ;
 function OrderedList( indent ) {
 	this.type = 'orderedList' ;
 	this.indent = indent ;
+	this.autoIndex = 1 ;
 	BlockPart.call( this ) ;
 }
 
@@ -19989,10 +21952,11 @@ documentParts.OrderedList = OrderedList ;
 
 
 
-function OrderedListItem( indent , order ) {
+function OrderedListItem( indent , order , index ) {
 	this.type = 'orderedListItem' ;
 	this.indent = indent ;
-	this.order = order ;
+	this.order = order ;	// User order value
+	this.index = index ;	// Real index, starting at 1, and auto-incrementing
 	BlockPart.call( this ) ;
 }
 
@@ -20068,6 +22032,7 @@ function Table() {
 	this.multilineRowMode = false ;
 	this.hasHeadSeparator = false ;
 	this.hasRowSeparator = false ;
+	this.hasRowSpan = false ;	// Useful to disable background colors based on odd/even rows
 	BlockPart.call( this ) ;
 }
 
@@ -20177,7 +22142,109 @@ TableHeadCell.prototype.constructor = TableHeadCell ;
 documentParts.TableHeadCell = TableHeadCell ;
 
 
-},{"string-kit/lib/emoji.js":80}],72:[function(require,module,exports){
+},{"string-kit/lib/emoji.js":101}],80:[function(require,module,exports){
+/*
+	Book Source
+
+	Copyright (c) 2023 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+// Non-breaking space
+const NBSP = String.fromCharCode( 0xa0 ) ;
+//const NBSP = '#' ;
+
+
+
+const DOUBLE_GRAPH_PUNCTUATIONS = [ ':' , ';' , '!' , '?' ] ;
+const SPACES = [ ' ' , NBSP ] ;
+const DOUBLE_GRAPH_PUNCTUATIONS_AND_SPACES = DOUBLE_GRAPH_PUNCTUATIONS.concat( SPACES ) ;
+const FRENCH_TYPO_PUNCTUATION_REGEX =
+	"([^" + DOUBLE_GRAPH_PUNCTUATIONS_AND_SPACES.join( '' ) + "])"
+	+ "[" + SPACES.join( '' ) + "]?"
+	+ "([" + DOUBLE_GRAPH_PUNCTUATIONS.join( '' ) + "]+)" ;
+const FRENCH_TYPO_PUNCTUATION_REGEX_WITHOUT_PREVIOUS =
+	"[" + SPACES.join( '' ) + "]?"
+	+ "([" + DOUBLE_GRAPH_PUNCTUATIONS.join( '' ) + "]+)" ;
+const FRENCH_TYPO_PUNCTUATION_REGEX_ALT_START =
+	"(?:"
+	+ "^" + FRENCH_TYPO_PUNCTUATION_REGEX_WITHOUT_PREVIOUS
+	+ "|(?<!^)" + FRENCH_TYPO_PUNCTUATION_REGEX
+	+ ")" ;
+
+
+
+exports['french-typo'] = ( part , lastPart ) => {
+	var useRegexAltStart = false ;
+
+	if ( lastPart ) {
+		let firstChar = part.text[ 0 ] ;
+		let lastChar = lastPart.text[ lastPart.text.length - 1 ] ;
+
+		if (
+			DOUBLE_GRAPH_PUNCTUATIONS.includes( firstChar )
+			&& ! DOUBLE_GRAPH_PUNCTUATIONS.includes( lastChar )
+			&& lastChar !== NBSP
+		) {
+			if ( lastChar === ' ' ) {
+				lastPart.text = lastPart.text.slice( 0 , - 1 ) + NBSP ;
+			}
+			else {
+				part.text = NBSP + part.text ;
+			}
+		}
+		else if ( ! DOUBLE_GRAPH_PUNCTUATIONS_AND_SPACES.includes( lastChar ) ) {
+			useRegexAltStart = true ;
+		}
+	}
+
+	if ( useRegexAltStart ) {
+		part.text = part.text.replace(
+			new RegExp( FRENCH_TYPO_PUNCTUATION_REGEX_ALT_START , 'g' ) ,
+			( match , punctuations1 , previous , punctuations2 ) =>
+				punctuations1 ? NBSP + punctuations1 :
+				previous + NBSP + punctuations2
+		) ;
+	}
+	else {
+		part.text = part.text.replace(
+			new RegExp( FRENCH_TYPO_PUNCTUATION_REGEX , 'g' ) ,
+			( match , previous , punctuations ) => previous + NBSP + punctuations
+		) ;
+	}
+} ;
+
+
+
+exports.apostrophe = ( part ) => {
+	part.text = part.text.replace( /'/g , '’' ) ;
+} ;
+
+
+},{}],81:[function(require,module,exports){
 (function (process){(function (){
 /*
 	Dom Kit
@@ -20752,7 +22819,293 @@ domKit.html = ( $element , html ) => $element.innerHTML = html ;
 
 
 }).call(this)}).call(this,require('_process'))
-},{"@cronvel/xmldom":40,"_process":94}],73:[function(require,module,exports){
+},{"@cronvel/xmldom":48,"_process":117}],82:[function(require,module,exports){
+/*
+	Next-Gen Events
+
+	Copyright (c) 2015 - 2021 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+function LeanEvents() {}
+module.exports = LeanEvents ;
+LeanEvents.prototype.__prototypeUID__ = 'nextgen-events/LeanEvents' ;
+LeanEvents.prototype.__prototypeVersion__ = require( '../package.json' ).version ;
+
+
+
+// .addListener( eventName , fn , [id] )
+LeanEvents.prototype.on = LeanEvents.prototype.addListener = function( eventName , fn , id , once ) {
+	if ( ! this.__listeners ) { this.__listeners = {} ; }
+	if ( ! this.__listeners[ eventName ] ) { this.__listeners[ eventName ] = [] ; }
+
+	var stateArgs = this.__states && this.__states[ eventName ] ;
+
+	if ( stateArgs && once ) {
+		// Don't even add it to listeners, just run it now
+		fn( ... stateArgs ) ;
+		return ;
+	}
+
+	var listener = {
+		id: id ?? fn ,
+		fn: fn ,
+		once: !! once
+	} ;
+
+	//this.__listeners[ eventName ].push( listener ) ;	// .push() is slower
+	var listeners = this.__listeners[ eventName ] ;
+	listeners[ listeners.length ] = listener ;
+
+	if ( stateArgs ) {
+		fn( ... stateArgs ) ;
+	}
+} ;
+
+
+
+// Short-hand
+// .once( eventName , fn , [id] )
+LeanEvents.prototype.once = function( eventName , fn , id ) { return this.addListener( eventName , fn , id , true ) ; } ;
+
+
+
+// .waitFor( eventName )
+// A Promise-returning .once() variant, only the first arg is returned
+LeanEvents.prototype.waitFor = function( eventName ) {
+	return new Promise( resolve => {
+		this.addListener( eventName , ( firstArg ) => resolve( firstArg ) , undefined , true ) ;
+	} ) ;
+} ;
+
+
+
+// .waitForAll( eventName )
+// A Promise-returning .once() variant, all args are returned as an array
+LeanEvents.prototype.waitForAll = function( eventName ) {
+	return new Promise( resolve => {
+		this.addListener( eventName , ( ... args ) => resolve( args ) , undefined , true ) ;
+	} ) ;
+} ;
+
+
+
+LeanEvents.prototype.off = LeanEvents.prototype.removeListener = function( eventName , id ) {
+	if ( ! this.__listeners || ! this.__listeners[ eventName ] || ! this.__listeners[ eventName ].length ) { return ; }
+
+	// Don't modify the listener array in place, an emit may be in progress (could cause recursive trouble).
+	// We assume that it's less frequent to remove a listener than to emit an event.
+	this.__listeners[ eventName ] = this.__listeners[ eventName ].filter( listener => listener.id !== id ) ;
+
+	/*	Same speed than .filter()
+	var i , iMax , iNew , newListeners = [] , listeners = this.__listeners[ eventName ] ;
+	for ( i = 0 , iMax = listeners.length , iNew = 0 ; i < iMax ; i ++ ) {
+		if ( listeners[ i ].id !== id ) {
+			newListeners[ iNew ++ ] = listeners[ i ] ;
+		}
+	}
+
+	this.__listeners[ eventName ] = newListeners ;
+	//*/
+
+	return this ;
+} ;
+
+
+
+LeanEvents.prototype.removeAllListeners = function( eventName ) {
+	if ( ! this.__listeners ) { return ; }
+
+	if ( eventName ) {
+		// Don't modify the listener array, an emit may be in progress (could cause recursive trouble)
+		//this.__listeners[ eventName ].length = 0 ;
+		delete this.__listeners[ eventName ] ;
+	}
+	else {
+		// Remove all listeners for any events
+		this.__listeners = {} ;
+	}
+
+	return this ;
+} ;
+
+
+
+/*
+	emit( eventName , [arg1] , [arg2] , [...] )
+*/
+LeanEvents.prototype.emit = function( eventName , ... args ) {
+	var i , iMax , listeners , listener , stateArgs , stateGroup ;
+
+	// Note that when a state is off, it is set to null, hence checking undefined is the way to know if it is a state event.
+	if ( this.__states && ( stateArgs = this.__states[ eventName ] ) !== undefined ) {
+		// This is a state event, register it NOW even if there is no listener!
+
+		if ( stateArgs && args.length === stateArgs.length && ( ! args.length || args.every( ( arg , index ) => arg === stateArgs[ index ] ) ) ) {
+			// The emitter is already in this exact state, skip it now!
+			return ;
+		}
+
+		// Unset all states of that group
+		stateGroup = this.__stateGroups[ eventName ] ;
+		for ( i = 0 , iMax = stateGroup.length ; i < iMax ; i ++ ) {
+			this.__states[ stateGroup[ i ] ] = null ;
+		}
+
+		this.__states[ eventName ] = args ;
+	}
+
+	if ( ! this.__listeners ) { return ; }
+
+	// listeners AND listeners.length MUST be cached, to avoid recursive trouble (adding/removing a listener inside of a listener)
+	listeners = this.__listeners[ eventName ] ;
+	if ( ! listeners || ! listeners.length ) { return ; }
+
+	// Emit the event to all listeners!
+	for ( i = 0 , iMax = listeners.length ; i < iMax ; i ++ ) {
+		listener = listeners[ i ] ;
+
+		// If it's a one-time listener, we should remove it RIGHT NOW because of recursive .emit() issues:
+		// one listener may eventually fire this very same event synchronously during the current loop.
+		if ( listener.once ) { this.removeListener( eventName , listener.id ) ; }
+
+		listener.fn( ... args ) ;
+	}
+	return this ;
+} ;
+
+
+
+LeanEvents.prototype.listeners = function( eventName ) {
+	if ( ! this.__listeners || ! this.__listeners[ eventName ] ) { return [] ; }
+
+	// Do not return the array, shallow copy it
+	return this.__listeners[ eventName ].slice() ;
+} ;
+
+
+
+LeanEvents.prototype.listenerCount = function( eventName ) {
+	if ( ! this.__listeners || ! this.__listeners[ eventName ] ) { return 0 ; }
+	return this.__listeners[ eventName ].length ;
+} ;
+
+
+
+/* Next Gen feature: states! */
+
+// .defineStates( exclusiveState1 , [exclusiveState2] , [exclusiveState3] , ... )
+LeanEvents.prototype.defineStates = function( ... states ) {
+	if ( ! this.__states ) {
+		this.__states = {} ;
+		this.__stateGroups = {} ;
+	}
+
+	states.forEach( state => {
+		this.__states[ state ] = null ;
+		this.__stateGroups[ state ] = states ;
+	} ) ;
+} ;
+
+
+
+LeanEvents.prototype.hasState = function( state ) {
+	if ( ! this.__states ) { return false ; }
+	return !! this.__states[ state ] ;
+} ;
+
+
+
+LeanEvents.prototype.getAllStates = function() {
+	if ( ! this.__states ) { return [] ; }
+	return Object.keys( this.__states ).filter( state => this.__states[ state ] ) ;
+} ;
+
+
+},{"../package.json":83}],83:[function(require,module,exports){
+module.exports={
+  "name": "nextgen-events",
+  "version": "1.5.3",
+  "description": "The next generation of events handling for javascript! New: abstract away the network!",
+  "main": "lib/NextGenEvents.js",
+  "engines": {
+    "node": ">=6.0.0"
+  },
+  "directories": {
+    "test": "test",
+    "bench": "bench"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "browserify": "^17.0.0",
+    "uglify-js-es6": "^2.8.9",
+    "ws": "^7.4.6"
+  },
+  "scripts": {
+    "test": "tea-time -R dot"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cronvel/nextgen-events.git"
+  },
+  "keywords": [
+    "events",
+    "async",
+    "emit",
+    "listener",
+    "context",
+    "series",
+    "serialize",
+    "namespace",
+    "proxy",
+    "network"
+  ],
+  "author": "Cédric Ronvel",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/cronvel/nextgen-events/issues"
+  },
+  "config": {
+    "tea-time": {
+      "coverDir": [
+        "lib"
+      ]
+    }
+  },
+  "copyright": {
+    "title": "Next-Gen Events",
+    "years": [
+      2015,
+      2021
+    ],
+    "owner": "Cédric Ronvel"
+  }
+}
+
+},{}],84:[function(require,module,exports){
 /*
  * Copyright (C) 2007-2018 Diego Perini
  * All rights reserved.
@@ -22530,7 +24883,7 @@ domKit.html = ( $element , html ) => $element.innerHTML = html ;
   return Dom;
 });
 
-},{}],74:[function(require,module,exports){
+},{}],85:[function(require,module,exports){
 (function (Buffer){(function (){
 /**
  * https://opentype.js.org v1.3.4 | (c) Frederik De Bleser and other contributors | MIT License | Uses tiny-inflate by Devon Govett and string.prototype.codepointat polyfill by Mathias Bynens
@@ -37011,7 +39364,7 @@ domKit.html = ( $element , html ) => $element.innerHTML = html ;
 
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"buffer":90,"fs":88}],75:[function(require,module,exports){
+},{"buffer":113,"fs":111}],86:[function(require,module,exports){
 /**
  * chroma.js - JavaScript library for color conversions
  *
@@ -37878,7 +40231,7 @@ domKit.html = ( $element , html ) => $element.innerHTML = html ;
 
 }));
 
-},{}],76:[function(require,module,exports){
+},{}],87:[function(require,module,exports){
 /*
 	Palette Shade
 
@@ -38093,7 +40446,7 @@ Color.parse = function( str ) {
 } ;
 
 
-},{}],77:[function(require,module,exports){
+},{}],88:[function(require,module,exports){
 /*
 	Palette Shade
 
@@ -38408,7 +40761,7 @@ Palette.cleanClip = function( chromaColor , lch ) {
 } ;
 
 
-},{"../extlib/chromajs.custom.js":75}],78:[function(require,module,exports){
+},{"../extlib/chromajs.custom.js":86}],89:[function(require,module,exports){
 /*
 	Palette Shade
 
@@ -38441,9 +40794,29 @@ exports.Color = require( './Color.js' ) ;
 exports.Palette = require( './Palette.js' ) ;
 
 
-},{"./Color.js":76,"./Palette.js":77}],79:[function(require,module,exports){
-arguments[4][45][0].apply(exports,arguments)
-},{"dup":45}],80:[function(require,module,exports){
+},{"./Color.js":87,"./Palette.js":88}],90:[function(require,module,exports){
+arguments[4][6][0].apply(exports,arguments)
+},{"_process":117,"dup":6}],91:[function(require,module,exports){
+arguments[4][7][0].apply(exports,arguments)
+},{"./seventh.js":98,"dup":7}],92:[function(require,module,exports){
+arguments[4][8][0].apply(exports,arguments)
+},{"./seventh.js":98,"dup":8}],93:[function(require,module,exports){
+arguments[4][9][0].apply(exports,arguments)
+},{"./seventh.js":98,"dup":9}],94:[function(require,module,exports){
+arguments[4][10][0].apply(exports,arguments)
+},{"_process":117,"dup":10,"setimmediate":90,"timers":118}],95:[function(require,module,exports){
+arguments[4][11][0].apply(exports,arguments)
+},{"./seventh.js":98,"dup":11}],96:[function(require,module,exports){
+arguments[4][12][0].apply(exports,arguments)
+},{"./seventh.js":98,"_process":117,"dup":12}],97:[function(require,module,exports){
+arguments[4][13][0].apply(exports,arguments)
+},{"./seventh.js":98,"dup":13}],98:[function(require,module,exports){
+arguments[4][14][0].apply(exports,arguments)
+},{"./Queue.js":91,"./api.js":92,"./batch.js":93,"./core.js":94,"./decorators.js":95,"./misc.js":96,"./parasite.js":97,"./wrapper.js":99,"dup":14}],99:[function(require,module,exports){
+arguments[4][15][0].apply(exports,arguments)
+},{"./seventh.js":98,"dup":15}],100:[function(require,module,exports){
+arguments[4][53][0].apply(exports,arguments)
+},{"dup":53}],101:[function(require,module,exports){
 /*
 	Book Source
 
@@ -38581,7 +40954,7 @@ emoji.splitIntoKeywords = ( name , noSimplify = false ) => {
 } ;
 
 
-},{"./english.js":81,"./json-data/emoji-char-to-canonical-name.json":83,"./json-data/emoji-keyword-to-charlist.json":84,"./latinize.js":86}],81:[function(require,module,exports){
+},{"./english.js":102,"./json-data/emoji-char-to-canonical-name.json":104,"./json-data/emoji-keyword-to-charlist.json":105,"./latinize.js":108}],102:[function(require,module,exports){
 /*
 	Book Source
 
@@ -38672,15 +41045,17 @@ english.undoPresentParticiple = word => {
 } ;
 
 
-},{}],82:[function(require,module,exports){
-arguments[4][46][0].apply(exports,arguments)
-},{"dup":46}],83:[function(require,module,exports){
+},{}],103:[function(require,module,exports){
+arguments[4][54][0].apply(exports,arguments)
+},{"dup":54}],104:[function(require,module,exports){
 module.exports={"😀":"grinning-face","😃":"grinning-face-with-big-eyes","😄":"grinning-face-with-smiling-eyes","😁":"beaming-face-with-smiling-eyes","😆":"grinning-squinting-face","😅":"grinning-face-with-sweat","🤣":"rolling-on-the-floor-laughing","😂":"face-with-tears-of-joy","🙂":"slightly-smiling-face","🙃":"upside-down-face","🫠":"melting-face","😉":"winking-face","😊":"smiling-face-with-smiling-eyes","😇":"smiling-face-with-halo","🥰":"smiling-face-with-hearts","😍":"smiling-face-with-heart-eyes","🤩":"star-struck","😘":"face-blowing-a-kiss","😗":"kissing-face","☺️":"smiling-face","😚":"kissing-face-with-closed-eyes","😙":"kissing-face-with-smiling-eyes","🥲":"smiling-face-with-tear","😋":"face-savoring-food","😛":"face-with-tongue","😜":"winking-face-with-tongue","🤪":"zany-face","😝":"squinting-face-with-tongue","🤑":"money-mouth-face","🤗":"smiling-face-with-open-hands","🤭":"face-with-hand-over-mouth","🫢":"face-with-open-eyes-and-hand-over-mouth","🫣":"face-with-peeking-eye","🤫":"shushing-face","🤔":"thinking-face","🫡":"saluting-face","🤐":"zipper-mouth-face","🤨":"face-with-raised-eyebrow","😐":"neutral-face","😑":"expressionless-face","😶":"face-without-mouth","🫥":"dotted-line-face","😶‍🌫️":"face-in-clouds","😏":"smirking-face","😒":"unamused-face","🙄":"face-with-rolling-eyes","😬":"grimacing-face","😮‍💨":"face-exhaling","🤥":"lying-face","🫨":"shaking-face","😌":"relieved-face","😔":"pensive-face","😪":"sleepy-face","🤤":"drooling-face","😴":"sleeping-face","😷":"face-with-medical-mask","🤒":"face-with-thermometer","🤕":"face-with-head-bandage","🤢":"nauseated-face","🤮":"face-vomiting","🤧":"sneezing-face","🥵":"hot-face","🥶":"cold-face","🥴":"woozy-face","😵":"face-with-crossed-out-eyes","😵‍💫":"face-with-spiral-eyes","🤯":"exploding-head","🤠":"cowboy-hat-face","🥳":"partying-face","🥸":"disguised-face","😎":"smiling-face-with-sunglasses","🤓":"nerd-face","🧐":"face-with-monocle","😕":"confused-face","🫤":"face-with-diagonal-mouth","😟":"worried-face","🙁":"slightly-frowning-face","☹️":"frowning-face","😮":"face-with-open-mouth","😯":"hushed-face","😲":"astonished-face","😳":"flushed-face","🥺":"pleading-face","🥹":"face-holding-back-tears","😦":"frowning-face-with-open-mouth","😧":"anguished-face","😨":"fearful-face","😰":"anxious-face-with-sweat","😥":"sad-but-relieved-face","😢":"crying-face","😭":"loudly-crying-face","😱":"face-screaming-in-fear","😖":"confounded-face","😣":"persevering-face","😞":"disappointed-face","😓":"downcast-face-with-sweat","😩":"weary-face","😫":"tired-face","🥱":"yawning-face","😤":"face-with-steam-from-nose","😡":"enraged-face","😠":"angry-face","🤬":"face-with-symbols-on-mouth","😈":"smiling-face-with-horns","👿":"angry-face-with-horns","💀":"skull","☠️":"skull-and-crossbones","💩":"pile-of-poo","🤡":"clown-face","👹":"ogre","👺":"goblin","👻":"ghost","👽":"alien","👾":"alien-monster","🤖":"robot","😺":"grinning-cat","😸":"grinning-cat-with-smiling-eyes","😹":"cat-with-tears-of-joy","😻":"smiling-cat-with-heart-eyes","😼":"cat-with-wry-smile","😽":"kissing-cat","🙀":"weary-cat","😿":"crying-cat","😾":"pouting-cat","🙈":"see-no-evil-monkey","🙉":"hear-no-evil-monkey","🙊":"speak-no-evil-monkey","💌":"love-letter","💘":"heart-with-arrow","💝":"heart-with-ribbon","💖":"sparkling-heart","💗":"growing-heart","💓":"beating-heart","💞":"revolving-hearts","💕":"two-hearts","💟":"heart-decoration","❣️":"heart-exclamation","💔":"broken-heart","❤️‍🔥":"heart-on-fire","❤️‍🩹":"mending-heart","❤️":"red-heart","🩷":"pink-heart","🧡":"orange-heart","💛":"yellow-heart","💚":"green-heart","💙":"blue-heart","🩵":"light-blue-heart","💜":"purple-heart","🤎":"brown-heart","🖤":"black-heart","🩶":"grey-heart","🤍":"white-heart","💋":"kiss-mark","💯":"hundred-points","💢":"anger-symbol","💥":"collision","💫":"dizzy","💦":"sweat-droplets","💨":"dashing-away","🕳️":"hole","💬":"speech-balloon","👁️‍🗨️":"eye-in-speech-bubble","🗨️":"left-speech-bubble","🗯️":"right-anger-bubble","💭":"thought-balloon","💤":"zzz","👋":"waving-hand","🤚":"raised-back-of-hand","🖐️":"hand-with-fingers-splayed","✋":"raised-hand","🖖":"vulcan-salute","🫱":"rightwards-hand","🫲":"leftwards-hand","🫳":"palm-down-hand","🫴":"palm-up-hand","🫷":"leftwards-pushing-hand","🫸":"rightwards-pushing-hand","👌":"ok-hand","🤌":"pinched-fingers","🤏":"pinching-hand","✌️":"victory-hand","🤞":"crossed-fingers","🫰":"hand-with-index-finger-and-thumb-crossed","🤟":"love-you-gesture","🤘":"sign-of-the-horns","🤙":"call-me-hand","👈":"backhand-index-pointing-left","👉":"backhand-index-pointing-right","👆":"backhand-index-pointing-up","🖕":"middle-finger","👇":"backhand-index-pointing-down","☝️":"index-pointing-up","🫵":"index-pointing-at-the-viewer","👍":"thumbs-up","👎":"thumbs-down","✊":"raised-fist","👊":"oncoming-fist","🤛":"left-facing-fist","🤜":"right-facing-fist","👏":"clapping-hands","🙌":"raising-hands","🫶":"heart-hands","👐":"open-hands","🤲":"palms-up-together","🤝":"handshake","🙏":"folded-hands","✍️":"writing-hand","💅":"nail-polish","🤳":"selfie","💪":"flexed-biceps","🦾":"mechanical-arm","🦿":"mechanical-leg","🦵":"leg","🦶":"foot","👂":"ear","🦻":"ear-with-hearing-aid","👃":"nose","🧠":"brain","🫀":"anatomical-heart","🫁":"lungs","🦷":"tooth","🦴":"bone","👀":"eyes","👁️":"eye","👅":"tongue","👄":"mouth","🫦":"biting-lip","👶":"baby","🧒":"child","👦":"boy","👧":"girl","🧑":"person","👱":"person-blond-hair","👨":"man","🧔":"person-beard","🧔‍♂️":"man-beard","🧔‍♀️":"woman-beard","👨‍🦰":"man-red-hair","👨‍🦱":"man-curly-hair","👨‍🦳":"man-white-hair","👨‍🦲":"man-bald","👩":"woman","👩‍🦰":"woman-red-hair","🧑‍🦰":"person-red-hair","👩‍🦱":"woman-curly-hair","🧑‍🦱":"person-curly-hair","👩‍🦳":"woman-white-hair","🧑‍🦳":"person-white-hair","👩‍🦲":"woman-bald","🧑‍🦲":"person-bald","👱‍♀️":"woman-blond-hair","👱‍♂️":"man-blond-hair","🧓":"older-person","👴":"old-man","👵":"old-woman","🙍":"person-frowning","🙍‍♂️":"man-frowning","🙍‍♀️":"woman-frowning","🙎":"person-pouting","🙎‍♂️":"man-pouting","🙎‍♀️":"woman-pouting","🙅":"person-gesturing-no","🙅‍♂️":"man-gesturing-no","🙅‍♀️":"woman-gesturing-no","🙆":"person-gesturing-ok","🙆‍♂️":"man-gesturing-ok","🙆‍♀️":"woman-gesturing-ok","💁":"person-tipping-hand","💁‍♂️":"man-tipping-hand","💁‍♀️":"woman-tipping-hand","🙋":"person-raising-hand","🙋‍♂️":"man-raising-hand","🙋‍♀️":"woman-raising-hand","🧏":"deaf-person","🧏‍♂️":"deaf-man","🧏‍♀️":"deaf-woman","🙇":"person-bowing","🙇‍♂️":"man-bowing","🙇‍♀️":"woman-bowing","🤦":"person-facepalming","🤦‍♂️":"man-facepalming","🤦‍♀️":"woman-facepalming","🤷":"person-shrugging","🤷‍♂️":"man-shrugging","🤷‍♀️":"woman-shrugging","🧑‍⚕️":"health-worker","👨‍⚕️":"man-health-worker","👩‍⚕️":"woman-health-worker","🧑‍🎓":"student","👨‍🎓":"man-student","👩‍🎓":"woman-student","🧑‍🏫":"teacher","👨‍🏫":"man-teacher","👩‍🏫":"woman-teacher","🧑‍⚖️":"judge","👨‍⚖️":"man-judge","👩‍⚖️":"woman-judge","🧑‍🌾":"farmer","👨‍🌾":"man-farmer","👩‍🌾":"woman-farmer","🧑‍🍳":"cook","👨‍🍳":"man-cook","👩‍🍳":"woman-cook","🧑‍🔧":"mechanic","👨‍🔧":"man-mechanic","👩‍🔧":"woman-mechanic","🧑‍🏭":"factory-worker","👨‍🏭":"man-factory-worker","👩‍🏭":"woman-factory-worker","🧑‍💼":"office-worker","👨‍💼":"man-office-worker","👩‍💼":"woman-office-worker","🧑‍🔬":"scientist","👨‍🔬":"man-scientist","👩‍🔬":"woman-scientist","🧑‍💻":"technologist","👨‍💻":"man-technologist","👩‍💻":"woman-technologist","🧑‍🎤":"singer","👨‍🎤":"man-singer","👩‍🎤":"woman-singer","🧑‍🎨":"artist","👨‍🎨":"man-artist","👩‍🎨":"woman-artist","🧑‍✈️":"pilot","👨‍✈️":"man-pilot","👩‍✈️":"woman-pilot","🧑‍🚀":"astronaut","👨‍🚀":"man-astronaut","👩‍🚀":"woman-astronaut","🧑‍🚒":"firefighter","👨‍🚒":"man-firefighter","👩‍🚒":"woman-firefighter","👮":"police-officer","👮‍♂️":"man-police-officer","👮‍♀️":"woman-police-officer","🕵️":"detective","🕵️‍♂️":"man-detective","🕵️‍♀️":"woman-detective","💂":"guard","💂‍♂️":"man-guard","💂‍♀️":"woman-guard","🥷":"ninja","👷":"construction-worker","👷‍♂️":"man-construction-worker","👷‍♀️":"woman-construction-worker","🫅":"person-with-crown","🤴":"prince","👸":"princess","👳":"person-wearing-turban","👳‍♂️":"man-wearing-turban","👳‍♀️":"woman-wearing-turban","👲":"person-with-skullcap","🧕":"woman-with-headscarf","🤵":"person-in-tuxedo","🤵‍♂️":"man-in-tuxedo","🤵‍♀️":"woman-in-tuxedo","👰":"person-with-veil","👰‍♂️":"man-with-veil","👰‍♀️":"woman-with-veil","🤰":"pregnant-woman","🫃":"pregnant-man","🫄":"pregnant-person","🤱":"breast-feeding","👩‍🍼":"woman-feeding-baby","👨‍🍼":"man-feeding-baby","🧑‍🍼":"person-feeding-baby","👼":"baby-angel","🎅":"santa-claus","🤶":"mrs-claus","🧑‍🎄":"mx-claus","🦸":"superhero","🦸‍♂️":"man-superhero","🦸‍♀️":"woman-superhero","🦹":"supervillain","🦹‍♂️":"man-supervillain","🦹‍♀️":"woman-supervillain","🧙":"mage","🧙‍♂️":"man-mage","🧙‍♀️":"woman-mage","🧚":"fairy","🧚‍♂️":"man-fairy","🧚‍♀️":"woman-fairy","🧛":"vampire","🧛‍♂️":"man-vampire","🧛‍♀️":"woman-vampire","🧜":"merperson","🧜‍♂️":"merman","🧜‍♀️":"mermaid","🧝":"elf","🧝‍♂️":"man-elf","🧝‍♀️":"woman-elf","🧞":"genie","🧞‍♂️":"man-genie","🧞‍♀️":"woman-genie","🧟":"zombie","🧟‍♂️":"man-zombie","🧟‍♀️":"woman-zombie","🧌":"troll","💆":"person-getting-massage","💆‍♂️":"man-getting-massage","💆‍♀️":"woman-getting-massage","💇":"person-getting-haircut","💇‍♂️":"man-getting-haircut","💇‍♀️":"woman-getting-haircut","🚶":"person-walking","🚶‍♂️":"man-walking","🚶‍♀️":"woman-walking","🧍":"person-standing","🧍‍♂️":"man-standing","🧍‍♀️":"woman-standing","🧎":"person-kneeling","🧎‍♂️":"man-kneeling","🧎‍♀️":"woman-kneeling","🧑‍🦯":"person-with-white-cane","👨‍🦯":"man-with-white-cane","👩‍🦯":"woman-with-white-cane","🧑‍🦼":"person-in-motorized-wheelchair","👨‍🦼":"man-in-motorized-wheelchair","👩‍🦼":"woman-in-motorized-wheelchair","🧑‍🦽":"person-in-manual-wheelchair","👨‍🦽":"man-in-manual-wheelchair","👩‍🦽":"woman-in-manual-wheelchair","🏃":"person-running","🏃‍♂️":"man-running","🏃‍♀️":"woman-running","💃":"woman-dancing","🕺":"man-dancing","🕴️":"person-in-suit-levitating","👯":"people-with-bunny-ears","👯‍♂️":"men-with-bunny-ears","👯‍♀️":"women-with-bunny-ears","🧖":"person-in-steamy-room","🧖‍♂️":"man-in-steamy-room","🧖‍♀️":"woman-in-steamy-room","🧗":"person-climbing","🧗‍♂️":"man-climbing","🧗‍♀️":"woman-climbing","🤺":"person-fencing","🏇":"horse-racing","⛷️":"skier","🏂":"snowboarder","🏌️":"person-golfing","🏌️‍♂️":"man-golfing","🏌️‍♀️":"woman-golfing","🏄":"person-surfing","🏄‍♂️":"man-surfing","🏄‍♀️":"woman-surfing","🚣":"person-rowing-boat","🚣‍♂️":"man-rowing-boat","🚣‍♀️":"woman-rowing-boat","🏊":"person-swimming","🏊‍♂️":"man-swimming","🏊‍♀️":"woman-swimming","⛹️":"person-bouncing-ball","⛹️‍♂️":"man-bouncing-ball","⛹️‍♀️":"woman-bouncing-ball","🏋️":"person-lifting-weights","🏋️‍♂️":"man-lifting-weights","🏋️‍♀️":"woman-lifting-weights","🚴":"person-biking","🚴‍♂️":"man-biking","🚴‍♀️":"woman-biking","🚵":"person-mountain-biking","🚵‍♂️":"man-mountain-biking","🚵‍♀️":"woman-mountain-biking","🤸":"person-cartwheeling","🤸‍♂️":"man-cartwheeling","🤸‍♀️":"woman-cartwheeling","🤼":"people-wrestling","🤼‍♂️":"men-wrestling","🤼‍♀️":"women-wrestling","🤽":"person-playing-water-polo","🤽‍♂️":"man-playing-water-polo","🤽‍♀️":"woman-playing-water-polo","🤾":"person-playing-handball","🤾‍♂️":"man-playing-handball","🤾‍♀️":"woman-playing-handball","🤹":"person-juggling","🤹‍♂️":"man-juggling","🤹‍♀️":"woman-juggling","🧘":"person-in-lotus-position","🧘‍♂️":"man-in-lotus-position","🧘‍♀️":"woman-in-lotus-position","🛀":"person-taking-bath","🛌":"person-in-bed","🧑‍🤝‍🧑":"people-holding-hands","👭":"women-holding-hands","👫":"woman-and-man-holding-hands","👬":"men-holding-hands","💏":"kiss","👩‍❤️‍💋‍👨":"kiss-woman-man","👨‍❤️‍💋‍👨":"kiss-man-man","👩‍❤️‍💋‍👩":"kiss-woman-woman","💑":"couple-with-heart","👩‍❤️‍👨":"couple-with-heart-woman-man","👨‍❤️‍👨":"couple-with-heart-man-man","👩‍❤️‍👩":"couple-with-heart-woman-woman","👪":"family","👨‍👩‍👦":"family-man-woman-boy","👨‍👩‍👧":"family-man-woman-girl","👨‍👩‍👧‍👦":"family-man-woman-girl-boy","👨‍👩‍👦‍👦":"family-man-woman-boy-boy","👨‍👩‍👧‍👧":"family-man-woman-girl-girl","👨‍👨‍👦":"family-man-man-boy","👨‍👨‍👧":"family-man-man-girl","👨‍👨‍👧‍👦":"family-man-man-girl-boy","👨‍👨‍👦‍👦":"family-man-man-boy-boy","👨‍👨‍👧‍👧":"family-man-man-girl-girl","👩‍👩‍👦":"family-woman-woman-boy","👩‍👩‍👧":"family-woman-woman-girl","👩‍👩‍👧‍👦":"family-woman-woman-girl-boy","👩‍👩‍👦‍👦":"family-woman-woman-boy-boy","👩‍👩‍👧‍👧":"family-woman-woman-girl-girl","👨‍👦":"family-man-boy","👨‍👦‍👦":"family-man-boy-boy","👨‍👧":"family-man-girl","👨‍👧‍👦":"family-man-girl-boy","👨‍👧‍👧":"family-man-girl-girl","👩‍👦":"family-woman-boy","👩‍👦‍👦":"family-woman-boy-boy","👩‍👧":"family-woman-girl","👩‍👧‍👦":"family-woman-girl-boy","👩‍👧‍👧":"family-woman-girl-girl","🗣️":"speaking-head","👤":"bust-in-silhouette","👥":"busts-in-silhouette","🫂":"people-hugging","👣":"footprints","🐵":"monkey-face","🐒":"monkey","🦍":"gorilla","🦧":"orangutan","🐶":"dog-face","🐕":"dog","🦮":"guide-dog","🐕‍🦺":"service-dog","🐩":"poodle","🐺":"wolf","🦊":"fox","🦝":"raccoon","🐱":"cat-face","🐈":"cat","🐈‍⬛":"black-cat","🦁":"lion","🐯":"tiger-face","🐅":"tiger","🐆":"leopard","🐴":"horse-face","🫎":"moose","🫏":"donkey","🐎":"horse","🦄":"unicorn","🦓":"zebra","🦌":"deer","🦬":"bison","🐮":"cow-face","🐂":"ox","🐃":"water-buffalo","🐄":"cow","🐷":"pig-face","🐖":"pig","🐗":"boar","🐽":"pig-nose","🐏":"ram","🐑":"ewe","🐐":"goat","🐪":"camel","🐫":"two-hump-camel","🦙":"llama","🦒":"giraffe","🐘":"elephant","🦣":"mammoth","🦏":"rhinoceros","🦛":"hippopotamus","🐭":"mouse-face","🐁":"mouse","🐀":"rat","🐹":"hamster","🐰":"rabbit-face","🐇":"rabbit","🐿️":"chipmunk","🦫":"beaver","🦔":"hedgehog","🦇":"bat","🐻":"bear","🐻‍❄️":"polar-bear","🐨":"koala","🐼":"panda","🦥":"sloth","🦦":"otter","🦨":"skunk","🦘":"kangaroo","🦡":"badger","🐾":"paw-prints","🦃":"turkey","🐔":"chicken","🐓":"rooster","🐣":"hatching-chick","🐤":"baby-chick","🐥":"front-facing-baby-chick","🐦":"bird","🐧":"penguin","🕊️":"dove","🦅":"eagle","🦆":"duck","🦢":"swan","🦉":"owl","🦤":"dodo","🪶":"feather","🦩":"flamingo","🦚":"peacock","🦜":"parrot","🪽":"wing","🐦‍⬛":"black-bird","🪿":"goose","🐸":"frog","🐊":"crocodile","🐢":"turtle","🦎":"lizard","🐍":"snake","🐲":"dragon-face","🐉":"dragon","🦕":"sauropod","🦖":"t-rex","🐳":"spouting-whale","🐋":"whale","🐬":"dolphin","🦭":"seal","🐟":"fish","🐠":"tropical-fish","🐡":"blowfish","🦈":"shark","🐙":"octopus","🐚":"spiral-shell","🪸":"coral","🪼":"jellyfish","🐌":"snail","🦋":"butterfly","🐛":"bug","🐜":"ant","🐝":"honeybee","🪲":"beetle","🐞":"lady-beetle","🦗":"cricket","🪳":"cockroach","🕷️":"spider","🕸️":"spider-web","🦂":"scorpion","🦟":"mosquito","🪰":"fly","🪱":"worm","🦠":"microbe","💐":"bouquet","🌸":"cherry-blossom","💮":"white-flower","🪷":"lotus","🏵️":"rosette","🌹":"rose","🥀":"wilted-flower","🌺":"hibiscus","🌻":"sunflower","🌼":"blossom","🌷":"tulip","🪻":"hyacinth","🌱":"seedling","🪴":"potted-plant","🌲":"evergreen-tree","🌳":"deciduous-tree","🌴":"palm-tree","🌵":"cactus","🌾":"sheaf-of-rice","🌿":"herb","☘️":"shamrock","🍀":"four-leaf-clover","🍁":"maple-leaf","🍂":"fallen-leaf","🍃":"leaf-fluttering-in-wind","🪹":"empty-nest","🪺":"nest-with-eggs","🍄":"mushroom","🍇":"grapes","🍈":"melon","🍉":"watermelon","🍊":"tangerine","🍋":"lemon","🍌":"banana","🍍":"pineapple","🥭":"mango","🍎":"red-apple","🍏":"green-apple","🍐":"pear","🍑":"peach","🍒":"cherries","🍓":"strawberry","🫐":"blueberries","🥝":"kiwi-fruit","🍅":"tomato","🫒":"olive","🥥":"coconut","🥑":"avocado","🍆":"eggplant","🥔":"potato","🥕":"carrot","🌽":"ear-of-corn","🌶️":"hot-pepper","🫑":"bell-pepper","🥒":"cucumber","🥬":"leafy-green","🥦":"broccoli","🧄":"garlic","🧅":"onion","🥜":"peanuts","🫘":"beans","🌰":"chestnut","🫚":"ginger-root","🫛":"pea-pod","🍞":"bread","🥐":"croissant","🥖":"baguette-bread","🫓":"flatbread","🥨":"pretzel","🥯":"bagel","🥞":"pancakes","🧇":"waffle","🧀":"cheese-wedge","🍖":"meat-on-bone","🍗":"poultry-leg","🥩":"cut-of-meat","🥓":"bacon","🍔":"hamburger","🍟":"french-fries","🍕":"pizza","🌭":"hot-dog","🥪":"sandwich","🌮":"taco","🌯":"burrito","🫔":"tamale","🥙":"stuffed-flatbread","🧆":"falafel","🥚":"egg","🍳":"cooking","🥘":"shallow-pan-of-food","🍲":"pot-of-food","🫕":"fondue","🥣":"bowl-with-spoon","🥗":"green-salad","🍿":"popcorn","🧈":"butter","🧂":"salt","🥫":"canned-food","🍱":"bento-box","🍘":"rice-cracker","🍙":"rice-ball","🍚":"cooked-rice","🍛":"curry-rice","🍜":"steaming-bowl","🍝":"spaghetti","🍠":"roasted-sweet-potato","🍢":"oden","🍣":"sushi","🍤":"fried-shrimp","🍥":"fish-cake-with-swirl","🥮":"moon-cake","🍡":"dango","🥟":"dumpling","🥠":"fortune-cookie","🥡":"takeout-box","🦀":"crab","🦞":"lobster","🦐":"shrimp","🦑":"squid","🦪":"oyster","🍦":"soft-ice-cream","🍧":"shaved-ice","🍨":"ice-cream","🍩":"doughnut","🍪":"cookie","🎂":"birthday-cake","🍰":"shortcake","🧁":"cupcake","🥧":"pie","🍫":"chocolate-bar","🍬":"candy","🍭":"lollipop","🍮":"custard","🍯":"honey-pot","🍼":"baby-bottle","🥛":"glass-of-milk","☕":"hot-beverage","🫖":"teapot","🍵":"teacup-without-handle","🍶":"sake","🍾":"bottle-with-popping-cork","🍷":"wine-glass","🍸":"cocktail-glass","🍹":"tropical-drink","🍺":"beer-mug","🍻":"clinking-beer-mugs","🥂":"clinking-glasses","🥃":"tumbler-glass","🫗":"pouring-liquid","🥤":"cup-with-straw","🧋":"bubble-tea","🧃":"beverage-box","🧉":"mate","🧊":"ice","🥢":"chopsticks","🍽️":"fork-and-knife-with-plate","🍴":"fork-and-knife","🥄":"spoon","🔪":"kitchen-knife","🫙":"jar","🏺":"amphora","🌍":"globe-showing-europe-africa","🌎":"globe-showing-americas","🌏":"globe-showing-asia-australia","🌐":"globe-with-meridians","🗺️":"world-map","🗾":"map-of-japan","🧭":"compass","🏔️":"snow-capped-mountain","⛰️":"mountain","🌋":"volcano","🗻":"mount-fuji","🏕️":"camping","🏖️":"beach-with-umbrella","🏜️":"desert","🏝️":"desert-island","🏞️":"national-park","🏟️":"stadium","🏛️":"classical-building","🏗️":"building-construction","🧱":"brick","🪨":"rock","🪵":"wood","🛖":"hut","🏘️":"houses","🏚️":"derelict-house","🏠":"house","🏡":"house-with-garden","🏢":"office-building","🏣":"japanese-post-office","🏤":"post-office","🏥":"hospital","🏦":"bank","🏨":"hotel","🏩":"love-hotel","🏪":"convenience-store","🏫":"school","🏬":"department-store","🏭":"factory","🏯":"japanese-castle","🏰":"castle","💒":"wedding","🗼":"tokyo-tower","🗽":"statue-of-liberty","⛪":"church","🕌":"mosque","🛕":"hindu-temple","🕍":"synagogue","⛩️":"shinto-shrine","🕋":"kaaba","⛲":"fountain","⛺":"tent","🌁":"foggy","🌃":"night-with-stars","🏙️":"cityscape","🌄":"sunrise-over-mountains","🌅":"sunrise","🌆":"cityscape-at-dusk","🌇":"sunset","🌉":"bridge-at-night","♨️":"hot-springs","🎠":"carousel-horse","🛝":"playground-slide","🎡":"ferris-wheel","🎢":"roller-coaster","💈":"barber-pole","🎪":"circus-tent","🚂":"locomotive","🚃":"railway-car","🚄":"high-speed-train","🚅":"bullet-train","🚆":"train","🚇":"metro","🚈":"light-rail","🚉":"station","🚊":"tram","🚝":"monorail","🚞":"mountain-railway","🚋":"tram-car","🚌":"bus","🚍":"oncoming-bus","🚎":"trolleybus","🚐":"minibus","🚑":"ambulance","🚒":"fire-engine","🚓":"police-car","🚔":"oncoming-police-car","🚕":"taxi","🚖":"oncoming-taxi","🚗":"automobile","🚘":"oncoming-automobile","🚙":"sport-utility-vehicle","🛻":"pickup-truck","🚚":"delivery-truck","🚛":"articulated-lorry","🚜":"tractor","🏎️":"racing-car","🏍️":"motorcycle","🛵":"motor-scooter","🦽":"manual-wheelchair","🦼":"motorized-wheelchair","🛺":"auto-rickshaw","🚲":"bicycle","🛴":"kick-scooter","🛹":"skateboard","🛼":"roller-skate","🚏":"bus-stop","🛣️":"motorway","🛤️":"railway-track","🛢️":"oil-drum","⛽":"fuel-pump","🛞":"wheel","🚨":"police-car-light","🚥":"horizontal-traffic-light","🚦":"vertical-traffic-light","🛑":"stop-sign","🚧":"construction","⚓":"anchor","🛟":"ring-buoy","⛵":"sailboat","🛶":"canoe","🚤":"speedboat","🛳️":"passenger-ship","⛴️":"ferry","🛥️":"motor-boat","🚢":"ship","✈️":"airplane","🛩️":"small-airplane","🛫":"airplane-departure","🛬":"airplane-arrival","🪂":"parachute","💺":"seat","🚁":"helicopter","🚟":"suspension-railway","🚠":"mountain-cableway","🚡":"aerial-tramway","🛰️":"satellite","🚀":"rocket","🛸":"flying-saucer","🛎️":"bellhop-bell","🧳":"luggage","⌛":"hourglass-done","⏳":"hourglass-not-done","⌚":"watch","⏰":"alarm-clock","⏱️":"stopwatch","⏲️":"timer-clock","🕰️":"mantelpiece-clock","🕛":"twelve-o-clock","🕧":"twelve-thirty","🕐":"one-o-clock","🕜":"one-thirty","🕑":"two-o-clock","🕝":"two-thirty","🕒":"three-o-clock","🕞":"three-thirty","🕓":"four-o-clock","🕟":"four-thirty","🕔":"five-o-clock","🕠":"five-thirty","🕕":"six-o-clock","🕡":"six-thirty","🕖":"seven-o-clock","🕢":"seven-thirty","🕗":"eight-o-clock","🕣":"eight-thirty","🕘":"nine-o-clock","🕤":"nine-thirty","🕙":"ten-o-clock","🕥":"ten-thirty","🕚":"eleven-o-clock","🕦":"eleven-thirty","🌑":"new-moon","🌒":"waxing-crescent-moon","🌓":"first-quarter-moon","🌔":"waxing-gibbous-moon","🌕":"full-moon","🌖":"waning-gibbous-moon","🌗":"last-quarter-moon","🌘":"waning-crescent-moon","🌙":"crescent-moon","🌚":"new-moon-face","🌛":"first-quarter-moon-face","🌜":"last-quarter-moon-face","🌡️":"thermometer","☀️":"sun","🌝":"full-moon-face","🌞":"sun-with-face","🪐":"ringed-planet","⭐":"star","🌟":"glowing-star","🌠":"shooting-star","🌌":"milky-way","☁️":"cloud","⛅":"sun-behind-cloud","⛈️":"cloud-with-lightning-and-rain","🌤️":"sun-behind-small-cloud","🌥️":"sun-behind-large-cloud","🌦️":"sun-behind-rain-cloud","🌧️":"cloud-with-rain","🌨️":"cloud-with-snow","🌩️":"cloud-with-lightning","🌪️":"tornado","🌫️":"fog","🌬️":"wind-face","🌀":"cyclone","🌈":"rainbow","🌂":"closed-umbrella","☂️":"umbrella","☔":"umbrella-with-rain-drops","⛱️":"umbrella-on-ground","⚡":"high-voltage","❄️":"snowflake","☃️":"snowman","⛄":"snowman-without-snow","☄️":"comet","🔥":"fire","💧":"droplet","🌊":"water-wave","🎃":"jack-o-lantern","🎄":"christmas-tree","🎆":"fireworks","🎇":"sparkler","🧨":"firecracker","✨":"sparkles","🎈":"balloon","🎉":"party-popper","🎊":"confetti-ball","🎋":"tanabata-tree","🎍":"pine-decoration","🎎":"japanese-dolls","🎏":"carp-streamer","🎐":"wind-chime","🎑":"moon-viewing-ceremony","🧧":"red-envelope","🎀":"ribbon","🎁":"wrapped-gift","🎗️":"reminder-ribbon","🎟️":"admission-tickets","🎫":"ticket","🎖️":"military-medal","🏆":"trophy","🏅":"sports-medal","🥇":"1st-place-medal","🥈":"2nd-place-medal","🥉":"3rd-place-medal","⚽":"soccer-ball","⚾":"baseball","🥎":"softball","🏀":"basketball","🏐":"volleyball","🏈":"american-football","🏉":"rugby-football","🎾":"tennis","🥏":"flying-disc","🎳":"bowling","🏏":"cricket-game","🏑":"field-hockey","🏒":"ice-hockey","🥍":"lacrosse","🏓":"ping-pong","🏸":"badminton","🥊":"boxing-glove","🥋":"martial-arts-uniform","🥅":"goal-net","⛳":"flag-in-hole","⛸️":"ice-skate","🎣":"fishing-pole","🤿":"diving-mask","🎽":"running-shirt","🎿":"skis","🛷":"sled","🥌":"curling-stone","🎯":"bullseye","🪀":"yo-yo","🪁":"kite","🔫":"water-pistol","🎱":"pool-8-ball","🔮":"crystal-ball","🪄":"magic-wand","🎮":"video-game","🕹️":"joystick","🎰":"slot-machine","🎲":"game-die","🧩":"puzzle-piece","🧸":"teddy-bear","🪅":"pinata","🪩":"mirror-ball","🪆":"nesting-dolls","♠️":"spade-suit","♥️":"heart-suit","♦️":"diamond-suit","♣️":"club-suit","♟️":"chess-pawn","🃏":"joker","🀄":"mahjong-red-dragon","🎴":"flower-playing-cards","🎭":"performing-arts","🖼️":"framed-picture","🎨":"artist-palette","🧵":"thread","🪡":"sewing-needle","🧶":"yarn","🪢":"knot","👓":"glasses","🕶️":"sunglasses","🥽":"goggles","🥼":"lab-coat","🦺":"safety-vest","👔":"necktie","👕":"t-shirt","👖":"jeans","🧣":"scarf","🧤":"gloves","🧥":"coat","🧦":"socks","👗":"dress","👘":"kimono","🥻":"sari","🩱":"one-piece-swimsuit","🩲":"briefs","🩳":"shorts","👙":"bikini","👚":"woman-s-clothes","🪭":"folding-hand-fan","👛":"purse","👜":"handbag","👝":"clutch-bag","🛍️":"shopping-bags","🎒":"backpack","🩴":"thong-sandal","👞":"man-s-shoe","👟":"running-shoe","🥾":"hiking-boot","🥿":"flat-shoe","👠":"high-heeled-shoe","👡":"woman-s-sandal","🩰":"ballet-shoes","👢":"woman-s-boot","🪮":"hair-pick","👑":"crown","👒":"woman-s-hat","🎩":"top-hat","🎓":"graduation-cap","🧢":"billed-cap","🪖":"military-helmet","⛑️":"rescue-worker-s-helmet","📿":"prayer-beads","💄":"lipstick","💍":"ring","💎":"gem-stone","🔇":"muted-speaker","🔈":"speaker-low-volume","🔉":"speaker-medium-volume","🔊":"speaker-high-volume","📢":"loudspeaker","📣":"megaphone","📯":"postal-horn","🔔":"bell","🔕":"bell-with-slash","🎼":"musical-score","🎵":"musical-note","🎶":"musical-notes","🎙️":"studio-microphone","🎚️":"level-slider","🎛️":"control-knobs","🎤":"microphone","🎧":"headphone","📻":"radio","🎷":"saxophone","🪗":"accordion","🎸":"guitar","🎹":"musical-keyboard","🎺":"trumpet","🎻":"violin","🪕":"banjo","🥁":"drum","🪘":"long-drum","🪇":"maracas","🪈":"flute","📱":"mobile-phone","📲":"mobile-phone-with-arrow","☎️":"telephone","📞":"telephone-receiver","📟":"pager","📠":"fax-machine","🔋":"battery","🪫":"low-battery","🔌":"electric-plug","💻":"laptop","🖥️":"desktop-computer","🖨️":"printer","⌨️":"keyboard","🖱️":"computer-mouse","🖲️":"trackball","💽":"computer-disk","💾":"floppy-disk","💿":"optical-disk","📀":"dvd","🧮":"abacus","🎥":"movie-camera","🎞️":"film-frames","📽️":"film-projector","🎬":"clapper-board","📺":"television","📷":"camera","📸":"camera-with-flash","📹":"video-camera","📼":"videocassette","🔍":"magnifying-glass-tilted-left","🔎":"magnifying-glass-tilted-right","🕯️":"candle","💡":"light-bulb","🔦":"flashlight","🏮":"red-paper-lantern","🪔":"diya-lamp","📔":"notebook-with-decorative-cover","📕":"closed-book","📖":"open-book","📗":"green-book","📘":"blue-book","📙":"orange-book","📚":"books","📓":"notebook","📒":"ledger","📃":"page-with-curl","📜":"scroll","📄":"page-facing-up","📰":"newspaper","🗞️":"rolled-up-newspaper","📑":"bookmark-tabs","🔖":"bookmark","🏷️":"label","💰":"money-bag","🪙":"coin","💴":"yen-banknote","💵":"dollar-banknote","💶":"euro-banknote","💷":"pound-banknote","💸":"money-with-wings","💳":"credit-card","🧾":"receipt","💹":"chart-increasing-with-yen","✉️":"envelope","📧":"e-mail","📨":"incoming-envelope","📩":"envelope-with-arrow","📤":"outbox-tray","📥":"inbox-tray","📦":"package","📫":"closed-mailbox-with-raised-flag","📪":"closed-mailbox-with-lowered-flag","📬":"open-mailbox-with-raised-flag","📭":"open-mailbox-with-lowered-flag","📮":"postbox","🗳️":"ballot-box-with-ballot","✏️":"pencil","✒️":"black-nib","🖋️":"fountain-pen","🖊️":"pen","🖌️":"paintbrush","🖍️":"crayon","📝":"memo","💼":"briefcase","📁":"file-folder","📂":"open-file-folder","🗂️":"card-index-dividers","📅":"calendar","📆":"tear-off-calendar","🗒️":"spiral-notepad","🗓️":"spiral-calendar","📇":"card-index","📈":"chart-increasing","📉":"chart-decreasing","📊":"bar-chart","📋":"clipboard","📌":"pushpin","📍":"round-pushpin","📎":"paperclip","🖇️":"linked-paperclips","📏":"straight-ruler","📐":"triangular-ruler","✂️":"scissors","🗃️":"card-file-box","🗄️":"file-cabinet","🗑️":"wastebasket","🔒":"locked","🔓":"unlocked","🔏":"locked-with-pen","🔐":"locked-with-key","🔑":"key","🗝️":"old-key","🔨":"hammer","🪓":"axe","⛏️":"pick","⚒️":"hammer-and-pick","🛠️":"hammer-and-wrench","🗡️":"dagger","⚔️":"crossed-swords","💣":"bomb","🪃":"boomerang","🏹":"bow-and-arrow","🛡️":"shield","🪚":"carpentry-saw","🔧":"wrench","🪛":"screwdriver","🔩":"nut-and-bolt","⚙️":"gear","🗜️":"clamp","⚖️":"balance-scale","🦯":"white-cane","🔗":"link","⛓️":"chains","🪝":"hook","🧰":"toolbox","🧲":"magnet","🪜":"ladder","⚗️":"alembic","🧪":"test-tube","🧫":"petri-dish","🧬":"dna","🔬":"microscope","🔭":"telescope","📡":"satellite-antenna","💉":"syringe","🩸":"drop-of-blood","💊":"pill","🩹":"adhesive-bandage","🩼":"crutch","🩺":"stethoscope","🩻":"x-ray","🚪":"door","🛗":"elevator","🪞":"mirror","🪟":"window","🛏️":"bed","🛋️":"couch-and-lamp","🪑":"chair","🚽":"toilet","🪠":"plunger","🚿":"shower","🛁":"bathtub","🪤":"mouse-trap","🪒":"razor","🧴":"lotion-bottle","🧷":"safety-pin","🧹":"broom","🧺":"basket","🧻":"roll-of-paper","🪣":"bucket","🧼":"soap","🫧":"bubbles","🪥":"toothbrush","🧽":"sponge","🧯":"fire-extinguisher","🛒":"shopping-cart","🚬":"cigarette","⚰️":"coffin","🪦":"headstone","⚱️":"funeral-urn","🧿":"nazar-amulet","🪬":"hamsa","🗿":"moai","🪧":"placard","🪪":"identification-card","🏧":"atm-sign","🚮":"litter-in-bin-sign","🚰":"potable-water","♿":"wheelchair-symbol","🚹":"men-s-room","🚺":"women-s-room","🚻":"restroom","🚼":"baby-symbol","🚾":"water-closet","🛂":"passport-control","🛃":"customs","🛄":"baggage-claim","🛅":"left-luggage","⚠️":"warning","🚸":"children-crossing","⛔":"no-entry","🚫":"prohibited","🚳":"no-bicycles","🚭":"no-smoking","🚯":"no-littering","🚱":"non-potable-water","🚷":"no-pedestrians","📵":"no-mobile-phones","🔞":"no-one-under-eighteen","☢️":"radioactive","☣️":"biohazard","⬆️":"up-arrow","↗️":"up-right-arrow","➡️":"right-arrow","↘️":"down-right-arrow","⬇️":"down-arrow","↙️":"down-left-arrow","⬅️":"left-arrow","↖️":"up-left-arrow","↕️":"up-down-arrow","↔️":"left-right-arrow","↩️":"right-arrow-curving-left","↪️":"left-arrow-curving-right","⤴️":"right-arrow-curving-up","⤵️":"right-arrow-curving-down","🔃":"clockwise-vertical-arrows","🔄":"counterclockwise-arrows-button","🔙":"back-arrow","🔚":"end-arrow","🔛":"on-arrow","🔜":"soon-arrow","🔝":"top-arrow","🛐":"place-of-worship","⚛️":"atom-symbol","🕉️":"om","✡️":"star-of-david","☸️":"wheel-of-dharma","☯️":"yin-yang","✝️":"latin-cross","☦️":"orthodox-cross","☪️":"star-and-crescent","☮️":"peace-symbol","🕎":"menorah","🔯":"dotted-six-pointed-star","🪯":"khanda","♈":"aries","♉":"taurus","♊":"gemini","♋":"cancer","♌":"leo","♍":"virgo","♎":"libra","♏":"scorpio","♐":"sagittarius","♑":"capricorn","♒":"aquarius","♓":"pisces","⛎":"ophiuchus","🔀":"shuffle-tracks-button","🔁":"repeat-button","🔂":"repeat-single-button","▶️":"play-button","⏩":"fast-forward-button","⏭️":"next-track-button","⏯️":"play-or-pause-button","◀️":"reverse-button","⏪":"fast-reverse-button","⏮️":"last-track-button","🔼":"upwards-button","⏫":"fast-up-button","🔽":"downwards-button","⏬":"fast-down-button","⏸️":"pause-button","⏹️":"stop-button","⏺️":"record-button","⏏️":"eject-button","🎦":"cinema","🔅":"dim-button","🔆":"bright-button","📶":"antenna-bars","🛜":"wireless","📳":"vibration-mode","📴":"mobile-phone-off","♀️":"female-sign","♂️":"male-sign","⚧️":"transgender-symbol","✖️":"multiply","➕":"plus","➖":"minus","➗":"divide","🟰":"heavy-equals-sign","♾️":"infinity","‼️":"double-exclamation-mark","⁉️":"exclamation-question-mark","❓":"red-question-mark","❔":"white-question-mark","❕":"white-exclamation-mark","❗":"red-exclamation-mark","〰️":"wavy-dash","💱":"currency-exchange","💲":"heavy-dollar-sign","⚕️":"medical-symbol","♻️":"recycling-symbol","⚜️":"fleur-de-lis","🔱":"trident-emblem","📛":"name-badge","🔰":"japanese-symbol-for-beginner","⭕":"hollow-red-circle","✅":"check-mark-button","☑️":"check-box-with-check","✔️":"check-mark","❌":"cross-mark","❎":"cross-mark-button","➰":"curly-loop","➿":"double-curly-loop","〽️":"part-alternation-mark","✳️":"eight-spoked-asterisk","✴️":"eight-pointed-star","❇️":"sparkle","©️":"copyright","®️":"registered","™️":"trade-mark","#️⃣":"keycap-#","*️⃣":"keycap-*","0️⃣":"keycap-0","1️⃣":"keycap-1","2️⃣":"keycap-2","3️⃣":"keycap-3","4️⃣":"keycap-4","5️⃣":"keycap-5","6️⃣":"keycap-6","7️⃣":"keycap-7","8️⃣":"keycap-8","9️⃣":"keycap-9","🔟":"keycap-10","🔠":"input-latin-uppercase","🔡":"input-latin-lowercase","🔢":"input-numbers","🔣":"input-symbols","🔤":"input-latin-letters","🅰️":"a-button-blood-type","🆎":"ab-button-blood-type","🅱️":"b-button-blood-type","🆑":"cl-button","🆒":"cool-button","🆓":"free-button","ℹ️":"information","🆔":"id-button","Ⓜ️":"circled-m","🆕":"new-button","🆖":"ng-button","🅾️":"o-button-blood-type","🆗":"ok-button","🅿️":"p-button","🆘":"sos-button","🆙":"up-button","🆚":"vs-button","🈁":"japanese-here-button","🈂️":"japanese-service-charge-button","🈷️":"japanese-monthly-amount-button","🈶":"japanese-not-free-of-charge-button","🈯":"japanese-reserved-button","🉐":"japanese-bargain-button","🈹":"japanese-discount-button","🈚":"japanese-free-of-charge-button","🈲":"japanese-prohibited-button","🉑":"japanese-acceptable-button","🈸":"japanese-application-button","🈴":"japanese-passing-grade-button","🈳":"japanese-vacancy-button","㊗️":"japanese-congratulations-button","㊙️":"japanese-secret-button","🈺":"japanese-open-for-business-button","🈵":"japanese-no-vacancy-button","🔴":"red-circle","🟠":"orange-circle","🟡":"yellow-circle","🟢":"green-circle","🔵":"blue-circle","🟣":"purple-circle","🟤":"brown-circle","⚫":"black-circle","⚪":"white-circle","🟥":"red-square","🟧":"orange-square","🟨":"yellow-square","🟩":"green-square","🟦":"blue-square","🟪":"purple-square","🟫":"brown-square","⬛":"black-large-square","⬜":"white-large-square","◼️":"black-medium-square","◻️":"white-medium-square","◾":"black-medium-small-square","◽":"white-medium-small-square","▪️":"black-small-square","▫️":"white-small-square","🔶":"large-orange-diamond","🔷":"large-blue-diamond","🔸":"small-orange-diamond","🔹":"small-blue-diamond","🔺":"red-triangle-pointed-up","🔻":"red-triangle-pointed-down","💠":"diamond-with-a-dot","🔘":"radio-button","🔳":"white-square-button","🔲":"black-square-button","🏁":"chequered-flag","🚩":"triangular-flag","🎌":"crossed-flags","🏴":"black-flag","🏳️":"white-flag","🏳️‍🌈":"rainbow-flag","🏳️‍⚧️":"transgender-flag","🏴‍☠️":"pirate-flag","🇦🇨":"flag-ascension-island","🇦🇩":"flag-andorra","🇦🇪":"flag-united-arab-emirates","🇦🇫":"flag-afghanistan","🇦🇬":"flag-antigua-&-barbuda","🇦🇮":"flag-anguilla","🇦🇱":"flag-albania","🇦🇲":"flag-armenia","🇦🇴":"flag-angola","🇦🇶":"flag-antarctica","🇦🇷":"flag-argentina","🇦🇸":"flag-american-samoa","🇦🇹":"flag-austria","🇦🇺":"flag-australia","🇦🇼":"flag-aruba","🇦🇽":"flag-aland-islands","🇦🇿":"flag-azerbaijan","🇧🇦":"flag-bosnia-&-herzegovina","🇧🇧":"flag-barbados","🇧🇩":"flag-bangladesh","🇧🇪":"flag-belgium","🇧🇫":"flag-burkina-faso","🇧🇬":"flag-bulgaria","🇧🇭":"flag-bahrain","🇧🇮":"flag-burundi","🇧🇯":"flag-benin","🇧🇱":"flag-st-barthelemy","🇧🇲":"flag-bermuda","🇧🇳":"flag-brunei","🇧🇴":"flag-bolivia","🇧🇶":"flag-caribbean-netherlands","🇧🇷":"flag-brazil","🇧🇸":"flag-bahamas","🇧🇹":"flag-bhutan","🇧🇻":"flag-bouvet-island","🇧🇼":"flag-botswana","🇧🇾":"flag-belarus","🇧🇿":"flag-belize","🇨🇦":"flag-canada","🇨🇨":"flag-cocos-keeling-islands","🇨🇩":"flag-congo-kinshasa","🇨🇫":"flag-central-african-republic","🇨🇬":"flag-congo-brazzaville","🇨🇭":"flag-switzerland","🇨🇮":"flag-cote-d-ivoire","🇨🇰":"flag-cook-islands","🇨🇱":"flag-chile","🇨🇲":"flag-cameroon","🇨🇳":"flag-china","🇨🇴":"flag-colombia","🇨🇵":"flag-clipperton-island","🇨🇷":"flag-costa-rica","🇨🇺":"flag-cuba","🇨🇻":"flag-cape-verde","🇨🇼":"flag-curacao","🇨🇽":"flag-christmas-island","🇨🇾":"flag-cyprus","🇨🇿":"flag-czechia","🇩🇪":"flag-germany","🇩🇬":"flag-diego-garcia","🇩🇯":"flag-djibouti","🇩🇰":"flag-denmark","🇩🇲":"flag-dominica","🇩🇴":"flag-dominican-republic","🇩🇿":"flag-algeria","🇪🇦":"flag-ceuta-&-melilla","🇪🇨":"flag-ecuador","🇪🇪":"flag-estonia","🇪🇬":"flag-egypt","🇪🇭":"flag-western-sahara","🇪🇷":"flag-eritrea","🇪🇸":"flag-spain","🇪🇹":"flag-ethiopia","🇪🇺":"flag-european-union","🇫🇮":"flag-finland","🇫🇯":"flag-fiji","🇫🇰":"flag-falkland-islands","🇫🇲":"flag-micronesia","🇫🇴":"flag-faroe-islands","🇫🇷":"flag-france","🇬🇦":"flag-gabon","🇬🇧":"flag-united-kingdom","🇬🇩":"flag-grenada","🇬🇪":"flag-georgia","🇬🇫":"flag-french-guiana","🇬🇬":"flag-guernsey","🇬🇭":"flag-ghana","🇬🇮":"flag-gibraltar","🇬🇱":"flag-greenland","🇬🇲":"flag-gambia","🇬🇳":"flag-guinea","🇬🇵":"flag-guadeloupe","🇬🇶":"flag-equatorial-guinea","🇬🇷":"flag-greece","🇬🇸":"flag-south-georgia-&-south-sandwich-islands","🇬🇹":"flag-guatemala","🇬🇺":"flag-guam","🇬🇼":"flag-guinea-bissau","🇬🇾":"flag-guyana","🇭🇰":"flag-hong-kong-sar-china","🇭🇲":"flag-heard-&-mcdonald-islands","🇭🇳":"flag-honduras","🇭🇷":"flag-croatia","🇭🇹":"flag-haiti","🇭🇺":"flag-hungary","🇮🇨":"flag-canary-islands","🇮🇩":"flag-indonesia","🇮🇪":"flag-ireland","🇮🇱":"flag-israel","🇮🇲":"flag-isle-of-man","🇮🇳":"flag-india","🇮🇴":"flag-british-indian-ocean-territory","🇮🇶":"flag-iraq","🇮🇷":"flag-iran","🇮🇸":"flag-iceland","🇮🇹":"flag-italy","🇯🇪":"flag-jersey","🇯🇲":"flag-jamaica","🇯🇴":"flag-jordan","🇯🇵":"flag-japan","🇰🇪":"flag-kenya","🇰🇬":"flag-kyrgyzstan","🇰🇭":"flag-cambodia","🇰🇮":"flag-kiribati","🇰🇲":"flag-comoros","🇰🇳":"flag-st-kitts-&-nevis","🇰🇵":"flag-north-korea","🇰🇷":"flag-south-korea","🇰🇼":"flag-kuwait","🇰🇾":"flag-cayman-islands","🇰🇿":"flag-kazakhstan","🇱🇦":"flag-laos","🇱🇧":"flag-lebanon","🇱🇨":"flag-st-lucia","🇱🇮":"flag-liechtenstein","🇱🇰":"flag-sri-lanka","🇱🇷":"flag-liberia","🇱🇸":"flag-lesotho","🇱🇹":"flag-lithuania","🇱🇺":"flag-luxembourg","🇱🇻":"flag-latvia","🇱🇾":"flag-libya","🇲🇦":"flag-morocco","🇲🇨":"flag-monaco","🇲🇩":"flag-moldova","🇲🇪":"flag-montenegro","🇲🇫":"flag-st-martin","🇲🇬":"flag-madagascar","🇲🇭":"flag-marshall-islands","🇲🇰":"flag-north-macedonia","🇲🇱":"flag-mali","🇲🇲":"flag-myanmar-burma","🇲🇳":"flag-mongolia","🇲🇴":"flag-macao-sar-china","🇲🇵":"flag-northern-mariana-islands","🇲🇶":"flag-martinique","🇲🇷":"flag-mauritania","🇲🇸":"flag-montserrat","🇲🇹":"flag-malta","🇲🇺":"flag-mauritius","🇲🇻":"flag-maldives","🇲🇼":"flag-malawi","🇲🇽":"flag-mexico","🇲🇾":"flag-malaysia","🇲🇿":"flag-mozambique","🇳🇦":"flag-namibia","🇳🇨":"flag-new-caledonia","🇳🇪":"flag-niger","🇳🇫":"flag-norfolk-island","🇳🇬":"flag-nigeria","🇳🇮":"flag-nicaragua","🇳🇱":"flag-netherlands","🇳🇴":"flag-norway","🇳🇵":"flag-nepal","🇳🇷":"flag-nauru","🇳🇺":"flag-niue","🇳🇿":"flag-new-zealand","🇴🇲":"flag-oman","🇵🇦":"flag-panama","🇵🇪":"flag-peru","🇵🇫":"flag-french-polynesia","🇵🇬":"flag-papua-new-guinea","🇵🇭":"flag-philippines","🇵🇰":"flag-pakistan","🇵🇱":"flag-poland","🇵🇲":"flag-st-pierre-&-miquelon","🇵🇳":"flag-pitcairn-islands","🇵🇷":"flag-puerto-rico","🇵🇸":"flag-palestinian-territories","🇵🇹":"flag-portugal","🇵🇼":"flag-palau","🇵🇾":"flag-paraguay","🇶🇦":"flag-qatar","🇷🇪":"flag-reunion","🇷🇴":"flag-romania","🇷🇸":"flag-serbia","🇷🇺":"flag-russia","🇷🇼":"flag-rwanda","🇸🇦":"flag-saudi-arabia","🇸🇧":"flag-solomon-islands","🇸🇨":"flag-seychelles","🇸🇩":"flag-sudan","🇸🇪":"flag-sweden","🇸🇬":"flag-singapore","🇸🇭":"flag-st-helena","🇸🇮":"flag-slovenia","🇸🇯":"flag-svalbard-&-jan-mayen","🇸🇰":"flag-slovakia","🇸🇱":"flag-sierra-leone","🇸🇲":"flag-san-marino","🇸🇳":"flag-senegal","🇸🇴":"flag-somalia","🇸🇷":"flag-suriname","🇸🇸":"flag-south-sudan","🇸🇹":"flag-sao-tome-&-principe","🇸🇻":"flag-el-salvador","🇸🇽":"flag-sint-maarten","🇸🇾":"flag-syria","🇸🇿":"flag-eswatini","🇹🇦":"flag-tristan-da-cunha","🇹🇨":"flag-turks-&-caicos-islands","🇹🇩":"flag-chad","🇹🇫":"flag-french-southern-territories","🇹🇬":"flag-togo","🇹🇭":"flag-thailand","🇹🇯":"flag-tajikistan","🇹🇰":"flag-tokelau","🇹🇱":"flag-timor-leste","🇹🇲":"flag-turkmenistan","🇹🇳":"flag-tunisia","🇹🇴":"flag-tonga","🇹🇷":"flag-turkey","🇹🇹":"flag-trinidad-&-tobago","🇹🇻":"flag-tuvalu","🇹🇼":"flag-taiwan","🇹🇿":"flag-tanzania","🇺🇦":"flag-ukraine","🇺🇬":"flag-uganda","🇺🇲":"flag-us-outlying-islands","🇺🇳":"flag-united-nations","🇺🇸":"flag-united-states","🇺🇾":"flag-uruguay","🇺🇿":"flag-uzbekistan","🇻🇦":"flag-vatican-city","🇻🇨":"flag-st-vincent-&-grenadines","🇻🇪":"flag-venezuela","🇻🇬":"flag-british-virgin-islands","🇻🇮":"flag-us-virgin-islands","🇻🇳":"flag-vietnam","🇻🇺":"flag-vanuatu","🇼🇫":"flag-wallis-&-futuna","🇼🇸":"flag-samoa","🇽🇰":"flag-kosovo","🇾🇪":"flag-yemen","🇾🇹":"flag-mayotte","🇿🇦":"flag-south-africa","🇿🇲":"flag-zambia","🇿🇼":"flag-zimbabwe","🏴󠁧󠁢󠁥󠁮󠁧󠁿":"flag-england","🏴󠁧󠁢󠁳󠁣󠁴󠁿":"flag-scotland","🏴󠁧󠁢󠁷󠁬󠁳󠁿":"flag-wales"}
-},{}],84:[function(require,module,exports){
+},{}],105:[function(require,module,exports){
 module.exports={"10":["🔟"],"grin":["😀","😃","😄","😆","😅","😺","😸"],"face":["😀","😃","😄","😁","😆","😅","😂","🙂","🙃","🫠","😉","😊","😇","🥰","😍","😘","😗","☺️","😚","😙","🥲","😋","😛","😜","🤪","😝","🤑","🤗","🤭","🫢","🫣","🤫","🤔","🫡","🤐","🤨","😐","😑","😶","🫥","😶‍🌫️","😏","😒","🙄","😬","😮‍💨","🤥","🫨","😌","😔","😪","🤤","😴","😷","🤒","🤕","🤢","🤮","🤧","🥵","🥶","🥴","😵","😵‍💫","🤠","🥳","🥸","😎","🤓","🧐","😕","🫤","😟","🙁","☹️","😮","😯","😲","😳","🥺","🥹","😦","😧","😨","😰","😥","😢","😭","😱","😖","😣","😞","😓","😩","😫","🥱","😤","😡","😠","🤬","😈","👿","🤡","🤛","🤜","🐵","🐶","🐱","🐯","🐴","🐮","🐷","🐭","🐰","🐥","🐲","🌚","🌛","🌜","🌝","🌞","🌬️","📄"],"big":["😃"],"eyes":["😃","😄","😁","😊","😍","😚","😙","🫢","🙄","😵","😵‍💫","😸","😻","👀"],"smile":["😄","😁","🙂","😊","😇","🥰","😍","☺️","😙","🥲","🤗","😎","😈","😸","😻","😼"],"beam":["😁"],"squint":["😆","😝"],"sweat":["😅","😰","😓","💦"],"roll":["🤣","🙄","🧻"],"on":["🤣","🤬","❤️‍🔥","🍖","⛱️","🔛"],"the":["🤣","🤘","🫵"],"floor":["🤣"],"laugh":["🤣"],"tears":["😂","🥹","😹"],"joy":["😂","😹"],"slightly":["🙂","🙁"],"upside":["🙃"],"down":["🙃","🫳","👇","👎","↘️","⬇️","↙️","↕️","⤵️","⏬","🔻"],"melt":["🫠"],"wink":["😉","😜"],"halo":["😇"],"hearts":["🥰","💞","💕"],"heart":["😍","😻","💘","💝","💖","💗","💓","💟","❣️","💔","❤️‍🔥","❤️‍🩹","❤️","🩷","🧡","💛","💚","💙","🩵","💜","🤎","🖤","🩶","🤍","🫶","🫀","💑","👩‍❤️‍👨","👨‍❤️‍👨","👩‍❤️‍👩","♥️"],"star":["🤩","⭐","🌟","🌠","✡️","☪️","🔯","✴️"],"struck":["🤩"],"blow":["😘"],"kiss":["😘","😗","😚","😙","😽","💋","💏","👩‍❤️‍💋‍👨","👨‍❤️‍💋‍👨","👩‍❤️‍💋‍👩"],"closed":["😚","🌂","📕","📫","📪"],"tear":["🥲","📆"],"savore":["😋"],"food":["😋","🥘","🍲","🥫"],"tongue":["😛","😜","😝","👅"],"zany":["🤪"],"money":["🤑","💰","💸"],"mouth":["🤑","🤭","🫢","🤐","😶","🫤","😮","😦","🤬","👄"],"open":["🤗","🫢","😮","😦","👐","📖","📬","📭","📂","🈺"],"hands":["🤗","👏","🙌","🫶","👐","🙏","🧑‍🤝‍🧑","👭","👫","👬"],"hand":["🤭","🫢","👋","🤚","🖐️","✋","🫱","🫲","🫳","🫴","🫷","🫸","👌","🤏","✌️","🫰","🤙","✍️","💁","💁‍♂️","💁‍♀️","🙋","🙋‍♂️","🙋‍♀️","🪭"],"over":["🤭","🫢","🌄"],"and":["🫢","☠️","🫰","👫","🍽️","🍴","⛈️","⚒️","🛠️","🏹","🔩","🛋️","☪️"],"peek":["🫣"],"eye":["🫣","👁️‍🗨️","👁️"],"shush":["🤫"],"think":["🤔"],"salute":["🫡","🖖"],"zipper":["🤐"],"raised":["🤨","🤚","✋","✊","📫","📬"],"eyebrow":["🤨"],"neutral":["😐"],"expressionless":["😑"],"without":["😶","🍵","⛄"],"dotted":["🫥","🔯"],"line":["🫥"],"in":["😶‍🌫️","😱","👁️‍🗨️","🤵","🤵‍♂️","🤵‍♀️","🧑‍🦼","👨‍🦼","👩‍🦼","🧑‍🦽","👨‍🦽","👩‍🦽","🕴️","🧖","🧖‍♂️","🧖‍♀️","🧘","🧘‍♂️","🧘‍♀️","🛌","👤","👥","🍃","⛳","🚮"],"clouds":["😶‍🌫️"],"smirk":["😏"],"unamused":["😒"],"grimace":["😬"],"exhale":["😮‍💨"],"lying":["🤥"],"shake":["🫨"],"relieved":["😌","😥"],"pensive":["😔"],"sleepy":["😪"],"drool":["🤤"],"sleep":["😴"],"medical":["😷","⚕️"],"mask":["😷","🤿"],"thermometer":["🤒","🌡️"],"head":["🤕","🤯","🗣️"],"bandage":["🤕","🩹"],"nauseated":["🤢"],"vomite":["🤮"],"sneez":["🤧"],"hot":["🥵","🌶️","🌭","☕","♨️"],"cold":["🥶"],"woozy":["🥴"],"crossed":["😵","🤞","🫰","⚔️","🎌"],"out":["😵"],"spiral":["😵‍💫","🐚","🗒️","🗓️"],"explode":["🤯"],"cowboy":["🤠"],"hat":["🤠","👒","🎩"],"party":["🥳","🎉"],"disguised":["🥸"],"sunglasses":["😎","🕶️"],"nerd":["🤓"],"monocle":["🧐"],"confused":["😕"],"diagonal":["🫤"],"worried":["😟"],"frown":["🙁","☹️","😦","🙍","🙍‍♂️","🙍‍♀️"],"hushed":["😯"],"astonished":["😲"],"flushed":["😳"],"plead":["🥺"],"hold":["🥹","🧑‍🤝‍🧑","👭","👫","👬"],"back":["🥹","🤚","🔙"],"anguished":["😧"],"fearful":["😨"],"anxious":["😰"],"sad":["😥"],"but":["😥"],"cry":["😢","😭","😿"],"loudly":["😭"],"scream":["😱"],"fear":["😱"],"confounded":["😖"],"persever":["😣"],"disappointed":["😞"],"downcast":["😓"],"weary":["😩","🙀"],"tired":["😫"],"yawn":["🥱"],"steam":["😤","🍜"],"from":["😤"],"nose":["😤","👃","🐽"],"enraged":["😡"],"angry":["😠","👿"],"symbols":["🤬","🔣"],"horns":["😈","👿","🤘"],"skull":["💀","☠️"],"crossbones":["☠️"],"pile":["💩"],"poo":["💩"],"clown":["🤡"],"ogre":["👹"],"goblin":["👺"],"ghost":["👻"],"alien":["👽","👾"],"monster":["👾"],"robot":["🤖"],"cat":["😺","😸","😹","😻","😼","😽","🙀","😿","😾","🐱","🐈","🐈‍⬛"],"wry":["😼"],"pout":["😾","🙎","🙎‍♂️","🙎‍♀️"],"see":["🙈"],"no":["🙈","🙉","🙊","🙅","🙅‍♂️","🙅‍♀️","⛔","🚳","🚭","🚯","🚷","📵","🔞","🈵"],"evil":["🙈","🙉","🙊"],"monkey":["🙈","🙉","🙊","🐵","🐒"],"hear":["🙉","🦻"],"speak":["🙊","🗣️"],"love":["💌","🤟","🏩"],"letter":["💌"],"arrow":["💘","📲","📩","🏹","⬆️","↗️","➡️","↘️","⬇️","↙️","⬅️","↖️","↕️","↔️","↩️","↪️","⤴️","⤵️","🔙","🔚","🔛","🔜","🔝"],"ribbon":["💝","🎀","🎗️"],"sparkle":["💖","❇️"],"grow":["💗"],"beat":["💓"],"revolve":["💞"],"two":["💕","🐫","🕑","🕝"],"decoration":["💟","🎍"],"exclamation":["❣️","‼️","⁉️","❕","❗"],"broken":["💔"],"fire":["❤️‍🔥","🚒","🔥","🧯"],"mend":["❤️‍🩹"],"red":["❤️","👨‍🦰","👩‍🦰","🧑‍🦰","🍎","🧧","🀄","🏮","❓","❗","⭕","🔴","🟥","🔺","🔻"],"pink":["🩷"],"orange":["🧡","📙","🟠","🟧","🔶","🔸"],"yellow":["💛","🟡","🟨"],"green":["💚","🍏","🥬","🥗","📗","🟢","🟩"],"blue":["💙","🩵","📘","🔵","🟦","🔷","🔹"],"light":["🩵","🚈","🚨","🚥","🚦","💡"],"purple":["💜","🟣","🟪"],"brown":["🤎","🟤","🟫"],"black":["🖤","🐈‍⬛","🐦‍⬛","✒️","⚫","⬛","◼️","◾","▪️","🔲","🏴"],"grey":["🩶"],"white":["🤍","👨‍🦳","👩‍🦳","🧑‍🦳","🧑‍🦯","👨‍🦯","👩‍🦯","💮","🦯","❔","❕","⚪","⬜","◻️","◽","▫️","🔳","🏳️"],"mark":["💋","‼️","⁉️","❓","❔","❕","❗","✅","✔️","❌","❎","〽️","™️"],"hundred":["💯"],"points":["💯"],"anger":["💢","🗯️"],"symbol":["💢","♿","🚼","⚛️","☮️","⚧️","⚕️","♻️","🔰"],"collision":["💥"],"dizzy":["💫"],"droplets":["💦"],"dash":["💨","〰️"],"away":["💨"],"hole":["🕳️","⛳"],"speech":["💬","👁️‍🗨️","🗨️"],"balloon":["💬","💭","🎈"],"bubble":["👁️‍🗨️","🗨️","🗯️","🧋"],"left":["🗨️","👈","🤛","🔍","🛅","↙️","⬅️","↖️","↔️","↩️","↪️"],"right":["🗯️","👉","🤜","🔎","↗️","➡️","↘️","↔️","↩️","↪️","⤴️","⤵️"],"thought":["💭"],"zzz":["💤"],"wave":["👋","🌊"],"fingers":["🖐️","🤌","🤞"],"splayed":["🖐️"],"vulcan":["🖖"],"rightwards":["🫱","🫸"],"leftwards":["🫲","🫷"],"palm":["🫳","🫴","🌴"],"up":["🫴","👆","☝️","👍","🤲","📄","🗞️","⬆️","↗️","↖️","↕️","⤴️","⏫","🆙","🔺"],"push":["🫷","🫸"],"ok":["👌","🙆","🙆‍♂️","🙆‍♀️","🆗"],"pinched":["🤌"],"pinch":["🤏"],"victory":["✌️"],"index":["🫰","👈","👉","👆","👇","☝️","🫵","🗂️","📇"],"finger":["🫰","🖕"],"thumb":["🫰"],"you":["🤟"],"gesture":["🤟","🙅","🙅‍♂️","🙅‍♀️","🙆","🙆‍♂️","🙆‍♀️"],"sign":["🤘","🛑","🏧","🚮","♀️","♂️","🟰","💲"],"call":["🤙"],"me":["🤙"],"backhand":["👈","👉","👆","👇"],"point":["👈","👉","👆","👇","☝️","🫵"],"middle":["🖕"],"at":["🫵","🌆","🌉"],"viewer":["🫵"],"thumbs":["👍","👎"],"fist":["✊","👊","🤛","🤜"],"oncome":["👊","🚍","🚔","🚖","🚘"],"clap":["👏"],"raise":["🙌","🙋","🙋‍♂️","🙋‍♀️"],"palms":["🤲"],"together":["🤲"],"handshake":["🤝"],"folded":["🙏"],"write":["✍️"],"nail":["💅"],"polish":["💅"],"selfie":["🤳"],"flexed":["💪"],"biceps":["💪"],"mechanical":["🦾","🦿"],"arm":["🦾"],"leg":["🦿","🦵","🍗"],"foot":["🦶"],"ear":["👂","🦻","🌽"],"aid":["🦻"],"brain":["🧠"],"anatomical":["🫀"],"lungs":["🫁"],"tooth":["🦷"],"bone":["🦴","🍖"],"bite":["🫦"],"lip":["🫦"],"baby":["👶","👩‍🍼","👨‍🍼","🧑‍🍼","👼","🐤","🐥","🍼","🚼"],"child":["🧒"],"boy":["👦","👨‍👩‍👦","👨‍👩‍👧‍👦","👨‍👩‍👦‍👦","👨‍👨‍👦","👨‍👨‍👧‍👦","👨‍👨‍👦‍👦","👩‍👩‍👦","👩‍👩‍👧‍👦","👩‍👩‍👦‍👦","👨‍👦","👨‍👦‍👦","👨‍👧‍👦","👩‍👦","👩‍👦‍👦","👩‍👧‍👦"],"girl":["👧","👨‍👩‍👧","👨‍👩‍👧‍👦","👨‍👩‍👧‍👧","👨‍👨‍👧","👨‍👨‍👧‍👦","👨‍👨‍👧‍👧","👩‍👩‍👧","👩‍👩‍👧‍👦","👩‍👩‍👧‍👧","👨‍👧","👨‍👧‍👦","👨‍👧‍👧","👩‍👧","👩‍👧‍👦","👩‍👧‍👧"],"person":["🧑","👱","🧔","🧑‍🦰","🧑‍🦱","🧑‍🦳","🧑‍🦲","🧓","🙍","🙎","🙅","🙆","💁","🙋","🧏","🙇","🤦","🤷","🫅","👳","👲","🤵","👰","🫄","🧑‍🍼","💆","💇","🚶","🧍","🧎","🧑‍🦯","🧑‍🦼","🧑‍🦽","🏃","🕴️","🧖","🧗","🤺","🏌️","🏄","🚣","🏊","⛹️","🏋️","🚴","🚵","🤸","🤽","🤾","🤹","🧘","🛀","🛌"],"blond":["👱","👱‍♀️","👱‍♂️"],"hair":["👱","👨‍🦰","👨‍🦱","👨‍🦳","👩‍🦰","🧑‍🦰","👩‍🦱","🧑‍🦱","👩‍🦳","🧑‍🦳","👱‍♀️","👱‍♂️","🪮"],"man":["👨","🧔‍♂️","👨‍🦰","👨‍🦱","👨‍🦳","👨‍🦲","👱‍♂️","👴","🙍‍♂️","🙎‍♂️","🙅‍♂️","🙆‍♂️","💁‍♂️","🙋‍♂️","🧏‍♂️","🙇‍♂️","🤦‍♂️","🤷‍♂️","👨‍⚕️","👨‍🎓","👨‍🏫","👨‍⚖️","👨‍🌾","👨‍🍳","👨‍🔧","👨‍🏭","👨‍💼","👨‍🔬","👨‍💻","👨‍🎤","👨‍🎨","👨‍✈️","👨‍🚀","👨‍🚒","👮‍♂️","🕵️‍♂️","💂‍♂️","👷‍♂️","👳‍♂️","🤵‍♂️","👰‍♂️","🫃","👨‍🍼","🦸‍♂️","🦹‍♂️","🧙‍♂️","🧚‍♂️","🧛‍♂️","🧝‍♂️","🧞‍♂️","🧟‍♂️","💆‍♂️","💇‍♂️","🚶‍♂️","🧍‍♂️","🧎‍♂️","👨‍🦯","👨‍🦼","👨‍🦽","🏃‍♂️","🕺","🧖‍♂️","🧗‍♂️","🏌️‍♂️","🏄‍♂️","🚣‍♂️","🏊‍♂️","⛹️‍♂️","🏋️‍♂️","🚴‍♂️","🚵‍♂️","🤸‍♂️","🤽‍♂️","🤾‍♂️","🤹‍♂️","🧘‍♂️","👫","👩‍❤️‍💋‍👨","👨‍❤️‍💋‍👨","👩‍❤️‍👨","👨‍❤️‍👨","👨‍👩‍👦","👨‍👩‍👧","👨‍👩‍👧‍👦","👨‍👩‍👦‍👦","👨‍👩‍👧‍👧","👨‍👨‍👦","👨‍👨‍👧","👨‍👨‍👧‍👦","👨‍👨‍👦‍👦","👨‍👨‍👧‍👧","👨‍👦","👨‍👦‍👦","👨‍👧","👨‍👧‍👦","👨‍👧‍👧","👞","🇮🇲"],"beard":["🧔","🧔‍♂️","🧔‍♀️"],"woman":["🧔‍♀️","👩","👩‍🦰","👩‍🦱","👩‍🦳","👩‍🦲","👱‍♀️","👵","🙍‍♀️","🙎‍♀️","🙅‍♀️","🙆‍♀️","💁‍♀️","🙋‍♀️","🧏‍♀️","🙇‍♀️","🤦‍♀️","🤷‍♀️","👩‍⚕️","👩‍🎓","👩‍🏫","👩‍⚖️","👩‍🌾","👩‍🍳","👩‍🔧","👩‍🏭","👩‍💼","👩‍🔬","👩‍💻","👩‍🎤","👩‍🎨","👩‍✈️","👩‍🚀","👩‍🚒","👮‍♀️","🕵️‍♀️","💂‍♀️","👷‍♀️","👳‍♀️","🧕","🤵‍♀️","👰‍♀️","🤰","👩‍🍼","🦸‍♀️","🦹‍♀️","🧙‍♀️","🧚‍♀️","🧛‍♀️","🧝‍♀️","🧞‍♀️","🧟‍♀️","💆‍♀️","💇‍♀️","🚶‍♀️","🧍‍♀️","🧎‍♀️","👩‍🦯","👩‍🦼","👩‍🦽","🏃‍♀️","💃","🧖‍♀️","🧗‍♀️","🏌️‍♀️","🏄‍♀️","🚣‍♀️","🏊‍♀️","⛹️‍♀️","🏋️‍♀️","🚴‍♀️","🚵‍♀️","🤸‍♀️","🤽‍♀️","🤾‍♀️","🤹‍♀️","🧘‍♀️","👫","👩‍❤️‍💋‍👨","👩‍❤️‍💋‍👩","👩‍❤️‍👨","👩‍❤️‍👩","👨‍👩‍👦","👨‍👩‍👧","👨‍👩‍👧‍👦","👨‍👩‍👦‍👦","👨‍👩‍👧‍👧","👩‍👩‍👦","👩‍👩‍👧","👩‍👩‍👧‍👦","👩‍👩‍👦‍👦","👩‍👩‍👧‍👧","👩‍👦","👩‍👦‍👦","👩‍👧","👩‍👧‍👦","👩‍👧‍👧","👚","👡","👢","👒"],"curly":["👨‍🦱","👩‍🦱","🧑‍🦱","➰","➿"],"bald":["👨‍🦲","👩‍🦲","🧑‍🦲"],"older":["🧓"],"old":["👴","👵","🗝️"],"tip":["💁","💁‍♂️","💁‍♀️"],"deaf":["🧏","🧏‍♂️","🧏‍♀️"],"bow":["🙇","🙇‍♂️","🙇‍♀️","🏹"],"facepalm":["🤦","🤦‍♂️","🤦‍♀️"],"shrug":["🤷","🤷‍♂️","🤷‍♀️"],"health":["🧑‍⚕️","👨‍⚕️","👩‍⚕️"],"worker":["🧑‍⚕️","👨‍⚕️","👩‍⚕️","🧑‍🏭","👨‍🏭","👩‍🏭","🧑‍💼","👨‍💼","👩‍💼","👷","👷‍♂️","👷‍♀️","⛑️"],"student":["🧑‍🎓","👨‍🎓","👩‍🎓"],"teacher":["🧑‍🏫","👨‍🏫","👩‍🏫"],"judge":["🧑‍⚖️","👨‍⚖️","👩‍⚖️"],"farmer":["🧑‍🌾","👨‍🌾","👩‍🌾"],"cook":["🧑‍🍳","👨‍🍳","👩‍🍳","🍳","🇨🇰"],"mechanic":["🧑‍🔧","👨‍🔧","👩‍🔧"],"factory":["🧑‍🏭","👨‍🏭","👩‍🏭","🏭"],"office":["🧑‍💼","👨‍💼","👩‍💼","🏢","🏣","🏤"],"scientist":["🧑‍🔬","👨‍🔬","👩‍🔬"],"technologist":["🧑‍💻","👨‍💻","👩‍💻"],"singer":["🧑‍🎤","👨‍🎤","👩‍🎤"],"artist":["🧑‍🎨","👨‍🎨","👩‍🎨","🎨"],"pilot":["🧑‍✈️","👨‍✈️","👩‍✈️"],"astronaut":["🧑‍🚀","👨‍🚀","👩‍🚀"],"firefighter":["🧑‍🚒","👨‍🚒","👩‍🚒"],"police":["👮","👮‍♂️","👮‍♀️","🚓","🚔","🚨"],"officer":["👮","👮‍♂️","👮‍♀️"],"detective":["🕵️","🕵️‍♂️","🕵️‍♀️"],"guard":["💂","💂‍♂️","💂‍♀️"],"ninja":["🥷"],"construction":["👷","👷‍♂️","👷‍♀️","🏗️","🚧"],"crown":["🫅","👑"],"prince":["🤴"],"princess":["👸"],"wear":["👳","👳‍♂️","👳‍♀️"],"turban":["👳","👳‍♂️","👳‍♀️"],"skullcap":["👲"],"headscarf":["🧕"],"tuxedo":["🤵","🤵‍♂️","🤵‍♀️"],"veil":["👰","👰‍♂️","👰‍♀️"],"pregnant":["🤰","🫃","🫄"],"breast":["🤱"],"feed":["🤱","👩‍🍼","👨‍🍼","🧑‍🍼"],"angel":["👼"],"santa":["🎅"],"claus":["🎅","🤶","🧑‍🎄"],"mrs":["🤶"],"mx":["🧑‍🎄"],"superhero":["🦸","🦸‍♂️","🦸‍♀️"],"supervillain":["🦹","🦹‍♂️","🦹‍♀️"],"mage":["🧙","🧙‍♂️","🧙‍♀️"],"fairy":["🧚","🧚‍♂️","🧚‍♀️"],"vampire":["🧛","🧛‍♂️","🧛‍♀️"],"merperson":["🧜"],"merman":["🧜‍♂️"],"mermaid":["🧜‍♀️"],"elf":["🧝","🧝‍♂️","🧝‍♀️"],"genie":["🧞","🧞‍♂️","🧞‍♀️"],"zombie":["🧟","🧟‍♂️","🧟‍♀️"],"troll":["🧌"],"gett":["💆","💆‍♂️","💆‍♀️","💇","💇‍♂️","💇‍♀️"],"massage":["💆","💆‍♂️","💆‍♀️"],"haircut":["💇","💇‍♂️","💇‍♀️"],"walk":["🚶","🚶‍♂️","🚶‍♀️"],"stand":["🧍","🧍‍♂️","🧍‍♀️"],"kneel":["🧎","🧎‍♂️","🧎‍♀️"],"cane":["🧑‍🦯","👨‍🦯","👩‍🦯","🦯"],"motorized":["🧑‍🦼","👨‍🦼","👩‍🦼","🦼"],"wheelchair":["🧑‍🦼","👨‍🦼","👩‍🦼","🧑‍🦽","👨‍🦽","👩‍🦽","🦽","🦼","♿"],"manual":["🧑‍🦽","👨‍🦽","👩‍🦽","🦽"],"run":["🏃","🏃‍♂️","🏃‍♀️","🎽","👟"],"dance":["💃","🕺"],"suit":["🕴️","♠️","♥️","♦️","♣️"],"levitate":["🕴️"],"people":["👯","🤼","🧑‍🤝‍🧑","🫂"],"bunny":["👯","👯‍♂️","👯‍♀️"],"ears":["👯","👯‍♂️","👯‍♀️"],"men":["👯‍♂️","🤼‍♂️","👬","🚹"],"women":["👯‍♀️","🤼‍♀️","👭","🚺"],"steamy":["🧖","🧖‍♂️","🧖‍♀️"],"room":["🧖","🧖‍♂️","🧖‍♀️","🚹","🚺"],"climb":["🧗","🧗‍♂️","🧗‍♀️"],"fence":["🤺"],"horse":["🏇","🐴","🐎","🎠"],"race":["🏇","🏎️"],"skier":["⛷️"],"snowboarder":["🏂"],"golf":["🏌️","🏌️‍♂️","🏌️‍♀️"],"surf":["🏄","🏄‍♂️","🏄‍♀️"],"row":["🚣","🚣‍♂️","🚣‍♀️"],"boat":["🚣","🚣‍♂️","🚣‍♀️","🛥️"],"swim":["🏊","🏊‍♂️","🏊‍♀️"],"bounce":["⛹️","⛹️‍♂️","⛹️‍♀️"],"ball":["⛹️","⛹️‍♂️","⛹️‍♀️","🍙","🎊","⚽","🎱","🔮","🪩"],"lift":["🏋️","🏋️‍♂️","🏋️‍♀️"],"weights":["🏋️","🏋️‍♂️","🏋️‍♀️"],"bike":["🚴","🚴‍♂️","🚴‍♀️","🚵","🚵‍♂️","🚵‍♀️"],"mountain":["🚵","🚵‍♂️","🚵‍♀️","🏔️","⛰️","🚞","🚠"],"cartwheel":["🤸","🤸‍♂️","🤸‍♀️"],"wrestle":["🤼","🤼‍♂️","🤼‍♀️"],"play":["🤽","🤽‍♂️","🤽‍♀️","🤾","🤾‍♂️","🤾‍♀️","🎴","▶️","⏯️"],"water":["🤽","🤽‍♂️","🤽‍♀️","🐃","🌊","🔫","🚰","🚾","🚱"],"polo":["🤽","🤽‍♂️","🤽‍♀️"],"handball":["🤾","🤾‍♂️","🤾‍♀️"],"juggle":["🤹","🤹‍♂️","🤹‍♀️"],"lotus":["🧘","🧘‍♂️","🧘‍♀️","🪷"],"position":["🧘","🧘‍♂️","🧘‍♀️"],"take":["🛀"],"bath":["🛀"],"bed":["🛌","🛏️"],"couple":["💑","👩‍❤️‍👨","👨‍❤️‍👨","👩‍❤️‍👩"],"family":["👪","👨‍👩‍👦","👨‍👩‍👧","👨‍👩‍👧‍👦","👨‍👩‍👦‍👦","👨‍👩‍👧‍👧","👨‍👨‍👦","👨‍👨‍👧","👨‍👨‍👧‍👦","👨‍👨‍👦‍👦","👨‍👨‍👧‍👧","👩‍👩‍👦","👩‍👩‍👧","👩‍👩‍👧‍👦","👩‍👩‍👦‍👦","👩‍👩‍👧‍👧","👨‍👦","👨‍👦‍👦","👨‍👧","👨‍👧‍👦","👨‍👧‍👧","👩‍👦","👩‍👦‍👦","👩‍👧","👩‍👧‍👦","👩‍👧‍👧"],"bust":["👤"],"silhouette":["👤","👥"],"busts":["👥"],"hug":["🫂"],"footprints":["👣"],"gorilla":["🦍"],"orangutan":["🦧"],"dog":["🐶","🐕","🦮","🐕‍🦺","🌭"],"guide":["🦮"],"service":["🐕‍🦺","🈂️"],"poodle":["🐩"],"wolf":["🐺"],"fox":["🦊"],"raccoon":["🦝"],"lion":["🦁"],"tiger":["🐯","🐅"],"leopard":["🐆"],"moose":["🫎"],"donkey":["🫏"],"unicorn":["🦄"],"zebra":["🦓"],"deer":["🦌"],"bison":["🦬"],"cow":["🐮","🐄"],"ox":["🐂"],"buffalo":["🐃"],"pig":["🐷","🐖","🐽"],"boar":["🐗"],"ram":["🐏"],"ewe":["🐑"],"goat":["🐐"],"camel":["🐪","🐫"],"hump":["🐫"],"llama":["🦙"],"giraffe":["🦒"],"elephant":["🐘"],"mammoth":["🦣"],"rhinoceros":["🦏"],"hippopotamus":["🦛"],"mouse":["🐭","🐁","🖱️","🪤"],"rat":["🐀"],"hamster":["🐹"],"rabbit":["🐰","🐇"],"chipmunk":["🐿️"],"beaver":["🦫"],"hedgehog":["🦔"],"bat":["🦇"],"bear":["🐻","🐻‍❄️","🧸"],"polar":["🐻‍❄️"],"koala":["🐨"],"panda":["🐼"],"sloth":["🦥"],"otter":["🦦"],"skunk":["🦨"],"kangaroo":["🦘"],"badger":["🦡"],"paw":["🐾"],"prints":["🐾"],"turkey":["🦃","🇹🇷"],"chicken":["🐔"],"rooster":["🐓"],"hatch":["🐣"],"chick":["🐣","🐤","🐥"],"front":["🐥"],"bird":["🐦","🐦‍⬛"],"penguin":["🐧"],"dove":["🕊️"],"eagle":["🦅"],"duck":["🦆"],"swan":["🦢"],"owl":["🦉"],"dodo":["🦤"],"feather":["🪶"],"flamingo":["🦩"],"peacock":["🦚"],"parrot":["🦜"],"wing":["🪽"],"goose":["🪿"],"frog":["🐸"],"crocodile":["🐊"],"turtle":["🐢"],"lizard":["🦎"],"snake":["🐍"],"dragon":["🐲","🐉","🀄"],"sauropod":["🦕"],"rex":["🦖"],"spout":["🐳"],"whale":["🐳","🐋"],"dolphin":["🐬"],"seal":["🦭"],"fish":["🐟","🐠","🍥","🎣"],"tropical":["🐠","🍹"],"blowfish":["🐡"],"shark":["🦈"],"octopus":["🐙"],"shell":["🐚"],"coral":["🪸"],"jellyfish":["🪼"],"snail":["🐌"],"butterfly":["🦋"],"bug":["🐛"],"ant":["🐜"],"honeybee":["🐝"],"beetle":["🪲","🐞"],"lady":["🐞"],"cricket":["🦗","🏏"],"cockroach":["🪳"],"spider":["🕷️","🕸️"],"web":["🕸️"],"scorpion":["🦂"],"mosquito":["🦟"],"fly":["🪰","🛸","🥏"],"worm":["🪱"],"microbe":["🦠"],"bouquet":["💐"],"cherry":["🌸"],"blossom":["🌸","🌼"],"flower":["💮","🥀","🎴"],"rosette":["🏵️"],"rose":["🌹"],"wilted":["🥀"],"hibiscus":["🌺"],"sunflower":["🌻"],"tulip":["🌷"],"hyacinth":["🪻"],"seedle":["🌱"],"potted":["🪴"],"plant":["🪴"],"evergreen":["🌲"],"tree":["🌲","🌳","🌴","🎄","🎋"],"deciduous":["🌳"],"cactus":["🌵"],"sheaf":["🌾"],"rice":["🌾","🍘","🍙","🍚","🍛"],"herb":["🌿"],"shamrock":["☘️"],"four":["🍀","🕓","🕟"],"leaf":["🍀","🍁","🍂","🍃"],"clover":["🍀"],"maple":["🍁"],"fallen":["🍂"],"flutter":["🍃"],"wind":["🍃","🌬️","🎐"],"empty":["🪹"],"nest":["🪹","🪺","🪆"],"eggs":["🪺"],"mushroom":["🍄"],"grapes":["🍇"],"melon":["🍈"],"watermelon":["🍉"],"tangerine":["🍊"],"lemon":["🍋"],"banana":["🍌"],"pineapple":["🍍"],"mango":["🥭"],"apple":["🍎","🍏"],"pear":["🍐"],"peach":["🍑"],"cherries":["🍒"],"strawberry":["🍓"],"blueberries":["🫐"],"kiwi":["🥝"],"fruit":["🥝"],"tomato":["🍅"],"olive":["🫒"],"coconut":["🥥"],"avocado":["🥑"],"eggplant":["🍆"],"potato":["🥔","🍠"],"carrot":["🥕"],"corn":["🌽"],"pepper":["🌶️","🫑"],"bell":["🫑","🛎️","🔔","🔕"],"cucumber":["🥒"],"leafy":["🥬"],"broccoli":["🥦"],"garlic":["🧄"],"onion":["🧅"],"peanuts":["🥜"],"beans":["🫘"],"chestnut":["🌰"],"ginger":["🫚"],"root":["🫚"],"pea":["🫛"],"pod":["🫛"],"bread":["🍞","🥖"],"croissant":["🥐"],"baguette":["🥖"],"flatbread":["🫓","🥙"],"pretzel":["🥨"],"bagel":["🥯"],"pancakes":["🥞"],"waffle":["🧇"],"cheese":["🧀"],"wedge":["🧀"],"meat":["🍖","🥩"],"poultry":["🍗"],"cut":["🥩"],"bacon":["🥓"],"hamburger":["🍔"],"french":["🍟","🇬🇫","🇵🇫","🇹🇫"],"fries":["🍟"],"pizza":["🍕"],"sandwich":["🥪","🇬🇸"],"taco":["🌮"],"burrito":["🌯"],"tamale":["🫔"],"stuffed":["🥙"],"falafel":["🧆"],"egg":["🥚"],"shallow":["🥘"],"pan":["🥘"],"pot":["🍲","🍯"],"fondue":["🫕"],"bowl":["🥣","🍜","🎳"],"spoon":["🥣","🥄"],"salad":["🥗"],"popcorn":["🍿"],"butter":["🧈"],"salt":["🧂"],"canned":["🥫"],"bento":["🍱"],"box":["🍱","🥡","🧃","🥊","🗳️","🗃️","☑️"],"cracker":["🍘"],"cooked":["🍚"],"curry":["🍛"],"spaghetti":["🍝"],"roasted":["🍠"],"sweet":["🍠"],"oden":["🍢"],"sushi":["🍣"],"fried":["🍤"],"shrimp":["🍤","🦐"],"cake":["🍥","🥮","🎂"],"swirl":["🍥"],"moon":["🥮","🌑","🌒","🌓","🌔","🌕","🌖","🌗","🌘","🌙","🌚","🌛","🌜","🌝","🎑"],"dango":["🍡"],"dumple":["🥟"],"fortune":["🥠"],"cookie":["🥠","🍪"],"takeout":["🥡"],"crab":["🦀"],"lobster":["🦞"],"squid":["🦑"],"oyster":["🦪"],"soft":["🍦"],"ice":["🍦","🍧","🍨","🧊","🏒","⛸️"],"cream":["🍦","🍨"],"shaved":["🍧"],"doughnut":["🍩"],"birthday":["🎂"],"shortcake":["🍰"],"cupcake":["🧁"],"pie":["🥧"],"chocolate":["🍫"],"bar":["🍫","📊"],"candy":["🍬"],"lollipop":["🍭"],"custard":["🍮"],"honey":["🍯"],"bottle":["🍼","🍾","🧴"],"glass":["🥛","🍷","🍸","🥃","🔍","🔎"],"milk":["🥛"],"beverage":["☕","🧃"],"teapot":["🫖"],"teacup":["🍵"],"handle":["🍵"],"sake":["🍶"],"pop":["🍾"],"cork":["🍾"],"wine":["🍷"],"cocktail":["🍸"],"drink":["🍹"],"beer":["🍺","🍻"],"mug":["🍺"],"clink":["🍻","🥂"],"mugs":["🍻"],"glasses":["🥂","👓"],"tumbler":["🥃"],"pour":["🫗"],"liquid":["🫗"],"cup":["🥤"],"straw":["🥤"],"tea":["🧋"],"mate":["🧉"],"chopsticks":["🥢"],"fork":["🍽️","🍴"],"knife":["🍽️","🍴","🔪"],"plate":["🍽️"],"kitchen":["🔪"],"jar":["🫙"],"amphora":["🏺"],"globe":["🌍","🌎","🌏","🌐"],"show":["🌍","🌎","🌏"],"europe":["🌍"],"africa":["🌍","🇿🇦"],"americas":["🌎"],"asia":["🌏"],"australia":["🌏","🇦🇺"],"meridians":["🌐"],"world":["🗺️"],"map":["🗺️","🗾"],"japan":["🗾","🇯🇵"],"compass":["🧭"],"snow":["🏔️","🌨️","⛄"],"capped":["🏔️"],"volcano":["🌋"],"mount":["🗻"],"fuji":["🗻"],"camp":["🏕️"],"beach":["🏖️"],"umbrella":["🏖️","🌂","☂️","☔","⛱️"],"desert":["🏜️","🏝️"],"island":["🏝️","🇦🇨","🇧🇻","🇨🇵","🇨🇽","🇳🇫"],"national":["🏞️"],"park":["🏞️"],"stadium":["🏟️"],"classical":["🏛️"],"build":["🏛️","🏗️","🏢"],"brick":["🧱"],"rock":["🪨"],"wood":["🪵"],"hut":["🛖"],"houses":["🏘️"],"derelict":["🏚️"],"house":["🏚️","🏠","🏡"],"garden":["🏡"],"japanese":["🏣","🏯","🎎","🔰","🈁","🈂️","🈷️","🈶","🈯","🉐","🈹","🈚","🈲","🉑","🈸","🈴","🈳","㊗️","㊙️","🈺","🈵"],"post":["🏣","🏤"],"hospital":["🏥"],"bank":["🏦"],"hotel":["🏨","🏩"],"convenience":["🏪"],"store":["🏪","🏬"],"school":["🏫"],"department":["🏬"],"castle":["🏯","🏰"],"wed":["💒"],"tokyo":["🗼"],"tower":["🗼"],"statue":["🗽"],"liberty":["🗽"],"church":["⛪"],"mosque":["🕌"],"hindu":["🛕"],"temple":["🛕"],"synagogue":["🕍"],"shinto":["⛩️"],"shrine":["⛩️"],"kaaba":["🕋"],"fountain":["⛲","🖋️"],"tent":["⛺","🎪"],"foggy":["🌁"],"night":["🌃","🌉"],"stars":["🌃"],"cityscape":["🏙️","🌆"],"sunrise":["🌄","🌅"],"mountains":["🌄"],"dusk":["🌆"],"sunset":["🌇"],"bridge":["🌉"],"springs":["♨️"],"carousel":["🎠"],"playground":["🛝"],"slide":["🛝"],"ferris":["🎡"],"wheel":["🎡","🛞","☸️"],"roller":["🎢","🛼"],"coaster":["🎢"],"barber":["💈"],"pole":["💈","🎣"],"circus":["🎪"],"locomotive":["🚂"],"railway":["🚃","🚞","🛤️","🚟"],"car":["🚃","🚋","🚓","🚔","🏎️","🚨"],"high":["🚄","⚡","👠","🔊"],"speed":["🚄"],"train":["🚄","🚅","🚆"],"bullet":["🚅"],"metro":["🚇"],"rail":["🚈"],"station":["🚉"],"tram":["🚊","🚋"],"monorail":["🚝"],"bus":["🚌","🚍","🚏"],"trolleybus":["🚎"],"minibus":["🚐"],"ambulance":["🚑"],"engine":["🚒"],"taxi":["🚕","🚖"],"automobile":["🚗","🚘"],"sport":["🚙"],"utility":["🚙"],"vehicle":["🚙"],"pickup":["🛻"],"truck":["🛻","🚚"],"delivery":["🚚"],"articulated":["🚛"],"lorry":["🚛"],"tractor":["🚜"],"motorcycle":["🏍️"],"motor":["🛵","🛥️"],"scooter":["🛵","🛴"],"auto":["🛺"],"rickshaw":["🛺"],"bicycle":["🚲"],"kick":["🛴"],"skateboard":["🛹"],"skate":["🛼","⛸️"],"stop":["🚏","🛑","⏹️"],"motorway":["🛣️"],"track":["🛤️","⏭️","⏮️"],"oil":["🛢️"],"drum":["🛢️","🥁","🪘"],"fuel":["⛽"],"pump":["⛽"],"horizontal":["🚥"],"traffic":["🚥","🚦"],"vertical":["🚦","🔃"],"anchor":["⚓"],"ring":["🛟","💍"],"buoy":["🛟"],"sailboat":["⛵"],"canoe":["🛶"],"speedboat":["🚤"],"passenger":["🛳️"],"ship":["🛳️","🚢"],"ferry":["⛴️"],"airplane":["✈️","🛩️","🛫","🛬"],"small":["🛩️","🌤️","◾","◽","▪️","▫️","🔸","🔹"],"departure":["🛫"],"arrival":["🛬"],"parachute":["🪂"],"seat":["💺"],"helicopter":["🚁"],"suspension":["🚟"],"cableway":["🚠"],"aerial":["🚡"],"tramway":["🚡"],"satellite":["🛰️","📡"],"rocket":["🚀"],"saucer":["🛸"],"bellhop":["🛎️"],"luggage":["🧳","🛅"],"hourglass":["⌛","⏳"],"done":["⌛","⏳"],"not":["⏳","🈶"],"watch":["⌚"],"alarm":["⏰"],"clock":["⏰","⏲️","🕰️","🕛","🕐","🕑","🕒","🕓","🕔","🕕","🕖","🕗","🕘","🕙","🕚"],"stopwatch":["⏱️"],"timer":["⏲️"],"mantelpiece":["🕰️"],"twelve":["🕛","🕧"],"thirty":["🕧","🕜","🕝","🕞","🕟","🕠","🕡","🕢","🕣","🕤","🕥","🕦"],"one":["🕐","🕜","🩱","🔞"],"three":["🕒","🕞"],"five":["🕔","🕠"],"six":["🕕","🕡","🔯"],"seven":["🕖","🕢"],"eight":["🕗","🕣","✳️","✴️"],"nine":["🕘","🕤"],"ten":["🕙","🕥"],"eleven":["🕚","🕦"],"new":["🌑","🌚","🆕","🇳🇨","🇳🇿","🇵🇬"],"wax":["🌒","🌔"],"crescent":["🌒","🌘","🌙","☪️"],"first":["🌓","🌛"],"quarter":["🌓","🌗","🌛","🌜"],"gibbous":["🌔","🌖"],"full":["🌕","🌝"],"wane":["🌖","🌘"],"last":["🌗","🌜","⏮️"],"sun":["☀️","🌞","⛅","🌤️","🌥️","🌦️"],"ringed":["🪐"],"planet":["🪐"],"glow":["🌟"],"shoot":["🌠"],"milky":["🌌"],"way":["🌌"],"cloud":["☁️","⛅","⛈️","🌤️","🌥️","🌦️","🌧️","🌨️","🌩️"],"behind":["⛅","🌤️","🌥️","🌦️"],"lightning":["⛈️","🌩️"],"rain":["⛈️","🌦️","🌧️","☔"],"large":["🌥️","⬛","⬜","🔶","🔷"],"tornado":["🌪️"],"fog":["🌫️"],"cyclone":["🌀"],"rainbow":["🌈","🏳️‍🌈"],"drops":["☔"],"ground":["⛱️"],"voltage":["⚡"],"snowflake":["❄️"],"snowman":["☃️","⛄"],"comet":["☄️"],"droplet":["💧"],"jack":["🎃"],"lantern":["🎃","🏮"],"christmas":["🎄","🇨🇽"],"fireworks":["🎆"],"sparkler":["🎇"],"firecracker":["🧨"],"sparkles":["✨"],"popper":["🎉"],"confetti":["🎊"],"tanabata":["🎋"],"pine":["🎍"],"dolls":["🎎","🪆"],"carp":["🎏"],"streamer":["🎏"],"chime":["🎐"],"view":["🎑"],"ceremony":["🎑"],"envelope":["🧧","✉️","📨","📩"],"wrapped":["🎁"],"gift":["🎁"],"reminder":["🎗️"],"admission":["🎟️"],"tickets":["🎟️"],"ticket":["🎫"],"military":["🎖️","🪖"],"medal":["🎖️","🏅","🥇","🥈","🥉"],"trophy":["🏆"],"sports":["🏅"],"1st":["🥇"],"place":["🥇","🥈","🥉","🛐"],"2nd":["🥈"],"3rd":["🥉"],"soccer":["⚽"],"baseball":["⚾"],"softball":["🥎"],"basketball":["🏀"],"volleyball":["🏐"],"american":["🏈","🇦🇸"],"football":["🏈","🏉"],"rugby":["🏉"],"tennis":["🎾"],"disc":["🥏"],"game":["🏏","🎮","🎲"],"field":["🏑"],"hockey":["🏑","🏒"],"lacrosse":["🥍"],"ping":["🏓"],"pong":["🏓"],"badminton":["🏸"],"glove":["🥊"],"martial":["🥋"],"arts":["🥋","🎭"],"uniform":["🥋"],"goal":["🥅"],"net":["🥅"],"flag":["⛳","📫","📪","📬","📭","🏁","🚩","🏴","🏳️","🏳️‍🌈","🏳️‍⚧️","🏴‍☠️","🇦🇨","🇦🇩","🇦🇪","🇦🇫","🇦🇬","🇦🇮","🇦🇱","🇦🇲","🇦🇴","🇦🇶","🇦🇷","🇦🇸","🇦🇹","🇦🇺","🇦🇼","🇦🇽","🇦🇿","🇧🇦","🇧🇧","🇧🇩","🇧🇪","🇧🇫","🇧🇬","🇧🇭","🇧🇮","🇧🇯","🇧🇱","🇧🇲","🇧🇳","🇧🇴","🇧🇶","🇧🇷","🇧🇸","🇧🇹","🇧🇻","🇧🇼","🇧🇾","🇧🇿","🇨🇦","🇨🇨","🇨🇩","🇨🇫","🇨🇬","🇨🇭","🇨🇮","🇨🇰","🇨🇱","🇨🇲","🇨🇳","🇨🇴","🇨🇵","🇨🇷","🇨🇺","🇨🇻","🇨🇼","🇨🇽","🇨🇾","🇨🇿","🇩🇪","🇩🇬","🇩🇯","🇩🇰","🇩🇲","🇩🇴","🇩🇿","🇪🇦","🇪🇨","🇪🇪","🇪🇬","🇪🇭","🇪🇷","🇪🇸","🇪🇹","🇪🇺","🇫🇮","🇫🇯","🇫🇰","🇫🇲","🇫🇴","🇫🇷","🇬🇦","🇬🇧","🇬🇩","🇬🇪","🇬🇫","🇬🇬","🇬🇭","🇬🇮","🇬🇱","🇬🇲","🇬🇳","🇬🇵","🇬🇶","🇬🇷","🇬🇸","🇬🇹","🇬🇺","🇬🇼","🇬🇾","🇭🇰","🇭🇲","🇭🇳","🇭🇷","🇭🇹","🇭🇺","🇮🇨","🇮🇩","🇮🇪","🇮🇱","🇮🇲","🇮🇳","🇮🇴","🇮🇶","🇮🇷","🇮🇸","🇮🇹","🇯🇪","🇯🇲","🇯🇴","🇯🇵","🇰🇪","🇰🇬","🇰🇭","🇰🇮","🇰🇲","🇰🇳","🇰🇵","🇰🇷","🇰🇼","🇰🇾","🇰🇿","🇱🇦","🇱🇧","🇱🇨","🇱🇮","🇱🇰","🇱🇷","🇱🇸","🇱🇹","🇱🇺","🇱🇻","🇱🇾","🇲🇦","🇲🇨","🇲🇩","🇲🇪","🇲🇫","🇲🇬","🇲🇭","🇲🇰","🇲🇱","🇲🇲","🇲🇳","🇲🇴","🇲🇵","🇲🇶","🇲🇷","🇲🇸","🇲🇹","🇲🇺","🇲🇻","🇲🇼","🇲🇽","🇲🇾","🇲🇿","🇳🇦","🇳🇨","🇳🇪","🇳🇫","🇳🇬","🇳🇮","🇳🇱","🇳🇴","🇳🇵","🇳🇷","🇳🇺","🇳🇿","🇴🇲","🇵🇦","🇵🇪","🇵🇫","🇵🇬","🇵🇭","🇵🇰","🇵🇱","🇵🇲","🇵🇳","🇵🇷","🇵🇸","🇵🇹","🇵🇼","🇵🇾","🇶🇦","🇷🇪","🇷🇴","🇷🇸","🇷🇺","🇷🇼","🇸🇦","🇸🇧","🇸🇨","🇸🇩","🇸🇪","🇸🇬","🇸🇭","🇸🇮","🇸🇯","🇸🇰","🇸🇱","🇸🇲","🇸🇳","🇸🇴","🇸🇷","🇸🇸","🇸🇹","🇸🇻","🇸🇽","🇸🇾","🇸🇿","🇹🇦","🇹🇨","🇹🇩","🇹🇫","🇹🇬","🇹🇭","🇹🇯","🇹🇰","🇹🇱","🇹🇲","🇹🇳","🇹🇴","🇹🇷","🇹🇹","🇹🇻","🇹🇼","🇹🇿","🇺🇦","🇺🇬","🇺🇲","🇺🇳","🇺🇸","🇺🇾","🇺🇿","🇻🇦","🇻🇨","🇻🇪","🇻🇬","🇻🇮","🇻🇳","🇻🇺","🇼🇫","🇼🇸","🇽🇰","🇾🇪","🇾🇹","🇿🇦","🇿🇲","🇿🇼","🏴󠁧󠁢󠁥󠁮󠁧󠁿","🏴󠁧󠁢󠁳󠁣󠁴󠁿","🏴󠁧󠁢󠁷󠁬󠁳󠁿"],"dive":["🤿"],"shirt":["🎽","👕"],"skis":["🎿"],"sled":["🛷"],"curl":["🥌","📃"],"stone":["🥌","💎"],"bullseye":["🎯"],"yo":["🪀"],"kite":["🪁"],"pistol":["🔫"],"pool":["🎱"],"crystal":["🔮"],"magic":["🪄"],"wand":["🪄"],"video":["🎮","📹"],"joystick":["🕹️"],"slot":["🎰"],"machine":["🎰","📠"],"die":["🎲"],"puzzle":["🧩"],"piece":["🧩","🩱"],"teddy":["🧸"],"pinata":["🪅"],"mirror":["🪩","🪞"],"spade":["♠️"],"diamond":["♦️","🔶","🔷","🔸","🔹","💠"],"club":["♣️"],"chess":["♟️"],"pawn":["♟️"],"joker":["🃏"],"mahjong":["🀄"],"cards":["🎴"],"perform":["🎭"],"framed":["🖼️"],"picture":["🖼️"],"palette":["🎨"],"thread":["🧵"],"sew":["🪡"],"needle":["🪡"],"yarn":["🧶"],"knot":["🪢"],"goggles":["🥽"],"lab":["🥼"],"coat":["🥼","🧥"],"safety":["🦺","🧷"],"vest":["🦺"],"necktie":["👔"],"jeans":["👖"],"scarf":["🧣"],"gloves":["🧤"],"socks":["🧦"],"dress":["👗"],"kimono":["👘"],"sari":["🥻"],"swimsuit":["🩱"],"briefs":["🩲"],"shorts":["🩳"],"bikini":["👙"],"clothes":["👚"],"fold":["🪭"],"fan":["🪭"],"purse":["👛"],"handbag":["👜"],"clutch":["👝"],"bag":["👝","💰"],"shop":["🛍️","🛒"],"bags":["🛍️"],"backpack":["🎒"],"thong":["🩴"],"sandal":["🩴","👡"],"shoe":["👞","👟","🥿","👠"],"hike":["🥾"],"boot":["🥾","👢"],"flat":["🥿"],"heeled":["👠"],"ballet":["🩰"],"shoes":["🩰"],"pick":["🪮","⛏️","⚒️"],"top":["🎩","🔝"],"graduation":["🎓"],"cap":["🎓","🧢"],"billed":["🧢"],"helmet":["🪖","⛑️"],"rescue":["⛑️"],"prayer":["📿"],"beads":["📿"],"lipstick":["💄"],"gem":["💎"],"muted":["🔇"],"speaker":["🔇","🔈","🔉","🔊"],"low":["🔈","🪫"],"volume":["🔈","🔉","🔊"],"medium":["🔉","◼️","◻️","◾","◽"],"loudspeaker":["📢"],"megaphone":["📣"],"postal":["📯"],"horn":["📯"],"slash":["🔕"],"musical":["🎼","🎵","🎶","🎹"],"score":["🎼"],"note":["🎵"],"notes":["🎶"],"studio":["🎙️"],"microphone":["🎙️","🎤"],"level":["🎚️"],"slider":["🎚️"],"control":["🎛️","🛂"],"knobs":["🎛️"],"headphone":["🎧"],"radio":["📻","🔘"],"saxophone":["🎷"],"accordion":["🪗"],"guitar":["🎸"],"keyboard":["🎹","⌨️"],"trumpet":["🎺"],"violin":["🎻"],"banjo":["🪕"],"long":["🪘"],"maracas":["🪇"],"flute":["🪈"],"mobile":["📱","📲","📵","📴"],"phone":["📱","📲","📴"],"telephone":["☎️","📞"],"receiver":["📞"],"pager":["📟"],"fax":["📠"],"battery":["🔋","🪫"],"electric":["🔌"],"plug":["🔌"],"laptop":["💻"],"desktop":["🖥️"],"computer":["🖥️","🖱️","💽"],"printer":["🖨️"],"trackball":["🖲️"],"disk":["💽","💾","💿"],"floppy":["💾"],"optical":["💿"],"dvd":["📀"],"abacus":["🧮"],"movie":["🎥"],"camera":["🎥","📷","📸","📹"],"film":["🎞️","📽️"],"frames":["🎞️"],"projector":["📽️"],"clapper":["🎬"],"board":["🎬"],"television":["📺"],"flash":["📸"],"videocassette":["📼"],"magnify":["🔍","🔎"],"tilted":["🔍","🔎"],"candle":["🕯️"],"bulb":["💡"],"flashlight":["🔦"],"paper":["🏮","🧻"],"diya":["🪔"],"lamp":["🪔","🛋️"],"notebook":["📔","📓"],"decorative":["📔"],"cover":["📔"],"book":["📕","📖","📗","📘","📙"],"books":["📚"],"ledger":["📒"],"page":["📃","📄"],"scroll":["📜"],"newspaper":["📰","🗞️"],"rolled":["🗞️"],"bookmark":["📑","🔖"],"tabs":["📑"],"label":["🏷️"],"coin":["🪙"],"yen":["💴","💹"],"banknote":["💴","💵","💶","💷"],"dollar":["💵","💲"],"euro":["💶"],"pound":["💷"],"wings":["💸"],"credit":["💳"],"card":["💳","🗂️","📇","🗃️","🪪"],"receipt":["🧾"],"chart":["💹","📈","📉","📊"],"increase":["💹","📈"],"mail":["📧"],"income":["📨"],"outbox":["📤"],"tray":["📤","📥"],"inbox":["📥"],"package":["📦"],"mailbox":["📫","📪","📬","📭"],"lowered":["📪","📭"],"postbox":["📮"],"ballot":["🗳️"],"pencil":["✏️"],"nib":["✒️"],"pen":["🖋️","🖊️","🔏"],"paintbrush":["🖌️"],"crayon":["🖍️"],"memo":["📝"],"briefcase":["💼"],"file":["📁","📂","🗃️","🗄️"],"folder":["📁","📂"],"dividers":["🗂️"],"calendar":["📅","📆","🗓️"],"off":["📆","📴"],"notepad":["🗒️"],"decrease":["📉"],"clipboard":["📋"],"pushpin":["📌","📍"],"round":["📍"],"paperclip":["📎"],"linked":["🖇️"],"paperclips":["🖇️"],"straight":["📏"],"ruler":["📏","📐"],"triangular":["📐","🚩"],"scissors":["✂️"],"cabinet":["🗄️"],"wastebasket":["🗑️"],"locked":["🔒","🔏","🔐"],"unlocked":["🔓"],"key":["🔐","🔑","🗝️"],"hammer":["🔨","⚒️","🛠️"],"axe":["🪓"],"wrench":["🛠️","🔧"],"dagger":["🗡️"],"swords":["⚔️"],"bomb":["💣"],"boomerang":["🪃"],"shield":["🛡️"],"carpentry":["🪚"],"saw":["🪚"],"screwdriver":["🪛"],"nut":["🔩"],"bolt":["🔩"],"gear":["⚙️"],"clamp":["🗜️"],"balance":["⚖️"],"scale":["⚖️"],"link":["🔗"],"chains":["⛓️"],"hook":["🪝"],"toolbox":["🧰"],"magnet":["🧲"],"ladder":["🪜"],"alembic":["⚗️"],"test":["🧪"],"tube":["🧪"],"petri":["🧫"],"dish":["🧫"],"dna":["🧬"],"microscope":["🔬"],"telescope":["🔭"],"antenna":["📡","📶"],"syringe":["💉"],"drop":["🩸"],"blood":["🩸","🅰️","🆎","🅱️","🅾️"],"pill":["💊"],"adhesive":["🩹"],"crutch":["🩼"],"stethoscope":["🩺"],"ray":["🩻"],"door":["🚪"],"elevator":["🛗"],"window":["🪟"],"couch":["🛋️"],"chair":["🪑"],"toilet":["🚽"],"plunger":["🪠"],"shower":["🚿"],"bathtub":["🛁"],"trap":["🪤"],"razor":["🪒"],"lotion":["🧴"],"pin":["🧷"],"broom":["🧹"],"basket":["🧺"],"bucket":["🪣"],"soap":["🧼"],"bubbles":["🫧"],"toothbrush":["🪥"],"sponge":["🧽"],"extinguisher":["🧯"],"cart":["🛒"],"cigarette":["🚬"],"coffin":["⚰️"],"headstone":["🪦"],"funeral":["⚱️"],"urn":["⚱️"],"nazar":["🧿"],"amulet":["🧿"],"hamsa":["🪬"],"moai":["🗿"],"placard":["🪧"],"identification":["🪪"],"atm":["🏧"],"litter":["🚮","🚯"],"bin":["🚮"],"potable":["🚰","🚱"],"restroom":["🚻"],"closet":["🚾"],"passport":["🛂"],"customs":["🛃"],"baggage":["🛄"],"claim":["🛄"],"warn":["⚠️"],"children":["🚸"],"cross":["🚸","✝️","☦️","❌","❎"],"entry":["⛔"],"prohibited":["🚫","🈲"],"bicycles":["🚳"],"smoke":["🚭"],"non":["🚱"],"pedestrians":["🚷"],"phones":["📵"],"under":["🔞"],"eighteen":["🔞"],"radioactive":["☢️"],"biohazard":["☣️"],"curve":["↩️","↪️","⤴️","⤵️"],"clockwise":["🔃"],"arrows":["🔃","🔄"],"counterclockwise":["🔄"],"button":["🔄","🔀","🔁","🔂","▶️","⏩","⏭️","⏯️","◀️","⏪","⏮️","🔼","⏫","🔽","⏬","⏸️","⏹️","⏺️","⏏️","🔅","🔆","✅","❎","🅰️","🆎","🅱️","🆑","🆒","🆓","🆔","🆕","🆖","🅾️","🆗","🅿️","🆘","🆙","🆚","🈁","🈂️","🈷️","🈶","🈯","🉐","🈹","🈚","🈲","🉑","🈸","🈴","🈳","㊗️","㊙️","🈺","🈵","🔘","🔳","🔲"],"end":["🔚"],"soon":["🔜"],"worship":["🛐"],"atom":["⚛️"],"om":["🕉️"],"david":["✡️"],"dharma":["☸️"],"yin":["☯️"],"yang":["☯️"],"latin":["✝️","🔠","🔡","🔤"],"orthodox":["☦️"],"peace":["☮️"],"menorah":["🕎"],"pointed":["🔯","✴️","🔺","🔻"],"khanda":["🪯"],"aries":["♈"],"taurus":["♉"],"gemini":["♊"],"cancer":["♋"],"leo":["♌"],"virgo":["♍"],"libra":["♎"],"scorpio":["♏"],"sagittarius":["♐"],"capricorn":["♑"],"aquarius":["♒"],"pisces":["♓"],"ophiuchus":["⛎"],"shuffle":["🔀"],"tracks":["🔀"],"repeat":["🔁","🔂"],"single":["🔂"],"fast":["⏩","⏪","⏫","⏬"],"forward":["⏩"],"next":["⏭️"],"or":["⏯️"],"pause":["⏯️","⏸️"],"reverse":["◀️","⏪"],"upwards":["🔼"],"downwards":["🔽"],"record":["⏺️"],"eject":["⏏️"],"cinema":["🎦"],"dim":["🔅"],"bright":["🔆"],"bars":["📶"],"wireless":["🛜"],"vibration":["📳"],"mode":["📳"],"female":["♀️"],"male":["♂️"],"transgender":["⚧️","🏳️‍⚧️"],"multiply":["✖️"],"plus":["➕"],"minus":["➖"],"divide":["➗"],"heavy":["🟰","💲"],"equals":["🟰"],"infinity":["♾️"],"double":["‼️","➿"],"question":["⁉️","❓","❔"],"wavy":["〰️"],"currency":["💱"],"exchange":["💱"],"recycle":["♻️"],"fleur":["⚜️"],"de":["⚜️"],"lis":["⚜️"],"trident":["🔱"],"emblem":["🔱"],"name":["📛"],"badge":["📛"],"for":["🔰","🈺"],"beginner":["🔰"],"hollow":["⭕"],"circle":["⭕","🔴","🟠","🟡","🟢","🔵","🟣","🟤","⚫","⚪"],"check":["✅","☑️","✔️"],"loop":["➰","➿"],"part":["〽️"],"alternation":["〽️"],"spoked":["✳️"],"asterisk":["✳️"],"copyright":["©️"],"registered":["®️"],"trade":["™️"],"keycap":["#️⃣","*️⃣","0️⃣","1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣","🔟"],"input":["🔠","🔡","🔢","🔣","🔤"],"uppercase":["🔠"],"lowercase":["🔡"],"numbers":["🔢"],"letters":["🔤"],"type":["🅰️","🆎","🅱️","🅾️"],"ab":["🆎"],"cl":["🆑"],"cool":["🆒"],"free":["🆓","🈶","🈚"],"information":["ℹ️"],"id":["🆔"],"circled":["Ⓜ️"],"ng":["🆖"],"sos":["🆘"],"vs":["🆚"],"here":["🈁"],"charge":["🈂️","🈶","🈚"],"monthly":["🈷️"],"amount":["🈷️"],"reserved":["🈯"],"bargain":["🉐"],"discount":["🈹"],"acceptable":["🉑"],"application":["🈸"],"pass":["🈴"],"grade":["🈴"],"vacancy":["🈳","🈵"],"congratulations":["㊗️"],"secret":["㊙️"],"business":["🈺"],"square":["🟥","🟧","🟨","🟩","🟦","🟪","🟫","⬛","⬜","◼️","◻️","◾","◽","▪️","▫️","🔳","🔲"],"triangle":["🔺","🔻"],"dot":["💠"],"chequered":["🏁"],"flags":["🎌"],"pirate":["🏴‍☠️"],"ascension":["🇦🇨"],"andorra":["🇦🇩"],"united":["🇦🇪","🇬🇧","🇺🇳","🇺🇸"],"arab":["🇦🇪"],"emirates":["🇦🇪"],"afghanistan":["🇦🇫"],"antigua":["🇦🇬"],"barbuda":["🇦🇬"],"anguilla":["🇦🇮"],"albania":["🇦🇱"],"armenia":["🇦🇲"],"angola":["🇦🇴"],"antarctica":["🇦🇶"],"argentina":["🇦🇷"],"samoa":["🇦🇸","🇼🇸"],"austria":["🇦🇹"],"aruba":["🇦🇼"],"aland":["🇦🇽"],"islands":["🇦🇽","🇨🇨","🇨🇰","🇫🇰","🇫🇴","🇬🇸","🇭🇲","🇮🇨","🇰🇾","🇲🇭","🇲🇵","🇵🇳","🇸🇧","🇹🇨","🇺🇲","🇻🇬","🇻🇮"],"azerbaijan":["🇦🇿"],"bosnia":["🇧🇦"],"herzegovina":["🇧🇦"],"barbados":["🇧🇧"],"bangladesh":["🇧🇩"],"belgium":["🇧🇪"],"burkina":["🇧🇫"],"faso":["🇧🇫"],"bulgaria":["🇧🇬"],"bahrain":["🇧🇭"],"burundi":["🇧🇮"],"benin":["🇧🇯"],"st":["🇧🇱","🇰🇳","🇱🇨","🇲🇫","🇵🇲","🇸🇭","🇻🇨"],"barthelemy":["🇧🇱"],"bermuda":["🇧🇲"],"brunei":["🇧🇳"],"bolivia":["🇧🇴"],"caribbean":["🇧🇶"],"netherlands":["🇧🇶","🇳🇱"],"brazil":["🇧🇷"],"bahamas":["🇧🇸"],"bhutan":["🇧🇹"],"bouvet":["🇧🇻"],"botswana":["🇧🇼"],"belarus":["🇧🇾"],"belize":["🇧🇿"],"canada":["🇨🇦"],"cocos":["🇨🇨"],"keel":["🇨🇨"],"congo":["🇨🇩","🇨🇬"],"kinshasa":["🇨🇩"],"central":["🇨🇫"],"african":["🇨🇫"],"republic":["🇨🇫","🇩🇴"],"brazzaville":["🇨🇬"],"switzerland":["🇨🇭"],"cote":["🇨🇮"],"ivoire":["🇨🇮"],"chile":["🇨🇱"],"cameroon":["🇨🇲"],"china":["🇨🇳","🇭🇰","🇲🇴"],"colombia":["🇨🇴"],"clipperton":["🇨🇵"],"costa":["🇨🇷"],"rica":["🇨🇷"],"cuba":["🇨🇺"],"cape":["🇨🇻"],"verde":["🇨🇻"],"curacao":["🇨🇼"],"cyprus":["🇨🇾"],"czechia":["🇨🇿"],"germany":["🇩🇪"],"diego":["🇩🇬"],"garcia":["🇩🇬"],"djibouti":["🇩🇯"],"denmark":["🇩🇰"],"dominica":["🇩🇲"],"dominican":["🇩🇴"],"algeria":["🇩🇿"],"ceuta":["🇪🇦"],"melilla":["🇪🇦"],"ecuador":["🇪🇨"],"estonia":["🇪🇪"],"egypt":["🇪🇬"],"western":["🇪🇭"],"sahara":["🇪🇭"],"eritrea":["🇪🇷"],"spain":["🇪🇸"],"ethiopia":["🇪🇹"],"european":["🇪🇺"],"union":["🇪🇺"],"finland":["🇫🇮"],"fiji":["🇫🇯"],"falkland":["🇫🇰"],"micronesia":["🇫🇲"],"faroe":["🇫🇴"],"france":["🇫🇷"],"gabon":["🇬🇦"],"kingdom":["🇬🇧"],"grenada":["🇬🇩"],"georgia":["🇬🇪","🇬🇸"],"guiana":["🇬🇫"],"guernsey":["🇬🇬"],"ghana":["🇬🇭"],"gibraltar":["🇬🇮"],"greenland":["🇬🇱"],"gambia":["🇬🇲"],"guinea":["🇬🇳","🇬🇶","🇬🇼","🇵🇬"],"guadeloupe":["🇬🇵"],"equatorial":["🇬🇶"],"greece":["🇬🇷"],"south":["🇬🇸","🇰🇷","🇸🇸","🇿🇦"],"guatemala":["🇬🇹"],"guam":["🇬🇺"],"bissau":["🇬🇼"],"guyana":["🇬🇾"],"hong":["🇭🇰"],"kong":["🇭🇰"],"sar":["🇭🇰","🇲🇴"],"heard":["🇭🇲"],"mcdonald":["🇭🇲"],"honduras":["🇭🇳"],"croatia":["🇭🇷"],"haiti":["🇭🇹"],"hungary":["🇭🇺"],"canary":["🇮🇨"],"indonesia":["🇮🇩"],"ireland":["🇮🇪"],"israel":["🇮🇱"],"isle":["🇮🇲"],"india":["🇮🇳"],"british":["🇮🇴","🇻🇬"],"indian":["🇮🇴"],"ocean":["🇮🇴"],"territory":["🇮🇴"],"iraq":["🇮🇶"],"iran":["🇮🇷"],"iceland":["🇮🇸"],"italy":["🇮🇹"],"jersey":["🇯🇪"],"jamaica":["🇯🇲"],"jordan":["🇯🇴"],"kenya":["🇰🇪"],"kyrgyzstan":["🇰🇬"],"cambodia":["🇰🇭"],"kiribati":["🇰🇮"],"comoros":["🇰🇲"],"kitts":["🇰🇳"],"nevis":["🇰🇳"],"north":["🇰🇵","🇲🇰"],"korea":["🇰🇵","🇰🇷"],"kuwait":["🇰🇼"],"cayman":["🇰🇾"],"kazakhstan":["🇰🇿"],"laos":["🇱🇦"],"lebanon":["🇱🇧"],"lucia":["🇱🇨"],"liechtenstein":["🇱🇮"],"sri":["🇱🇰"],"lanka":["🇱🇰"],"liberia":["🇱🇷"],"lesotho":["🇱🇸"],"lithuania":["🇱🇹"],"luxembourg":["🇱🇺"],"latvia":["🇱🇻"],"libya":["🇱🇾"],"morocco":["🇲🇦"],"monaco":["🇲🇨"],"moldova":["🇲🇩"],"montenegro":["🇲🇪"],"martin":["🇲🇫"],"madagascar":["🇲🇬"],"marshall":["🇲🇭"],"macedonia":["🇲🇰"],"mali":["🇲🇱"],"myanmar":["🇲🇲"],"burma":["🇲🇲"],"mongolia":["🇲🇳"],"macao":["🇲🇴"],"northern":["🇲🇵"],"mariana":["🇲🇵"],"martinique":["🇲🇶"],"mauritania":["🇲🇷"],"montserrat":["🇲🇸"],"malta":["🇲🇹"],"mauritius":["🇲🇺"],"maldives":["🇲🇻"],"malawi":["🇲🇼"],"mexico":["🇲🇽"],"malaysia":["🇲🇾"],"mozambique":["🇲🇿"],"namibia":["🇳🇦"],"caledonia":["🇳🇨"],"niger":["🇳🇪"],"norfolk":["🇳🇫"],"nigeria":["🇳🇬"],"nicaragua":["🇳🇮"],"norway":["🇳🇴"],"nepal":["🇳🇵"],"nauru":["🇳🇷"],"niue":["🇳🇺"],"zealand":["🇳🇿"],"oman":["🇴🇲"],"panama":["🇵🇦"],"peru":["🇵🇪"],"polynesia":["🇵🇫"],"papua":["🇵🇬"],"philippines":["🇵🇭"],"pakistan":["🇵🇰"],"poland":["🇵🇱"],"pierre":["🇵🇲"],"miquelon":["🇵🇲"],"pitcairn":["🇵🇳"],"puerto":["🇵🇷"],"rico":["🇵🇷"],"palestinian":["🇵🇸"],"territories":["🇵🇸","🇹🇫"],"portugal":["🇵🇹"],"palau":["🇵🇼"],"paraguay":["🇵🇾"],"qatar":["🇶🇦"],"reunion":["🇷🇪"],"romania":["🇷🇴"],"serbia":["🇷🇸"],"russia":["🇷🇺"],"rwanda":["🇷🇼"],"saudi":["🇸🇦"],"arabia":["🇸🇦"],"solomon":["🇸🇧"],"seychelles":["🇸🇨"],"sudan":["🇸🇩","🇸🇸"],"sweden":["🇸🇪"],"singapore":["🇸🇬"],"helena":["🇸🇭"],"slovenia":["🇸🇮"],"svalbard":["🇸🇯"],"jan":["🇸🇯"],"mayen":["🇸🇯"],"slovakia":["🇸🇰"],"sierra":["🇸🇱"],"leone":["🇸🇱"],"san":["🇸🇲"],"marino":["🇸🇲"],"senegal":["🇸🇳"],"somalia":["🇸🇴"],"suriname":["🇸🇷"],"sao":["🇸🇹"],"tome":["🇸🇹"],"principe":["🇸🇹"],"el":["🇸🇻"],"salvador":["🇸🇻"],"sint":["🇸🇽"],"maarten":["🇸🇽"],"syria":["🇸🇾"],"eswatini":["🇸🇿"],"tristan":["🇹🇦"],"da":["🇹🇦"],"cunha":["🇹🇦"],"turks":["🇹🇨"],"caicos":["🇹🇨"],"chad":["🇹🇩"],"southern":["🇹🇫"],"togo":["🇹🇬"],"thailand":["🇹🇭"],"tajikistan":["🇹🇯"],"tokelau":["🇹🇰"],"timor":["🇹🇱"],"leste":["🇹🇱"],"turkmenistan":["🇹🇲"],"tunisia":["🇹🇳"],"tonga":["🇹🇴"],"trinidad":["🇹🇹"],"tobago":["🇹🇹"],"tuvalu":["🇹🇻"],"taiwan":["🇹🇼"],"tanzania":["🇹🇿"],"ukraine":["🇺🇦"],"uganda":["🇺🇬"],"us":["🇺🇲","🇻🇮"],"outly":["🇺🇲"],"nations":["🇺🇳"],"states":["🇺🇸"],"uruguay":["🇺🇾"],"uzbekistan":["🇺🇿"],"vatican":["🇻🇦"],"city":["🇻🇦"],"vincent":["🇻🇨"],"grenadines":["🇻🇨"],"venezuela":["🇻🇪"],"virgin":["🇻🇬","🇻🇮"],"vietnam":["🇻🇳"],"vanuatu":["🇻🇺"],"wallis":["🇼🇫"],"futuna":["🇼🇫"],"kosovo":["🇽🇰"],"yemen":["🇾🇪"],"mayotte":["🇾🇹"],"zambia":["🇿🇲"],"zimbabwe":["🇿🇼"],"england":["🏴󠁧󠁢󠁥󠁮󠁧󠁿"],"scotland":["🏴󠁧󠁢󠁳󠁣󠁴󠁿"],"wales":["🏴󠁧󠁢󠁷󠁬󠁳󠁿"]}
-},{}],85:[function(require,module,exports){
-arguments[4][50][0].apply(exports,arguments)
-},{"dup":50}],86:[function(require,module,exports){
+},{}],106:[function(require,module,exports){
+arguments[4][58][0].apply(exports,arguments)
+},{"dup":58}],107:[function(require,module,exports){
+arguments[4][65][0].apply(exports,arguments)
+},{"dup":65}],108:[function(require,module,exports){
 /*
 	String Kit
 
@@ -38719,10 +41094,372 @@ module.exports = function( str ) {
 
 
 
-},{"./json-data/latinize-map.json":85}],87:[function(require,module,exports){
+},{"./json-data/latinize-map.json":106}],109:[function(require,module,exports){
+/*
+	String Kit
+
+	Copyright (c) 2014 - 2021 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+/*
+	Javascript does not use UTF-8 but UCS-2.
+	The purpose of this module is to process correctly strings containing UTF-8 characters that take more than 2 bytes.
+
+	Since the punycode module is deprecated in Node.js v8.x, this is an adaptation of punycode.ucs2.x
+	as found on Aug 16th 2017 at: https://github.com/bestiejs/punycode.js/blob/master/punycode.js.
+
+	2021 note -- Modern Javascript is way more unicode friendly since many years, e.g. `Array.from( string )` and `for ( char of string )` are unicode aware.
+	Some methods here are now useless, but have been modernized to use the correct ES features.
+*/
+
+
+
+// Create the module and export it
+const unicode = {} ;
+module.exports = unicode ;
+
+
+
+unicode.encode = array => String.fromCodePoint( ... array ) ;
+
+// Decode a string into an array of unicode codepoints.
+// The 2nd argument of Array.from() is a map function, it avoids creating intermediate array.
+unicode.decode = str => Array.from( str , c => c.codePointAt( 0 ) ) ;
+
+// DEPRECATED: This function is totally useless now, with modern JS.
+unicode.firstCodePoint = str => str.codePointAt( 0 ) ;
+
+// Extract only the first char.
+unicode.firstChar = str => str.length ? String.fromCodePoint( str.codePointAt( 0 ) ) : undefined ;
+
+// DEPRECATED: This function is totally useless now, with modern JS.
+unicode.toArray = str => Array.from( str ) ;
+
+
+
+// Decode a string into an array of Cell (used by Terminal-kit).
+// Wide chars have an additionnal filler cell, so position is correct
+unicode.toCells = ( Cell , str , tabWidth = 4 , linePosition = 0 , ... extraCellArgs ) => {
+	var char , code , fillSize , width ,
+		output = [] ;
+
+	for ( char of str ) {
+		code = char.codePointAt( 0 ) ;
+
+		if ( code === 0x0a ) {	// New line
+			linePosition = 0 ;
+		}
+		else if ( code === 0x09 ) {	// Tab
+			// Depends upon the next tab-stop
+			fillSize = tabWidth - ( linePosition % tabWidth ) - 1 ;
+			//output.push( new Cell( '\t' , ... extraCellArgs ) ) ;
+			output.push( new Cell( '\t' , 1 , ... extraCellArgs ) ) ;
+			linePosition += 1 + fillSize ;
+
+			// Add a filler cell
+			while ( fillSize -- ) { output.push( new Cell( ' ' , -2 , ... extraCellArgs ) ) ; }
+		}
+		else {
+			width = unicode.codePointWidth( code ) ,
+			output.push( new Cell( char , width , ... extraCellArgs ) ) ;
+			linePosition += width ;
+
+			// Add an anti-filler cell (a cell with 0 width, following a wide char)
+			while ( -- width > 0 ) { output.push( new Cell( ' ' , -1 , ... extraCellArgs ) ) ; }
+		}
+	}
+
+	return output ;
+} ;
+
+
+
+unicode.fromCells = ( cells ) => {
+	var cell , str = '' ;
+
+	for ( cell of cells ) {
+		if ( ! cell.filler ) { str += cell.char ; }
+	}
+
+	return str ;
+} ;
+
+
+
+// Get the length of an unicode string
+// Mostly an adaptation of .decode(), not factorized for performance's sake (used by Terminal-kit)
+// /!\ Use Array.from().length instead??? Not using it is potentially faster, but it needs benchmark to be sure.
+unicode.length = str => {
+	// for ... of is unicode-aware
+	var char , length = 0 ;
+	for ( char of str ) { length ++ ; }		/* eslint-disable-line no-unused-vars */
+	return length ;
+} ;
+
+
+
+// Return a string that does not exceed the character limit
+unicode.truncateLength = unicode.truncate = ( str , limit ) => {
+	var position = 0 , length = 0 ;
+
+	for ( let char of str ) {
+		if ( length === limit ) { return str.slice( 0 , position ) ; }
+		length ++ ;
+		position += char.length ;
+	}
+
+	// The string remains unchanged
+	return str ;
+} ;
+
+
+
+// Return the width of a string in a terminal/monospace font
+unicode.width = str => {
+	// for ... of is unicode-aware
+	var char , count = 0 ;
+	for ( char of str ) { count += unicode.codePointWidth( char.codePointAt( 0 ) ) ; }
+	return count ;
+} ;
+
+
+
+// Return the width of an array of string in a terminal/monospace font
+unicode.arrayWidth = ( array , limit ) => {
+	var index , count = 0 ;
+
+	if ( limit === undefined ) { limit = array.length ; }
+
+	for ( index = 0 ; index < limit ; index ++ ) {
+		count += unicode.isFullWidth( array[ index ] ) ? 2 : 1 ;
+	}
+
+	return count ;
+} ;
+
+
+
+// Userland may use this, it is more efficient than .truncateWidth() + .width(),
+// and BTW even more than testing .width() then .truncateWidth() + .width()
+var lastTruncateWidth = 0 ;
+unicode.getLastTruncateWidth = () => lastTruncateWidth ;
+
+// Return a string that does not exceed the width limit (taking wide-char into considerations)
+unicode.widthLimit =	// DEPRECATED
+unicode.truncateWidth = ( str , limit ) => {
+	var char , charWidth , position = 0 ;
+
+	// Module global:
+	lastTruncateWidth = 0 ;
+
+	for ( char of str ) {
+		charWidth = unicode.codePointWidth( char.codePointAt( 0 ) ) ;
+
+		if ( lastTruncateWidth + charWidth > limit ) {
+			return str.slice( 0 , position ) ;
+		}
+
+		lastTruncateWidth += charWidth ;
+		position += char.length ;
+	}
+
+	// The string remains unchanged
+	return str ;
+} ;
+
+
+
+/*
+	** PROBABLY DEPRECATED **
+
+	Check if a UCS2 char is a surrogate pair.
+
+	Returns:
+		0: single char
+		1: leading surrogate
+		-1: trailing surrogate
+
+	Note: it does not check input, to gain perfs.
+*/
+unicode.surrogatePair = char => {
+	var code = char.charCodeAt( 0 ) ;
+
+	if ( code < 0xd800 || code >= 0xe000 ) { return 0 ; }
+	else if ( code < 0xdc00 ) { return 1 ; }
+	return -1 ;
+} ;
+
+
+
+// Check if a character is a full-width char or not
+unicode.isFullWidth = char => unicode.isFullWidthCodePoint( char.codePointAt( 0 ) ) ;
+
+// Return the width of a char, leaner than .width() for one char
+unicode.charWidth = char => unicode.codePointWidth( char.codePointAt( 0 ) ) ;
+
+
+
+/*
+	Build the Emoji width lookup.
+	The ranges file (./lib/unicode-emoji-width-ranges.json) is produced by a Terminal-Kit script ([terminal-kit]/utilities/build-emoji-width-lookup.js),
+	that writes each emoji and check the cursor location.
+*/
+const emojiWidthLookup = new Map() ;
+
+( function() {
+	var ranges = require( './json-data/unicode-emoji-width-ranges.json' ) ;
+	for ( let range of ranges ) {
+		for ( let i = range.s ; i <= range.e ; i ++ ) {
+			emojiWidthLookup.set( i , range.w ) ;
+		}
+	}
+} )() ;
+
+/*
+	Check if a codepoint represent a full-width char or not.
+*/
+unicode.codePointWidth = code => {
+	// Assuming all emoji are wide here
+	if ( unicode.isEmojiCodePoint( code ) ) {
+		return emojiWidthLookup.get( code ) ?? 2 ;
+	}
+
+	// Code points are derived from:
+	// http://www.unicode.org/Public/UNIDATA/EastAsianWidth.txt
+	if ( code >= 0x1100 && (
+		code <= 0x115f ||	// Hangul Jamo
+		code === 0x2329 || // LEFT-POINTING ANGLE BRACKET
+		code === 0x232a || // RIGHT-POINTING ANGLE BRACKET
+		// CJK Radicals Supplement .. Enclosed CJK Letters and Months
+		( 0x2e80 <= code && code <= 0x3247 && code !== 0x303f ) ||
+		// Enclosed CJK Letters and Months .. CJK Unified Ideographs Extension A
+		( 0x3250 <= code && code <= 0x4dbf ) ||
+		// CJK Unified Ideographs .. Yi Radicals
+		( 0x4e00 <= code && code <= 0xa4c6 ) ||
+		// Hangul Jamo Extended-A
+		( 0xa960 <= code && code <= 0xa97c ) ||
+		// Hangul Syllables
+		( 0xac00 <= code && code <= 0xd7a3 ) ||
+		// CJK Compatibility Ideographs
+		( 0xf900 <= code && code <= 0xfaff ) ||
+		// Vertical Forms
+		( 0xfe10 <= code && code <= 0xfe19 ) ||
+		// CJK Compatibility Forms .. Small Form Variants
+		( 0xfe30 <= code && code <= 0xfe6b ) ||
+		// Halfwidth and Fullwidth Forms
+		( 0xff01 <= code && code <= 0xff60 ) ||
+		( 0xffe0 <= code && code <= 0xffe6 ) ||
+		// Kana Supplement
+		( 0x1b000 <= code && code <= 0x1b001 ) ||
+		// Enclosed Ideographic Supplement
+		( 0x1f200 <= code && code <= 0x1f251 ) ||
+		// CJK Unified Ideographs Extension B .. Tertiary Ideographic Plane
+		( 0x20000 <= code && code <= 0x3fffd )
+	) ) {
+		return 2 ;
+	}
+
+	if (
+		unicode.isEmojiModifierCodePoint( code ) ||
+		unicode.isZeroWidthDiacriticCodePoint( code )
+	) {
+		return 0 ;
+	}
+
+	return 1 ;
+} ;
+
+// For a true/false type of result
+unicode.isFullWidthCodePoint = code => unicode.codePointWidth( code ) === 2 ;
+
+
+
+// Convert normal ASCII chars to their full-width counterpart
+unicode.toFullWidth = str => {
+	return String.fromCodePoint( ... Array.from( str , char => {
+		var code = char.codePointAt( 0 ) ;
+		return code >= 33 && code <= 126  ?  0xff00 + code - 0x20  :  code ;
+	} ) ) ;
+} ;
+
+
+
+// Check if a character is a diacritic with zero-width or not
+unicode.isZeroWidthDiacritic = char => unicode.isZeroWidthDiacriticCodePoint( char.codePointAt( 0 ) ) ;
+
+// Some doc found here: https://en.wikipedia.org/wiki/Combining_character
+// Diacritics and other characters that combines with previous one (zero-width)
+unicode.isZeroWidthDiacriticCodePoint = code =>
+	// Combining Diacritical Marks
+	( 0x300 <= code && code <= 0x36f ) ||
+	// Combining Diacritical Marks Extended
+	( 0x1ab0 <= code && code <= 0x1aff ) ||
+	// Combining Diacritical Marks Supplement
+	( 0x1dc0 <= code && code <= 0x1dff ) ||
+	// Combining Diacritical Marks for Symbols
+	( 0x20d0 <= code && code <= 0x20ff ) ||
+	// Combining Half Marks
+	( 0xfe20 <= code && code <= 0xfe2f ) ||
+	// Dakuten and handakuten (japanese)
+	code === 0x3099 || code === 0x309a ||
+	// Devanagari
+	( 0x900 <= code && code <= 0x903 ) ||
+	( 0x93a <= code && code <= 0x957 && code !== 0x93d && code !== 0x950 ) ||
+	code === 0x962 || code === 0x963 ||
+	// Thai
+	code === 0xe31 ||
+	( 0xe34 <= code && code <= 0xe3a ) ||
+	( 0xe47 <= code && code <= 0xe4e ) ;
+
+// Check if a character is an emoji or not
+unicode.isEmoji = char => unicode.isEmojiCodePoint( char.codePointAt( 0 ) ) ;
+
+// Some doc found here: https://stackoverflow.com/questions/30470079/emoji-value-range
+unicode.isEmojiCodePoint = code =>
+	// Miscellaneous symbols
+	( 0x2600 <= code && code <= 0x26ff ) ||
+	// Dingbats
+	( 0x2700 <= code && code <= 0x27bf ) ||
+	// Emoji
+	( 0x1f000 <= code && code <= 0x1f1ff ) ||
+	( 0x1f300 <= code && code <= 0x1f3fa ) ||
+	( 0x1f400 <= code && code <= 0x1faff ) ;
+
+// Emoji modifier
+unicode.isEmojiModifier = char => unicode.isEmojiModifierCodePoint( char.codePointAt( 0 ) ) ;
+unicode.isEmojiModifierCodePoint = code =>
+	( 0x1f3fb <= code && code <= 0x1f3ff ) ||	// (Fitzpatrick): https://en.wikipedia.org/wiki/Miscellaneous_Symbols_and_Pictographs#Emoji_modifiers
+	code === 0xfe0f ;	// VARIATION SELECTOR-16 [VS16] {emoji variation selector}
+
+
+},{"./json-data/unicode-emoji-width-ranges.json":107}],110:[function(require,module,exports){
 module.exports={
   "name": "svg-kit",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "A SVG toolkit, with its own Vector Graphics structure, multiple renderers (svg text, DOM svg, canvas), and featuring Flowing Text.",
   "main": "lib/svg-kit.js",
   "directories": {
@@ -38731,12 +41468,14 @@ module.exports={
   "dependencies": {
     "@cronvel/xmldom": "^0.1.32",
     "array-kit": "^0.2.6",
-    "book-source": "^0.2.2",
+    "book-source": "^0.3.7",
     "dom-kit": "^0.5.2",
     "image-size": "^1.0.2",
+    "nextgen-events": "^1.5.3",
     "opentype.js": "^1.3.4",
     "palette-shade": "^0.1.3",
-    "string-kit": "^0.18.0"
+    "seventh": "^0.9.2",
+    "string-kit": "^0.18.3"
   },
   "scripts": {
     "test": "tea-time -R dot"
@@ -38766,13 +41505,13 @@ module.exports={
     "owner": "Cédric Ronvel"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=16.13.0"
   }
 }
 
-},{}],88:[function(require,module,exports){
+},{}],111:[function(require,module,exports){
 
-},{}],89:[function(require,module,exports){
+},{}],112:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -38924,7 +41663,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],90:[function(require,module,exports){
+},{}],113:[function(require,module,exports){
 (function (Buffer){(function (){
 /*!
  * The buffer module from node.js, for the browser.
@@ -40705,7 +43444,7 @@ function numberIsNaN (obj) {
 }
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"base64-js":89,"buffer":90,"ieee754":91}],91:[function(require,module,exports){
+},{"base64-js":112,"buffer":113,"ieee754":114}],114:[function(require,module,exports){
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
@@ -40792,7 +43531,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],92:[function(require,module,exports){
+},{}],115:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -40815,7 +43554,7 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],93:[function(require,module,exports){
+},{}],116:[function(require,module,exports){
 (function (process){(function (){
 // 'path' module extracted from Node.js v8.11.1 (only the posix part)
 // transplited with Babel
@@ -41348,7 +44087,7 @@ posix.posix = posix;
 module.exports = posix;
 
 }).call(this)}).call(this,require('_process'))
-},{"_process":94}],94:[function(require,module,exports){
+},{"_process":117}],117:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -41534,7 +44273,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],95:[function(require,module,exports){
+},{}],118:[function(require,module,exports){
 (function (setImmediate,clearImmediate){(function (){
 var nextTick = require('process/browser.js').nextTick;
 var apply = Function.prototype.apply;
@@ -41613,5 +44352,5 @@ exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate :
   delete immediateIds[id];
 };
 }).call(this)}).call(this,require("timers").setImmediate,require("timers").clearImmediate)
-},{"process/browser.js":94,"timers":95}]},{},[5])(5)
+},{"process/browser.js":117,"timers":118}]},{},[5])(5)
 });

@@ -61,7 +61,7 @@ async function createScene() {
 	flowingText.width = "100%" ;
 	flowingText.height = "100%" ;
     flowingText.setPadding( "50px" ) ;
-    flowingText.markupText = "^GHello^ ^/my^ ^+friend^:, ^+^/stay^ ^[bgBlue]awhile^ and ^_listen^:..." ;
+    flowingText.markupText = "[Hello]<green> *my* **friend**, ***stay*** [awhile]<bg:blue> and _listen_..." ;
     flowingText.textWrapping = "wordWrap" ;
     flowingText.textAttr = {
         fontSize: 30 ,
