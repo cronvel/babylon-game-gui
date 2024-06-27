@@ -392,7 +392,6 @@ Dialog.prototype._createContent = Promise.debounceNextTick( Dialog.prototype._cr
 
 DecoratedContainer.createCommonContentGetterSetter( Dialog.prototype , {
 	markupText: 'markupText' ,
-	
 } ) ;
 
 module.exports = Dialog ;
@@ -445,18 +444,18 @@ class FlowingText extends VG {
 	_markupText = null ;
 	_structuredText = null ;
 
-	/*
-	_textAttr = {
-			fontSize: 30 ,
-			color: '#777' ,
-			outline: true ,
-			frameCornerRadius: '0.2em' ,
-			frameOutlineWidth: '0.1em'
-			//outlineColor: '#afa' ,
-			//lineOutline: true ,
-			//lineColor: '#559'
-		} ;
-	*/
+	_textAttr = new svgKit.TextAttribute( {
+		fontSize: 30 ,
+		color: '#777' ,
+		outline: true ,
+		frameCornerRadius: '0.2em' ,
+		frameOutlineWidth: '0.1em'
+		//outlineColor: '#afa' ,
+		//lineOutline: true ,
+		//lineColor: '#559'
+	} ) ;
+
+	_fx = null ;
 
 	_vgFlowingText = null ;
 	_vgGenerated = null ;
@@ -488,6 +487,14 @@ class FlowingText extends VG {
 		if ( this._autoScale ) { this._adaptVgSizeNow() ; }
 	}
 
+	get text() { return this._text ; }
+	set text( _text ) {
+		if ( this._text === _text ) { return ; }
+		this._text = _text ;
+		if ( this._text ) { this._markupText = this._structuredText = null ; }
+		this._generateVg() ;
+	}
+
 	get markupText() { return this._markupText ; }
 	set markupText( _markupText ) {
 		if ( this._markupText === _markupText ) { return ; }
@@ -496,14 +503,26 @@ class FlowingText extends VG {
 		this._generateVg() ;
 	}
 
-	/*
-	get textAttr() { return this._textAttr ; }
-	set textAttr( _textAttr ) {
-		if ( this._textAttr === _textAttr ) { return ; }
-		this._textAttr = _textAttr ;
+	get structuredText() { return this._structuredText ; }
+	set structuredText( _structuredText ) {
+		if ( this._structuredText === _structuredText ) { return ; }
+		this._structuredText = _structuredText ;
+		if ( this._structuredText ) { this._text = this._markupText = null ; }
 		this._generateVg() ;
 	}
-	*/
+
+	get textAttr() { return this._textAttr ; }
+	set textAttr( _textAttr ) {
+		this._textAttr.set( _textAttr ) ;
+		this._generateVg() ;
+	}
+
+	get fx() { return this._fx ; }
+	set fx( _fx ) {
+		if ( this._fx === _fx ) { return ; }
+		this._fx = _fx ;
+		this._generateVg() ;
+	}
 
 	set autoScale( v ) {
 		v = !! v ;
@@ -521,29 +540,27 @@ class FlowingText extends VG {
 			y: 0 ,
 			width: this.widthInPixels ,
 			height: this.heightInPixels ,
-			//clip: false ,
-			//debugContainer: true ,
-			//textWrapping: 'ellipsis' ,
-			textWrapping: 'wordWrap'
-		} ;
-
-		params.attr = {
-			fontSize: 30 ,
-			color: '#777' ,
-			outline: true ,
-			frameCornerRadius: '0.2em' ,
-			frameOutlineWidth: '0.1em'
-			//outlineColor: '#afa' ,
-			//lineOutline: true ,
-			//lineColor: '#559'
+			attr: this._textAttr ,
+			clip: false ,
+			textWrapping: 'wordWrap' ,
+			//fx: this._fx
+			//fx: { slowTyping: { speed: 2 } }
 		} ;
 
 		if ( this._structuredText ) { params.structuredText = this._structuredText ; }
 		else if ( this._markupText ) { params.markupText = this._markupText ; }
 		else if ( this._text ) { params.text = this._text ; }
 
+		console.warn( "### VGFlowingText( params ):" , params ) ;
 		this._vgFlowingText = new svgKit.VGFlowingText( params ) ;
 		this._vg = new svgKit.VG() ;
+
+		if ( this._dynamicManager ) {
+			console.warn( "### Destroy this._dynamicManager" ) ;
+			this._dynamicManager.destroy() ;
+			this._dynamicManager = null ;
+		}
+
 		await this._adaptVgSizeNow() ;
 		this._vg.addEntity( this._vgFlowingText ) ;
 		this._afterVgUpdate() ;
@@ -725,8 +742,8 @@ class VG extends BABYLON.GUI.Control {
 	}
 
 	async _afterVgUpdate() {
-		this._vgWidth = this._vg.viewBox.width ;
-		this._vgHeight = this._vg.viewBox.height ;
+		this._vgWidth = Math.ceil( this._vg.viewBox.width ) ;
+		this._vgHeight = Math.ceil( this._vg.viewBox.height ) ;
 		
 		if ( ! this._offscreenCanvas ) {
 			console.warn( "new OffscreenCanvas:" , this._vgWidth , this._vgHeight ) ;
@@ -748,9 +765,14 @@ class VG extends BABYLON.GUI.Control {
 	
 	_generateDynamicManager() {
 		if ( this._dynamicManager ) { return ; }
+		console.warn( "### Generate this._dynamicManager" , this._context , this._vg ) ;
 		this._dynamicManager = new svgKit.DynamicManager( this._context , this._vg , 50 ) ;
 		this._dynamicManager.manageBrowserCanvas() ;
-		this._dynamicManager.on( 'redraw' , () => this._markAsDirty() ) ;
+		//this._dynamicManager.on( 'redraw' , () => this._markAsDirty() ) ;
+		this._dynamicManager.on( 'redraw' , () => {
+			console.warn( "### dynamicManager REDRAW" ) ;
+			this._markAsDirty() ;
+		} ) ;
 	}
 
 	async _renderCanvasNow() {
@@ -4249,8 +4271,14 @@ function DynamicManager( ctx , vg , tickTime ) {
 
 	// A debounced redraw
 	this.redraw = Promise.debounceUpdate( { delay: this.tickTime / 2 } , async () => {
+		console.warn( "###! redraw()" ) ;
+		try {
 		await this.vg.redrawCanvas( this.ctx ) ;
 		this.emit( 'redraw' ) ;
+		} catch ( error ) {
+			console.warn( "Error:" , error ) ;
+		}
+		console.warn( "###! redrawn()" ) ;
 	} ) ;
 }
 
@@ -4260,6 +4288,17 @@ DynamicManager.prototype = Object.create( LeanEvents.prototype ) ;
 DynamicManager.prototype.constructor = DynamicManager ;
 DynamicManager.prototype.__prototypeUID__ = 'svg-kit/DynamicManager' ;
 DynamicManager.prototype.__prototypeVersion__ = require( '../package.json' ).version ;
+
+
+
+DynamicManager.prototype.destroy = function() {
+	if ( this.timer ) {
+		clearInterval( this.timer ) ;
+		this.timer = null ;
+	}
+
+	this.clearCanvasEventListener() ;
+} ;
 
 
 
@@ -4274,6 +4313,7 @@ DynamicManager.prototype.emitPendingEvents = function() {
 
 
 DynamicManager.prototype.onTick = function() {
+	console.warn( "###! onTick()" ) ;
 	this.tick ++ ;
 
 	let outdated = false ;
