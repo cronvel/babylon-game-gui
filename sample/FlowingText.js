@@ -39,10 +39,12 @@ async function createScene() {
 	svgKit.fontLib.setFontUrl( 'serif' , 'bold' , 'italic' , './serif-bold+italic.ttf' ) ;
 
 	var flowingText = new BABYLON.GUI.FlowingText( 'flowingText' ) ;
-	flowingText.markupText = "[Hello]<green> *my* **friend**, ***stay*** [awhile]<bg:blue> and _listen_... Don't [shake]<fx:shake> !" ;
+	//flowingText.markupText = "[Hello]<green> *my* **friend**, ***stay*** [awhile]<bg:blue> and _listen_... Don't [shake]<fx:shake> !" ;
+	flowingText.markupText = "Don't [shake]<fx:shake> !" ;
 	flowingText.width = "300px" ;
 	flowingText.height = "200px" ;
 	//flowingText.textWrapping = "wordWrap" ;
+	/*
 	flowingText.textAttr = {
 		fontSize: 30 ,
 		color: '#777' ,
@@ -53,6 +55,7 @@ async function createScene() {
 		//lineOutline: true ,
 		//lineColor: '#559'
 	} ;
+	//*/
 	//flowingText.fx = { slowTyping: true } ;
 	//flowingText.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP ;
 	flowingText.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
