@@ -477,12 +477,12 @@ class FlowingText extends VG {
 	
 	set width( w ) {
 		super.width = w ;
-		if ( this._autoScale ) { this._adaptVgSizeNow() ; }
+		if ( this._autoScale ) { this._adaptVgSize() ; }
 	}
 
 	set height( h ) {
 		super.height = h ;
-		if ( this._autoScale ) { this._adaptVgSizeNow() ; }
+		if ( this._autoScale ) { this._adaptVgSize() ; }
 	}
 
 	get text() { return this._text ; }
@@ -528,7 +528,7 @@ class FlowingText extends VG {
 		this._autoScale = v ;
 		if ( this._autoScale ) {
 			if ( this._vgRendered ) { this.synchronizeSizeWithContent() ; }
-			this._adaptVgSizeNow() ;
+			this._adaptVgSize() ;
 		}
 	}
 
@@ -549,28 +549,29 @@ class FlowingText extends VG {
 		else if ( this._markupText ) { params.markupText = this._markupText ; }
 		else if ( this._text ) { params.text = this._text ; }
 
-		console.warn( "### VGFlowingText( params ):" , params ) ;
+		//console.warn( "### VGFlowingText( params ):" , params ) ;
 		this._vg = new svgKit.VG() ;
 		this._vgFlowingText = new svgKit.VGFlowingText( params ) ;
 		this._vg.addEntity( this._vgFlowingText ) ;
 
 		if ( this._dynamicManager ) {
-			console.warn( "### Destroy this._dynamicManager" ) ;
+			//console.warn( "### Destroy this._dynamicManager" ) ;
 			this._dynamicManager.destroy() ;
 			this._dynamicManager = null ;
 		}
 
-		await this._adaptVgSizeNow() ;
+		await this._adaptVgSize() ;
 		this._afterVgUpdate() ;
 	}
 
 	async _adaptVgSizeNow() {
 		if ( ! this._vg ) { return ; }
+		//console.error( "Entering _adaptVgSizeNow()" ) ;
 
 		var viewBox ;
 
 		if ( this._autoScale ) {
-			var bbox = await this._vgFlowingText.getContentBoundingBox() ;
+			let bbox = await this._vgFlowingText.getContentBoundingBox() ;
 
 			// The VG can be gone by the time we got the bounding box
 			if ( ! this._vg ) { return ; }
@@ -592,18 +593,21 @@ class FlowingText extends VG {
 		}
 
 		if ( ! this._vg.viewBox.isEqualToObject( viewBox ) ) {
+			/*
 			console.warn( "_adaptVgSizeNow() " , this._autoScale ? '[autoscale] :' : ':' , viewBox ,
 				this.widthInPixels , this.paddingLeftInPixels , this.paddingRightInPixels ,
 				this.heightInPixels , this.paddingTopInPixels , this.paddingBottomInPixels
 			) ;
+			//*/
 			this._vg.viewBox.set( viewBox ) ;
 			this._vgFlowingText.set( viewBox ) ;
 		}
+		//console.error( "Exiting _adaptVgSizeNow()" ) ;
 	}
 
 	/*
 	_layout( parentMeasure , context ) {
-		console.warn( "Calling FlowingText _layout() , width:" , this.width , this.widthInPixels , this._host , this._cachedParentMeasure.width ) ;
+		//console.warn( "Calling FlowingText _layout() , width:" , this.width , this.widthInPixels , this._host , this._cachedParentMeasure.width ) ;
 		return super._layout( parentMeasure , context ) ;
 	}
 	*/
@@ -618,7 +622,7 @@ class FlowingText extends VG {
 			this._lastHeight = height ;
 
 			if ( this._vg ) {
-				this._adaptVgSizeNow().then( () => this._afterVgUpdate() ) ;
+				this._adaptVgSize().then( () => this._afterVgUpdate() ) ;
 			}
 		}
 
@@ -743,13 +747,13 @@ class VG extends BABYLON.GUI.Control {
 		this._vgHeight = Math.ceil( this._vg.viewBox.height ) ;
 		
 		if ( ! this._offscreenCanvas ) {
-			console.warn( "new OffscreenCanvas:" , this._vgWidth , this._vgHeight ) ;
+			//console.warn( "new OffscreenCanvas:" , this._vgWidth , this._vgHeight ) ;
 			this._offscreenCanvas = new OffscreenCanvas( this._vgWidth , this._vgHeight ) ;
 			this._context = this._offscreenCanvas.getContext( '2d' ) ;
 		}
 		else {
 			if ( this._vgWidth !== this._offscreenCanvas.width || this._vgHeight !== this._offscreenCanvas.height ) {
-				console.warn( "resize OffscreenCanvas:" , this._vgWidth , this._vgHeight ) ;
+				//console.warn( "resize OffscreenCanvas:" , this._vgWidth , this._vgHeight ) ;
 				this._offscreenCanvas.width = this._vgWidth ;
 				this._offscreenCanvas.height = this._vgHeight ;
 			}
@@ -767,12 +771,12 @@ class VG extends BABYLON.GUI.Control {
 	
 	_generateDynamicManager() {
 		if ( this._dynamicManager ) { return ; }
-		console.warn( "### Generate this._dynamicManager" , this._context , this._vg ) ;
+		//console.warn( "### Generate this._dynamicManager" , this._context , this._vg ) ;
 		this._dynamicManager = new svgKit.DynamicManager( this._context , this._vg , 50 ) ;
 		this._dynamicManager.manageBrowserCanvas() ;
 		//this._dynamicManager.on( 'redraw' , () => this._markAsDirty() ) ;
 		this._dynamicManager.on( 'redraw' , () => {
-			console.warn( "### dynamicManager REDRAW" ) ;
+			//console.warn( "### dynamicManager REDRAW" ) ;
 			this._markAsDirty() ;
 		} ) ;
 	}
@@ -3199,7 +3203,6 @@ Promise.debounceNextTick = ( asyncFn , thisBinding ) => {
 		* delayFn: async `function` called before calling again the decoratee
 		* waitFn: async `function` called before calling the decoratee (even the first try), use-case: Window.requestAnimationFrame()
 */
-console.warn( "### Modified Seventh" ) ;
 Promise.debounceUpdate = ( options , asyncFn , thisBinding ) => {
 	var inWrapper = null ,
 		outWrapper = null ,
@@ -3286,9 +3289,7 @@ Promise.debounceUpdate = ( options , asyncFn , thisBinding ) => {
 
 			Promise.finally( instance.waitInProgress , () => {
 				instance.waitInProgress = null ;
-				console.error( ">>> asyncFn" , asyncFn.name ) ;
 				instance.currentUpdatePromise = asyncFn.call( this , ... instance.currentUpdateWith ) ;
-				Promise.finally( instance.currentUpdatePromise , () => console.error( "<<< asyncFn" , asyncFn.name ) ) ;
 				Promise.finally( instance.currentUpdatePromise , outWrapper.bind( this ) ) ;
 				Promise.propagate( instance.currentUpdatePromise , instance.inProgress ) ;
 			} ) ;
@@ -3297,7 +3298,6 @@ Promise.debounceUpdate = ( options , asyncFn , thisBinding ) => {
 		} ;
 
 		return function( ... args ) {
-			console.error( ">>> asyncFn DECORATOR" , asyncFn.name ) ;
 			var localThis = thisBinding || this ,
 				instance = getInstance( localThis ) ;
 
@@ -4215,7 +4215,7 @@ DynamicArea.prototype.save = function( canvasCtx ) {
 
 	if ( this.useEntityBackgroundImageData ) {
 		if ( this.entity.backgroundImageUsed ) { return ; }
-		console.warn( "::: Saving backgroundImageData for:" , this.entity.__prototypeUID__.slice( 8 ) + ' ' + this.entity._id ) ;
+		//console.warn( "::: Saving backgroundImageData for:" , this.entity.__prototypeUID__.slice( 8 ) + ' ' + this.entity._id ) ;
 
 		this.entity.backgroundImageData = canvasCtx.getImageData(
 			this.boundingBox.x , this.boundingBox.y ,
@@ -4240,7 +4240,7 @@ DynamicArea.prototype.restore = function( canvasCtx ) {
 	if ( this.useEntityBackgroundImageData ) {
 		if ( this.entity.backgroundImageUsed ) { return ; }
 		if ( ! this.entity.backgroundImageData ) {
-			console.warn( "!!! Missing backgroundImageData:" , this.entity.__prototypeUID__.slice( 8 ) + ' ' + this.entity._id ) ;
+			//console.warn( "!!! Missing backgroundImageData:" , this.entity.__prototypeUID__.slice( 8 ) + ' ' + this.entity._id ) ;
 		}
 		canvasCtx.putImageData( this.entity.backgroundImageData , this.boundingBox.x , this.boundingBox.y ) ;
 		this.entity.backgroundImageUsed = true ;
@@ -4302,16 +4302,20 @@ function DynamicManager( ctx , vg , tickTime ) {
 
 	// A debounced redraw
 	this.redraw = Promise.debounceUpdate( { delay: this.tickTime / 2 } , async () => {
-		console.warn( "###! redraw()" ) ;
+		//console.warn( "###! redraw()" ) ;
+		await this.vg.redrawCanvas( this.ctx ) ;
+		this.emit( 'redraw' ) ;
+		/*
 		try {
 			await this.vg.redrawCanvas( this.ctx ) ;
 			this.emit( 'redraw' ) ;
 		} catch ( error ) {
-			console.warn( "Error:" , error ) ;
+			console.error( "Error:" , error ) ;
 			this.destroy() ;
 			return ;
 		}
-		console.warn( "###! redrawn()" ) ;
+		//*/
+		//console.warn( "###! redrawn()" ) ;
 	} ) ;
 }
 
@@ -4346,7 +4350,7 @@ DynamicManager.prototype.emitPendingEvents = function() {
 
 
 DynamicManager.prototype.onTick = function() {
-	console.warn( "###! onTick()" ) ;
+	//console.warn( "###! onTick()" ) ;
 	this.tick ++ ;
 
 	let outdated = false ;
@@ -5855,13 +5859,13 @@ VGEntity.prototype.renderSvgDom = async function( options = {} , master = this )
 VGEntity.prototype.renderCanvas = async function( canvasCtx , options = {} , isRedraw = false , master = this ) {
 	if ( this.root === this ) {
 		if ( this.renderCanvasPromise ) {
-			console.warn( "=== root renderCanvas() ALREADY RUNNING" , isRedraw ) ;
+			//console.warn( "=== root renderCanvas() ALREADY RUNNING" , isRedraw ) ;
 			await this.renderCanvasPromise ;
 		}
 
-		console.warn( ">>> root renderCanvas()" , isRedraw ? 'redraw' : 'draw' , this.getEntityTree() ) ;
+		//console.warn( ">>> root renderCanvas()" , isRedraw ? 'redraw' : 'draw' , this.getEntityTree() ) ;
 		if ( isRedraw && this.needFullDraw ) {
-			console.warn( "+++ force a full draw" ) ;
+			//console.warn( "+++ force a full draw" ) ;
 			isRedraw = false ;
 		}
 	}
@@ -5945,7 +5949,7 @@ VGEntity.prototype.renderCanvas = async function( canvasCtx , options = {} , isR
 		}
 	}
 
-	if ( this.root === this ) { console.warn( "<<< root renderCanvas()" , isRedraw ? 'redraw' : 'draw' ) ; }
+	//if ( this.root === this ) { console.warn( "<<< root renderCanvas()" , isRedraw ? 'redraw' : 'draw' ) ; }
 	this.needFullDraw = false ;
 
 	this.renderCanvasPromise = null ;
@@ -6091,7 +6095,7 @@ VGEntity.prototype.preloadFonts = async function() {
 VGEntity.prototype.getEntityTree = function( depth = 0 ) {
 	var str = '  '.repeat( depth ) ;
 	str += this.__prototypeUID__.slice( 8 ) + ' ' + this._id ;
-	//str += 
+	//str +=
 	str += '\n' ;
 
 	if ( this.isPseudoContainer ) {
@@ -6483,7 +6487,7 @@ StructuredTextRenderer.prototype.type = 'flatStructure' ;
 
 // Render the full document, called last with all content rendered
 StructuredTextRenderer.prototype.document = function( meta , renderedChildren ) {
-	console.warn( "document:" , renderedChildren ) ;
+	//console.warn( "document:" , renderedChildren ) ;
 	return renderedChildren ;
 } ;
 
@@ -6494,7 +6498,7 @@ StructuredTextRenderer.prototype.document = function( meta , renderedChildren ) 
 
 
 StructuredTextRenderer.prototype.paragraph = function( data , renderedChildren ) {
-	console.warn( "paragraph:" , renderedChildren ) ;
+	//console.warn( "paragraph:" , renderedChildren ) ;
 	renderedChildren.push( { text: "\n\n" } ) ;
 	return renderedChildren ;
 } ;
@@ -7593,7 +7597,7 @@ VGFlowingText.prototype.export = function( data = {} ) {
 
 
 VGFlowingText.prototype.shouldComputeAgain = function() {
-	console.error( "shouldComputeAgain" ) ;
+	//console.error( "shouldComputeAgain" ) ;
 	this.areLinesComputed = false ;
 	this.arePseudoEntitiesReady = false ;
 } ;
@@ -7619,7 +7623,7 @@ VGFlowingText.prototype.setMarkupText = function( markupText ) {
 	var structuredTextRenderer = new StructuredTextRenderer() ;
 	var structuredDocument = bookSource.parse( markupText ) ;
 	var parsed = structuredDocument.render( structuredTextRenderer ) ;
-	console.warn( "PARSED:" , parsed ) ;
+	//console.warn( "PARSED:" , parsed ) ;
 
 	return this.setStructuredText( parsed ) ;
 } ;
@@ -7671,7 +7675,7 @@ VGFlowingText.prototype.computeLines = async function() {
 	this.structuredTextLines = await this.breakLines( this.width ) ;
 	this.structuredTextLines.forEach( line => line.fuseEqualAttr() ) ;
 	this.computePartsPosition() ;
-	console.error( "Input -> Lines" , this.structuredText , this.structuredTextLines ) ;
+	//console.error( "Input -> Lines" , this.structuredText , this.structuredTextLines ) ;
 	this.areLinesComputed = true ;
 } ;
 
@@ -41066,708 +41070,8 @@ arguments[4][9][0].apply(exports,arguments)
 },{"./seventh.js":98,"dup":9}],94:[function(require,module,exports){
 arguments[4][10][0].apply(exports,arguments)
 },{"_process":117,"dup":10,"setimmediate":90,"timers":118}],95:[function(require,module,exports){
-/*
-	Seventh
-
-	Copyright (c) 2017 - 2020 Cédric Ronvel
-
-	The MIT License (MIT)
-
-	Permission is hereby granted, free of charge, to any person obtaining a copy
-	of this software and associated documentation files (the "Software"), to deal
-	in the Software without restriction, including without limitation the rights
-	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-	copies of the Software, and to permit persons to whom the Software is
-	furnished to do so, subject to the following conditions:
-
-	The above copyright notice and this permission notice shall be included in all
-	copies or substantial portions of the Software.
-
-	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-	SOFTWARE.
-*/
-
-"use strict" ;
-
-
-
-const Promise = require( './seventh.js' ) ;
-const noop = () => undefined ;
-
-
-
-Promise.promisifyAll = ( nodeAsyncFn , thisBinding ) => {
-	// Little optimization here to have a promisified function as fast as possible
-	if ( thisBinding ) {
-		return ( ... args ) => {
-			return new Promise( ( resolve , reject ) => {
-				nodeAsyncFn.call( thisBinding , ... args , ( error , ... cbArgs ) => {
-					if ( error ) {
-						if ( cbArgs.length && error instanceof Error ) { error.args = cbArgs ; }
-						reject( error ) ;
-					}
-					else {
-						resolve( cbArgs ) ;
-					}
-				} ) ;
-			} ) ;
-		} ;
-	}
-
-	return function( ... args ) {
-		return new Promise( ( resolve , reject ) => {
-			nodeAsyncFn.call( this , ... args , ( error , ... cbArgs ) => {
-				if ( error ) {
-					if ( cbArgs.length && error instanceof Error ) { error.args = cbArgs ; }
-					reject( error ) ;
-				}
-				else {
-					resolve( cbArgs ) ;
-				}
-			} ) ;
-		} ) ;
-	} ;
-
-} ;
-
-
-
-// Same than .promisifyAll() but only return the callback args #1 instead of an array of args from #1 to #n
-Promise.promisify = ( nodeAsyncFn , thisBinding ) => {
-	// Little optimization here to have a promisified function as fast as possible
-	if ( thisBinding ) {
-		return ( ... args ) => {
-			return new Promise( ( resolve , reject ) => {
-				nodeAsyncFn.call( thisBinding , ... args , ( error , cbArg ) => {
-					if ( error ) {
-						if ( cbArg !== undefined && error instanceof Error ) { error.arg = cbArg ; }
-						reject( error ) ;
-					}
-					else {
-						resolve( cbArg ) ;
-					}
-				} ) ;
-			} ) ;
-		} ;
-	}
-
-	return function( ... args ) {
-		return new Promise( ( resolve , reject ) => {
-			nodeAsyncFn.call( this , ... args , ( error , cbArg ) => {
-				if ( error ) {
-					if ( cbArg !== undefined && error instanceof Error ) { error.arg = cbArg ; }
-					reject( error ) ;
-				}
-				else {
-					resolve( cbArg ) ;
-				}
-			} ) ;
-		} ) ;
-	} ;
-} ;
-
-
-
-/*
-	Intercept each decoratee resolve/reject.
-*/
-Promise.interceptor = ( asyncFn , interceptor , errorInterceptor , thisBinding ) => {
-	if ( typeof errorInterceptor !== 'function' ) {
-		thisBinding = errorInterceptor ;
-		errorInterceptor = noop ;
-	}
-
-	return function( ... args ) {
-		var localThis = thisBinding || this ,
-			maybePromise = asyncFn.call( localThis , ... args ) ;
-
-		Promise.resolve( maybePromise ).then(
-			value => interceptor.call( localThis , value ) ,
-			error => errorInterceptor.call( localThis , error )
-		) ;
-
-		return maybePromise ;
-	} ;
-} ;
-
-
-
-/*
-	Run only once, return always the same promise.
-*/
-Promise.once = ( asyncFn , thisBinding ) => {
-	var functionInstance = null ,	// instance when not called as an object's method but a regular function ('this' is undefined)
-		instanceMap = new WeakMap() ;
-
-	const getInstance = ( localThis ) => {
-		var instance = localThis ? instanceMap.get( localThis ) : functionInstance ;
-		if ( instance ) { return instance ; }
-
-		instance = {
-			triggered: false ,
-			result: undefined
-		} ;
-
-		if ( localThis ) { instanceMap.set( localThis , instance ) ; }
-		else { functionInstance = instance ; }
-
-		return instance ;
-	} ;
-
-	return function( ... args ) {
-		var localThis = thisBinding || this ,
-			instance = getInstance( localThis ) ;
-
-		if ( ! instance.triggered ) {
-			instance.triggered = true ;
-			instance.result = asyncFn.call( localThis , ... args ) ;
-		}
-
-		return instance.result ;
-	} ;
-} ;
-
-
-
-/*
-	The decoratee execution does not overlap, multiple calls are serialized.
-*/
-Promise.serialize = ( asyncFn , thisBinding ) => {
-	var functionInstance = null ,	// instance when not called as an object's method but a regular function ('this' is undefined)
-		instanceMap = new WeakMap() ;
-
-	const getInstance = ( localThis ) => {
-		var instance = localThis ? instanceMap.get( localThis ) : functionInstance ;
-		if ( instance ) { return instance ; }
-
-		instance = { lastPromise: Promise.resolve() } ;
-
-		if ( localThis ) { instanceMap.set( localThis , instance ) ; }
-		else { functionInstance = instance ; }
-
-		return instance ;
-	} ;
-
-	return function( ... args ) {
-		var localThis = thisBinding || this ,
-			instance = getInstance( localThis ) ,
-			promise = new Promise() ;
-
-		instance.lastPromise.finally( () => {
-			Promise.propagate( asyncFn.call( localThis , ... args ) , promise ) ;
-		} ) ;
-
-		instance.lastPromise = promise ;
-
-		return promise ;
-	} ;
-} ;
-
-
-
-/*
-	It does nothing if the decoratee is still in progress, but it returns the promise of the action in progress.
-*/
-Promise.debounce = ( asyncFn , thisBinding ) => {
-	var functionInstance = null ,	// instance when not called as an object's method but a regular function ('this' is undefined)
-		instanceMap = new WeakMap() ;
-
-	const getInstance = ( localThis ) => {
-		var instance = localThis ? instanceMap.get( localThis ) : functionInstance ;
-		if ( instance ) { return instance ; }
-
-		instance = { inProgress: null } ;
-
-		if ( localThis ) { instanceMap.set( localThis , instance ) ; }
-		else { functionInstance = instance ; }
-
-		return instance ;
-	} ;
-
-	return function( ... args ) {
-		var localThis = thisBinding || this ,
-			instance = getInstance( localThis ) ;
-
-		if ( instance.inProgress ) { return instance.inProgress ; }
-
-		let inProgress = instance.inProgress = asyncFn.call( localThis , ... args ) ;
-		Promise.finally( inProgress , () => instance.inProgress = null ) ;
-		return inProgress ;
-	} ;
-} ;
-
-
-
-/*
-	Like .debounce(), but subsequent call continue to return the last promise for some extra time after it resolved.
-*/
-Promise.debounceDelay = ( delay , asyncFn , thisBinding ) => {
-	var functionInstance = null ,	// instance when not called as an object's method but a regular function ('this' is undefined)
-		instanceMap = new WeakMap() ;
-
-	const getInstance = ( localThis ) => {
-		var instance = localThis ? instanceMap.get( localThis ) : functionInstance ;
-		if ( instance ) { return instance ; }
-
-		instance = { inProgress: null } ;
-
-		if ( localThis ) { instanceMap.set( localThis , instance ) ; }
-		else { functionInstance = instance ; }
-
-		return instance ;
-	} ;
-
-	return function( ... args ) {
-		var localThis = thisBinding || this ,
-			instance = getInstance( localThis ) ;
-
-		if ( instance.inProgress ) { return instance.inProgress ; }
-
-		let inProgress = instance.inProgress = asyncFn.call( localThis , ... args ) ;
-		Promise.finally( inProgress , () => setTimeout( () => instance.inProgress = null , delay ) ) ;
-		return inProgress ;
-	} ;
-} ;
-
-
-
-/*
-	debounceNextTick( [asyncFn|syncFn] , thisBinding ) => {
-
-	It does nothing until the next tick.
-	The decoratee is called only once with the arguments of the last decorator call.
-	The function argument can be sync or async.
-
-	The use case is can be some niche case of .update()/.refresh()/.redraw() functions.
-*/
-Promise.debounceNextTick = ( asyncFn , thisBinding ) => {
-	var inWrapper = null ,
-		outWrapper = null ,
-		waitFn = null ,
-		functionInstance = null ,	// instance when not called as an object's method but a regular function ('this' is undefined)
-		instanceMap = new WeakMap() ;
-
-	const getInstance = ( localThis ) => {
-		var instance = localThis ? instanceMap.get( localThis ) : functionInstance ;
-		if ( instance ) { return instance ; }
-
-		instance = {
-			inProgress: null ,
-			waitingNextTick: false ,
-			currentUpdateWith: null ,
-			currentUpdatePromise: null ,
-			nextUpdateWith: null ,
-			nextUpdatePromise: null
-		} ;
-
-		if ( localThis ) { instanceMap.set( localThis , instance ) ; }
-		else { functionInstance = instance ; }
-
-		return instance ;
-	} ;
-
-
-	const nextUpdate = function() {
-		var instance = getInstance( this ) ;
-		instance.inProgress = instance.currentUpdatePromise = null ;
-
-		if ( instance.nextUpdateWith ) {
-			let args = instance.nextUpdateWith ;
-			instance.nextUpdateWith = null ;
-			let sharedPromise = instance.nextUpdatePromise ;
-			instance.nextUpdatePromise = null ;
-
-			instance.inProgress = inWrapper.call( this , args ) ;
-			// Forward the result to the pending promise
-			Promise.propagate( instance.inProgress , sharedPromise ) ;
-		}
-	} ;
-
-
-	inWrapper = function( args ) {
-		var instance = getInstance( this ) ;
-
-		instance.inProgress = new Promise() ;
-		instance.currentUpdateWith = args ;
-		instance.waitingNextTick = true ;
-
-		Promise.nextTick( () => {
-			instance.waitingNextTick = false ;
-			let maybePromise = asyncFn.call( this , ... instance.currentUpdateWith ) ;
-
-			if ( Promise.isThenable( maybePromise ) ) {
-				instance.currentUpdatePromise = maybePromise ;
-				Promise.finally( maybePromise , nextUpdate.bind( this ) ) ;
-				Promise.propagate( maybePromise , instance.inProgress ) ;
-			}
-			else {
-				// the function was synchronous
-				instance.currentUpdatePromise = null ;
-				instance.inProgress.resolve( maybePromise ) ;
-				nextUpdate.call( this ) ;
-			}
-		} ) ;
-
-		return instance.inProgress ;
-	} ;
-
-	return function( ... args ) {
-		var localThis = thisBinding || this ,
-			instance = getInstance( localThis ) ;
-
-		if ( instance.waitingNextTick ) {
-			instance.currentUpdateWith = args ;
-			return instance.inProgress ;
-		}
-
-		if ( instance.currentUpdatePromise ) {
-			if ( ! instance.nextUpdatePromise ) { instance.nextUpdatePromise = new Promise() ; }
-			instance.nextUpdateWith = args ;
-			return instance.nextUpdatePromise ;
-		}
-
-		return inWrapper.call( localThis , args ) ;
-	} ;
-} ;
-
-
-
-/*
-	debounceUpdate( [options] , asyncFn , thisBinding ) => {
-
-	It does nothing if the decoratee is still in progress.
-	Instead, the decoratee is called again after finishing once and only once, if it was tried one or more time during its progress.
-	In case of multiple calls, the arguments of the last call will be used.
-
-	The use case is .update()/.refresh()/.redraw() functions.
-
-	If 'options' is given, it is an object, with:
-		* delay: `number` a delay before calling again the decoratee
-		* delayFn: async `function` called before calling again the decoratee
-		* waitFn: async `function` called before calling the decoratee (even the first try), use-case: Window.requestAnimationFrame()
-*/
-Promise.debounceUpdate = ( options , asyncFn , thisBinding ) => {
-	var inWrapper = null ,
-		outWrapper = null ,
-		delay = 0 ,
-		delayFn = null ,
-		waitFn = null ,
-		functionInstance = null ,	// instance when not called as an object's method but a regular function ('this' is undefined)
-		instanceMap = new WeakMap() ;
-
-	// Manage arguments
-	if ( typeof options === 'function' ) {
-		thisBinding = asyncFn ;
-		asyncFn = options ;
-	}
-	else {
-		if ( typeof options.delay === 'number' ) { delay = options.delay ; }
-		if ( typeof options.delayFn === 'function' ) { delayFn = options.delayFn ; }
-
-		if ( options.waitNextTick ) { waitFn = Promise.resolveNextTick ; }
-		else if ( typeof options.waitFn === 'function' ) { waitFn = options.waitFn ; }
-	}
-
-
-	const getInstance = ( localThis ) => {
-		var instance = localThis ? instanceMap.get( localThis ) : functionInstance ;
-		if ( instance ) { return instance ; }
-
-		instance = {
-			inProgress: null ,
-			waitInProgress: null ,
-			currentUpdateWith: null ,
-			currentUpdatePromise: null ,
-			nextUpdateWith: null ,
-			nextUpdatePromise: null
-		} ;
-
-		if ( localThis ) { instanceMap.set( localThis , instance ) ; }
-		else { functionInstance = instance ; }
-
-		return instance ;
-	} ;
-
-
-	const nextUpdate = function() {
-		var instance = getInstance( this ) ;
-		instance.inProgress = instance.currentUpdatePromise = null ;
-
-		if ( instance.nextUpdateWith ) {
-			let args = instance.nextUpdateWith ;
-			instance.nextUpdateWith = null ;
-			let sharedPromise = instance.nextUpdatePromise ;
-			instance.nextUpdatePromise = null ;
-
-			instance.inProgress = inWrapper.call( this , args ) ;
-			// Forward the result to the pending promise
-			Promise.propagate( instance.inProgress , sharedPromise ) ;
-		}
-	} ;
-
-
-	// Build outWrapper
-	if ( delayFn ) {
-		outWrapper = function() {
-			delayFn().then( nextUpdate.bind( this ) ) ;
-		} ;
-	}
-	else if ( delay ) {
-		outWrapper = function() {
-			setTimeout( nextUpdate.bind( this ) , delay ) ;
-		} ;
-	}
-	else {
-		outWrapper = nextUpdate ;
-	}
-
-
-	if ( waitFn ) {
-		inWrapper = function( args ) {
-			var instance = getInstance( this ) ;
-
-			instance.inProgress = new Promise() ;
-			instance.currentUpdateWith = args ;
-			instance.waitInProgress = waitFn() ;
-
-			Promise.finally( instance.waitInProgress , () => {
-				instance.waitInProgress = null ;
-				instance.currentUpdatePromise = asyncFn.call( this , ... instance.currentUpdateWith ) ;
-				Promise.finally( instance.currentUpdatePromise , outWrapper.bind( this ) ) ;
-				Promise.propagate( instance.currentUpdatePromise , instance.inProgress ) ;
-			} ) ;
-
-			return instance.inProgress ;
-		} ;
-
-		return function( ... args ) {
-			var localThis = thisBinding || this ,
-				instance = getInstance( localThis ) ;
-
-			if ( instance.waitInProgress ) {
-				instance.currentUpdateWith = args ;
-				return instance.inProgress ;
-			}
-
-			if ( instance.currentUpdatePromise ) {
-				if ( ! instance.nextUpdatePromise ) { instance.nextUpdatePromise = new Promise() ; }
-				instance.nextUpdateWith = args ;
-				return instance.nextUpdatePromise ;
-			}
-
-			return inWrapper.call( localThis , args ) ;
-		} ;
-	}
-
-
-	// Variant without a waitFn
-
-	inWrapper = function( args ) {
-		var instance = getInstance( this ) ;
-
-		instance.inProgress = asyncFn.call( this , ... args ) ;
-		Promise.finally( instance.inProgress , outWrapper.bind( this ) ) ;
-		return instance.inProgress ;
-	} ;
-
-	return function( ... args ) {
-		var localThis = thisBinding || this ,
-			instance = getInstance( localThis ) ;
-
-		if ( instance.inProgress ) {
-			if ( ! instance.nextUpdatePromise ) { instance.nextUpdatePromise = new Promise() ; }
-			instance.nextUpdateWith = args ;
-			return instance.nextUpdatePromise ;
-		}
-
-		return inWrapper.call( localThis , args ) ;
-	} ;
-} ;
-
-
-
-// Used to ensure that the sync is done immediately if not busy
-Promise.NO_DELAY = {} ;
-
-// Used to ensure that the sync is done immediately if not busy, but for the first of a batch
-Promise.BATCH_NO_DELAY = {} ;
-
-/*
-	Debounce for synchronization algorithm.
-	Get two functions, one for getting from upstream, one for a full sync with upstream (getting AND updating).
-	No operation overlap for a given resourceId.
-	Depending on the configuration, it is either like .debounce() or like .debounceUpdate().
-
-	*Params:
-		fn: the function
-		thisBinding: the this binding, if any
-		delay: the minimum delay between to call
-			for get: nothing is done is the delay is not met, simply return the last promise
-			for update/fullSync, it waits for that delay before synchronizing again
-		onDebounce: *ONLY* for GET ATM, a callback called when debounced
-*/
-Promise.debounceSync = ( getParams , fullSyncParams ) => {
-	var perResourceData = new Map() ;
-
-	const getResourceData = resourceId => {
-		var resourceData = perResourceData.get( resourceId ) ;
-
-		if ( ! resourceData ) {
-			resourceData = {
-				inProgress: null ,
-				inProgressIsFull: null ,
-				last: null ,				// Get or full sync promise
-				lastTime: null ,			// Get or full sync time
-				lastFullSync: null ,		// last full sync promise
-				lastFullSyncTime: null ,	// last full sync time
-				nextFullSyncPromise: null ,	// the promise for the next fullSync iteration
-				nextFullSyncWith: null , 	// the 'this' and arguments for the next fullSync iteration
-				noDelayBatches: new Set()		// only the first of the batch has no delay
-			} ;
-
-			perResourceData.set( resourceId , resourceData ) ;
-		}
-
-		return resourceData ;
-	} ;
-
-
-	const outWrapper = ( resourceData , level ) => {
-		// level 2: fullSync, 1: get, 0: nothing but a delay
-		var delta , args , sharedPromise , now = new Date() ;
-		//lastTime = resourceData.lastTime , lastFullSyncTime = resourceData.lastFullSyncTime ;
-
-		resourceData.inProgress = null ;
-
-		if ( level >= 2 ) { resourceData.lastFullSyncTime = resourceData.lastTime = now ; }
-		else if ( level >= 1 ) { resourceData.lastTime = now ; }
-
-		if ( resourceData.nextFullSyncWith ) {
-			if ( fullSyncParams.delay && resourceData.lastFullSyncTime && ( delta = now - resourceData.lastFullSyncTime - fullSyncParams.delay ) < 0 ) {
-				resourceData.inProgress = Promise.resolveTimeout( - delta + 1 ) ;	// Strangely, sometime it is trigerred 1ms too soon
-				resourceData.inProgress.finally( () => outWrapper( resourceData , 0 ) ) ;
-				return resourceData.nextFullSyncPromise ;
-			}
-
-			args = resourceData.nextFullSyncWith ;
-			resourceData.nextFullSyncWith = null ;
-			sharedPromise = resourceData.nextFullSyncPromise ;
-			resourceData.nextFullSyncPromise = null ;
-
-			// Call the fullSyncParams.fn again
-			resourceData.lastFullSync = resourceData.last = resourceData.inProgress = fullSyncParams.fn.call( ... args ) ;
-
-			// Forward the result to the pending promise
-			Promise.propagate( resourceData.inProgress , sharedPromise ) ;
-
-			// BTW, trigger again the outWrapper
-			Promise.finally( resourceData.inProgress , () => outWrapper( resourceData , 2 ) ) ;
-
-			return resourceData.inProgress ;
-		}
-	} ;
-
-	const getInWrapper = function( resourceId , ... args ) {
-		var noDelay = false ,
-			localThis = getParams.thisBinding || this ,
-			resourceData = getResourceData( resourceId ) ;
-
-		if ( args[ 0 ] === Promise.NO_DELAY ) {
-			noDelay = true ;
-			args.shift() ;
-		}
-		else if ( args[ 0 ] === Promise.BATCH_NO_DELAY ) {
-			args.shift() ;
-			let batchId = args.shift() ;
-			if ( ! resourceData.noDelayBatches.has( batchId ) ) {
-				resourceData.noDelayBatches.add( batchId ) ;
-				noDelay = true ;
-			}
-		}
-
-		if ( resourceData.inProgress ) { return resourceData.inProgress ; }
-
-		if ( ! noDelay && getParams.delay && resourceData.lastTime && new Date() - resourceData.lastTime < getParams.delay ) {
-			if ( typeof getParams.onDebounce === 'function' ) { getParams.onDebounce( resourceId , ... args ) ; }
-			return resourceData.last ;
-		}
-
-		resourceData.last = resourceData.inProgress = getParams.fn.call( localThis , resourceId , ... args ) ;
-		resourceData.inProgressIsFull = false ;
-		Promise.finally( resourceData.inProgress , () => outWrapper( resourceData , 1 ) ) ;
-		return resourceData.inProgress ;
-	} ;
-
-	const fullSyncInWrapper = function( resourceId , ... args ) {
-		var delta ,
-			noDelay = false ,
-			localThis = fullSyncParams.thisBinding || this ,
-			resourceData = getResourceData( resourceId ) ;
-
-		if ( args[ 0 ] === Promise.NO_DELAY ) {
-			noDelay = true ;
-			args.shift() ;
-		}
-		else if ( args[ 0 ] === Promise.BATCH_NO_DELAY ) {
-			args.shift() ;
-			let batchId = args.shift() ;
-			if ( ! resourceData.noDelayBatches.has( batchId ) ) {
-				resourceData.noDelayBatches.add( batchId ) ;
-				noDelay = true ;
-			}
-		}
-
-		if ( ! resourceData.inProgress && ! noDelay && fullSyncParams.delay && resourceData.lastFullSyncTime && ( delta = new Date() - resourceData.lastFullSyncTime - fullSyncParams.delay ) < 0 ) {
-			resourceData.inProgress = Promise.resolveTimeout( - delta + 1 ) ;	// Strangely, sometime it is trigerred 1ms too soon
-			Promise.finally( resourceData.inProgress , () => outWrapper( resourceData , 0 ) ) ;
-		}
-
-		if ( resourceData.inProgress ) {
-			// No difference between in-progress is 'get' or 'fullSync'
-			if ( ! resourceData.nextFullSyncPromise ) { resourceData.nextFullSyncPromise = new Promise() ; }
-			resourceData.nextFullSyncWith = [ localThis , resourceId , ... args ] ;
-			return resourceData.nextFullSyncPromise ;
-		}
-
-		resourceData.lastFullSync = resourceData.last = resourceData.inProgress = fullSyncParams.fn.call( localThis , resourceId , ... args ) ;
-		Promise.finally( resourceData.inProgress , () => outWrapper( resourceData , 2 ) ) ;
-		return resourceData.inProgress ;
-	} ;
-
-	return [ getInWrapper , fullSyncInWrapper ] ;
-} ;
-
-
-
-// The call reject with a timeout error if it takes too much time
-Promise.timeout = ( timeout , asyncFn , thisBinding ) => {
-	return function( ... args ) {
-		var promise = new Promise() ;
-		Promise.propagate( asyncFn.call( thisBinding || this , ... args ) , promise ) ;
-		setTimeout( () => promise.reject( new Error( 'Timeout' ) ) , timeout ) ;
-		return promise ;
-	} ;
-} ;
-
-
-
-// Like .timeout(), but here the timeout value is not passed at creation, but as the first arg of each call
-Promise.variableTimeout = ( asyncFn , thisBinding ) => {
-	return function( timeout , ... args ) {
-		var promise = new Promise() ;
-		Promise.propagate( asyncFn.call( thisBinding || this , ... args ) , promise ) ;
-		setTimeout( () => promise.reject( new Error( 'Timeout' ) ) , timeout ) ;
-		return promise ;
-	} ;
-} ;
-
-
-},{"./seventh.js":98}],96:[function(require,module,exports){
+arguments[4][11][0].apply(exports,arguments)
+},{"./seventh.js":98,"dup":11}],96:[function(require,module,exports){
 arguments[4][12][0].apply(exports,arguments)
 },{"./seventh.js":98,"_process":117,"dup":12}],97:[function(require,module,exports){
 arguments[4][13][0].apply(exports,arguments)
@@ -42420,7 +41724,7 @@ unicode.isEmojiModifierCodePoint = code =>
 },{"./json-data/unicode-emoji-width-ranges.json":107}],110:[function(require,module,exports){
 module.exports={
   "name": "svg-kit",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "A SVG toolkit, with its own Vector Graphics structure, multiple renderers (svg text, DOM svg, canvas), and featuring Flowing Text.",
   "main": "lib/svg-kit.js",
   "directories": {
