@@ -476,12 +476,12 @@ class FlowingText extends VG {
 	_getTypeName() { return "FlowingText" ; }
 	
 	set width( w ) {
-		this.__width = w ;
+		super.width = w ;
 		if ( this._autoScale ) { this._adaptVgSizeNow() ; }
 	}
 
 	set height( h ) {
-		this.__height = h ;
+		super.height = h ;
 		if ( this._autoScale ) { this._adaptVgSizeNow() ; }
 	}
 
@@ -567,37 +567,36 @@ class FlowingText extends VG {
 	async _adaptVgSizeNow() {
 		if ( ! this._vg ) { return ; }
 
+		var viewBox ;
+
 		if ( this._autoScale ) {
 			var bbox = await this._vgFlowingText.getContentBoundingBox() ;
 
 			// The VG can be gone by the time we got the bounding box
 			if ( ! this._vg ) { return ; }
 
-			let viewBox = {
+			viewBox = {
 				x: 0 ,
 				y: 0 ,
 				width: Math.max( 0 , this.widthInPixels - this.paddingLeftInPixels - this.paddingRightInPixels ) ,
 				height: Math.max( 0 , Math.min( bbox.height , this.heightInPixels - this.paddingTopInPixels - this.paddingBottomInPixels ) )
 			} ;
-			console.error( "_adaptVgSizeNow():" , viewBox ,
-				this.widthInPixels , this.paddingLeftInPixels , this.paddingRightInPixels ,
-				this.heightInPixels , this.paddingTopInPixels , this.paddingBottomInPixels
-			) ;
-			this._vg.set( { viewBox } ) ;
-			this._vgFlowingText.set( viewBox ) ;
 		}
 		else {
-			let viewBox = {
+			viewBox = {
 				x: 0 ,
 				y: 0 ,
 				width: Math.max( 0 , this.widthInPixels - this.paddingLeftInPixels - this.paddingRightInPixels ) ,
 				height: Math.max( 0 , this.heightInPixels - this.paddingTopInPixels - this.paddingBottomInPixels )
 			} ;
-			console.warn( "_adaptVgSizeNow():" , viewBox ,
+		}
+
+		if ( ! this._vg.viewBox.isEqualToObject( viewBox ) ) {
+			console.warn( "_adaptVgSizeNow() " , this._autoScale ? '[autoscale] :' : ':' , viewBox ,
 				this.widthInPixels , this.paddingLeftInPixels , this.paddingRightInPixels ,
 				this.heightInPixels , this.paddingTopInPixels , this.paddingBottomInPixels
 			) ;
-			this._vg.set( { viewBox } ) ;
+			this._vg.viewBox.set( viewBox ) ;
 			this._vgFlowingText.set( viewBox ) ;
 		}
 	}
@@ -679,8 +678,6 @@ class VG extends BABYLON.GUI.Control {
 	_vgRendered = false ;
 	_vgWidth = null ;
 	_vgHeight = null ;
-	__width = null ;
-	__height = null ;
 
 	_offscreenCanvas = null ;
 	_context = null ;
@@ -711,12 +708,6 @@ class VG extends BABYLON.GUI.Control {
 	}
 
 	_getTypeName() { return "VG" ; }
-
-	get width() { return this.__width ; }
-	set width( w ) { this.__width = w ; }
-
-	get height() { return this.__height ; }
-	set height( h ) { this.__height = h ; }
 
 	get stretch() { return this._stretch ; }
 	set stretch( v ) {
@@ -756,10 +747,15 @@ class VG extends BABYLON.GUI.Control {
 			this._offscreenCanvas = new OffscreenCanvas( this._vgWidth , this._vgHeight ) ;
 			this._context = this._offscreenCanvas.getContext( '2d' ) ;
 		}
-		else if ( this._vgWidth !== this._offscreenCanvas.width || this._vgHeight !== this._offscreenCanvas.height ) {
-			console.warn( "resize OffscreenCanvas:" , this._vgWidth , this._vgHeight ) ;
-			this._offscreenCanvas.width = this._vgWidth ;
-			this._offscreenCanvas.height = this._vgHeight ;
+		else {
+			if ( this._vgWidth !== this._offscreenCanvas.width || this._vgHeight !== this._offscreenCanvas.height ) {
+				console.warn( "resize OffscreenCanvas:" , this._vgWidth , this._vgHeight ) ;
+				this._offscreenCanvas.width = this._vgWidth ;
+				this._offscreenCanvas.height = this._vgHeight ;
+			}
+
+			// ._renderCanvas() should be called on a cleared context
+			this._context.reset() ;
 		}
 		
 		await this._renderCanvas() ;
@@ -844,9 +840,9 @@ class VG extends BABYLON.GUI.Control {
 		// From Babylon GUI image.ts
 		if ( ! this._vgRendered ) { return ; }
 
-		// Setting width/height insterad of __width/__height causes FlowingText setter to be called, calling again this._adaptVgSizeNow()
-		this.__width = this._vgWidth + "px" ;
-		this.__height = this._vgHeight + "px" ;
+		// Setting this.width/this.height insterad of super.width/super.height causes FlowingText setter to be called, calling again this._adaptVgSizeNow()
+		super.width = this._vgWidth + "px" ;
+		super.height = this._vgHeight + "px" ;
 	}
 
 	_processMeasures( parentMeasure , context ) {
@@ -4005,6 +4001,21 @@ BoundingBox.prototype.merge = function( bbox ) {
 
 BoundingBox.prototype.isEqualTo = function( bbox ) {
 	return bbox.xmin === this.xmin && bbox.xmax === this.xmax && bbox.ymin === this.ymin && bbox.ymax === this.ymax ;
+} ;
+
+
+
+// Is equal to a foreign object, support both the xmin/xmax/ymin/ymax and the x/y/width/height format
+BoundingBox.prototype.isEqualToObject = function( object ) {
+	if ( object.width !== undefined ) {
+		return object.x === this.xmin && object.width === this.width && object.y === this.ymin && object.height === this.height ;
+	}
+
+	if ( object.xmin !== undefined ) {
+		return object.xmin === this.xmin && object.xmax === this.xmax && object.ymin === this.ymin && object.ymax === this.ymax ;
+	}
+
+	return false ;
 } ;
 
 
