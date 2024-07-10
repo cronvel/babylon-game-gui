@@ -40,7 +40,8 @@ async function createScene() {
 
 	var flowingText = new BABYLON.GUI.FlowingText( 'flowingText' ) ;
 	//console.log( "BF flowingText.markupText =" ) ;
-	flowingText.markupText = "[Hello]<green> *my* **friend**, ***stay*** [awhile]<bg:blue> and _listen_... Don't [shake]<fx:shake> !" ;
+	//flowingText.markupText = "[Hello]<green> *my* **friend**, ***stay*** [awhile]<bg:blue> and _listen_... Don't [shake]<fx:shake> !" ;
+	flowingText.markupText = "Some ?[text with infotip][Secret message]! Don't [shake]<fx:shake> !" ;
 	//flowingText.markupText = "Don't [shake]<fx:shake> !" ;
 	//console.log( "BF flowingText.width =" ) ;
 	flowingText.width = "300px" ;
@@ -60,8 +61,8 @@ async function createScene() {
 	} ;
 	//*/
 	//flowingText.fx = { slowTyping: true } ;
-	//flowingText.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP ;
 	//console.log( "BF flowingText.verticalAlignment =" ) ;
+	//flowingText.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP ; flowingText.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT ;
 	flowingText.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
 	//console.log( "BF flowingText.autoScale =" ) ;
 	flowingText.autoScale = true ;
