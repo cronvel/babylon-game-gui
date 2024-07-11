@@ -69,6 +69,14 @@ async function createScene() {
 	//console.log( "BF advancedTexture.addControl" ) ;
 	advancedTexture.addControl( flowingText ) ;
 
+	flowingText.onInfotipObservable.add( data => {
+		console.warn( "Infotip:" , data ) ;
+	} ) ;
+
+	flowingText.onInfotipClosedObservable.add( data => {
+		console.warn( "Infotip Closed:" , data ) ;
+	} ) ;
+
 	return scene ;
 }
 
