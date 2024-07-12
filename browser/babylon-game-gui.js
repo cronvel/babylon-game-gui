@@ -67,9 +67,9 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 	}
 
 	dispose() {
-		super.dispose() ;
 		if ( this._decoration ) { this._decoration.dispose() ; }
 		if ( this._content ) { this._content.dispose() ; }
+		super.dispose() ;
 	}
 
 	_getTypeName() { return "DecoratedContainer" ; }
@@ -391,7 +391,9 @@ Dialog.prototype._createContent = Promise.debounceNextTick( Dialog.prototype._cr
 //Dialog.prototype._createContent = Promise.debounceUpdate( { waitFn: () => Promise.resolveTimeout(1000) } , Dialog.prototype._createContentNow ) ;
 
 DecoratedContainer.createCommonContentGetterSetter( Dialog.prototype , {
+	text: 'text' ,
 	markupText: 'markupText' ,
+	structuredText: 'structuredText' ,
 } ) ;
 
 module.exports = Dialog ;
@@ -470,6 +472,11 @@ class FlowingText extends VG {
 	}
 
 	dispose() {
+		if ( this._dynamicManager ) {
+			this._dynamicManager.destroy() ;
+			this._dynamicManager = null ;
+		}
+
 		super.dispose() ;
 	}
 
@@ -4428,12 +4435,75 @@ DynamicManager.prototype.onPointerMove = function( canvasCoords , convertBackCoo
 		}
 
 		if ( dynamic.toEmit ) {
-			//this.toEmit.push( ... dynamic.toEmit ) ;
 			for ( let event of dynamic.toEmit ) {
 				this.convertEventCoords( event , convertBackCoords ) ;
 				this.toEmit.push( event ) ;
 			}
 				
+			dynamic.toEmit.length = 0 ;
+		}
+	}
+
+	if ( outdated ) { this.redraw() ; }
+	if ( this.toEmit.length ) { this.emitPendingEvents() ; }
+} ;
+
+
+
+DynamicManager.prototype.onPointerPress = function( canvasCoords , convertBackCoords ) {
+	let outdated = false ;
+	let contextCoords = canvas.canvasToContextCoords( this.ctx , canvasCoords ) ;
+
+	for ( let dynamic of this.vg.dynamicAreaIterator() ) {
+		if ( dynamic.boundingBox.isInside( contextCoords ) ) {
+			dynamic.setStatus( 'press' ) ;
+		}
+		else {
+			dynamic.setStatus( 'base' ) ;
+		}
+
+		if ( dynamic.outdated ) {
+			outdated = true ;
+		}
+
+		if ( dynamic.toEmit ) {
+			for ( let event of dynamic.toEmit ) {
+				this.convertEventCoords( event , convertBackCoords ) ;
+				this.toEmit.push( event ) ;
+			}
+
+			dynamic.toEmit.length = 0 ;
+		}
+	}
+
+	if ( outdated ) { this.redraw() ; }
+	if ( this.toEmit.length ) { this.emitPendingEvents() ; }
+} ;
+
+
+
+DynamicManager.prototype.onPointerRelease = function( canvasCoords , convertBackCoords ) {
+	let outdated = false ;
+	let contextCoords = canvas.canvasToContextCoords( this.ctx , canvasCoords ) ;
+
+	for ( let dynamic of this.vg.dynamicAreaIterator() ) {
+		if ( dynamic.boundingBox.isInside( contextCoords ) ) {
+			dynamic.setStatus( 'release' ) ;
+		}
+		else {
+			dynamic.setStatus( 'base' ) ;
+		}
+
+		if ( dynamic.outdated ) {
+			outdated = true ;
+		}
+
+		if ( dynamic.toEmit ) {
+			for ( let event of dynamic.toEmit ) {
+				this.convertEventCoords( event , convertBackCoords ) ;
+				this.toEmit.push( event ) ;
+			}
+
 			dynamic.toEmit.length = 0 ;
 		}
 	}
@@ -4461,62 +4531,6 @@ DynamicManager.prototype.convertEventCoords = function( event , convertBackCoord
 
 
 
-DynamicManager.prototype.onPointerPress = function( canvasCoords ) {
-	let outdated = false ;
-	let contextCoords = canvas.canvasToContextCoords( this.ctx , canvasCoords ) ;
-
-	for ( let dynamic of this.vg.dynamicAreaIterator() ) {
-		if ( dynamic.boundingBox.isInside( contextCoords ) ) {
-			dynamic.setStatus( 'press' ) ;
-		}
-		else {
-			dynamic.setStatus( 'base' ) ;
-		}
-
-		if ( dynamic.outdated ) {
-			outdated = true ;
-		}
-
-		if ( dynamic.toEmit ) {
-			this.toEmit.push( ... dynamic.toEmit ) ;
-			dynamic.toEmit.length = 0 ;
-		}
-	}
-
-	if ( outdated ) { this.redraw() ; }
-	if ( this.toEmit.length ) { this.emitPendingEvents() ; }
-} ;
-
-
-
-DynamicManager.prototype.onPointerRelease = function( canvasCoords ) {
-	let outdated = false ;
-	let contextCoords = canvas.canvasToContextCoords( this.ctx , canvasCoords ) ;
-
-	for ( let dynamic of this.vg.dynamicAreaIterator() ) {
-		if ( dynamic.boundingBox.isInside( contextCoords ) ) {
-			dynamic.setStatus( 'release' ) ;
-		}
-		else {
-			dynamic.setStatus( 'base' ) ;
-		}
-
-		if ( dynamic.outdated ) {
-			outdated = true ;
-		}
-
-		if ( dynamic.toEmit ) {
-			this.toEmit.push( ... dynamic.toEmit ) ;
-			dynamic.toEmit.length = 0 ;
-		}
-	}
-
-	if ( outdated ) { this.redraw() ; }
-	if ( this.toEmit.length ) { this.emitPendingEvents() ; }
-} ;
-
-
-
 DynamicManager.prototype.manageBrowserCanvas = function() {
 	if ( this.running ) { throw new Error( "Manager is already running!" ) ; }
 	this.running = true ;
@@ -4531,9 +4545,9 @@ DynamicManager.prototype.manageBrowserCanvas = function() {
 	const convertCoords = event => canvas.screenToCanvasCoords( this.ctx.canvas , { x: event.clientX , y: event.clientY } ) ;
 	const convertBackCoords = coords => canvas.canvasToScreenCoords( this.ctx.canvas , coords ) ;
 
-	this.addCanvasEventListener( 'mousemove' , event => this.onPointerMove( convertCoords( event ) , convertBackBbox ) ) ;
-	this.addCanvasEventListener( 'mousedown' , event => this.onPointerPress( convertCoords( event ) , convertBackBbox ) ) ;
-	this.addCanvasEventListener( 'mouseup' , event => this.onPointerRelease( convertCoords( event ) , convertBackBbox ) ) ;
+	this.addCanvasEventListener( 'mousemove' , event => this.onPointerMove( convertCoords( event ) , convertBackCoords ) ) ;
+	this.addCanvasEventListener( 'mousedown' , event => this.onPointerPress( convertCoords( event ) , convertBackCoords ) ) ;
+	this.addCanvasEventListener( 'mouseup' , event => this.onPointerRelease( convertCoords( event ) , convertBackCoords ) ) ;
 } ;
 
 
@@ -4594,7 +4608,7 @@ DynamicManager.prototype.manageBabylonControl = function( control ) {
 	this.addBabylonControlEventListener( 'onPointerUpObservable' , coords => this.onPointerRelease( convertCoords( coords ) , convertBackCoords ) ) ;
 
 	// Special case, acts as if the pointer was moved to the negative region
-	this.addBabylonControlEventListener( 'onPointerOutObservable' , coords => this.onPointerMove( { x: - 1 , y: - 1 } ) ) ;
+	this.addBabylonControlEventListener( 'onPointerOutObservable' , coords => this.onPointerMove( { x: - 1 , y: - 1 } , convertBackCoords ) ) ;
 } ;
 
 

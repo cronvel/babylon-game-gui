@@ -97,25 +97,26 @@ function createDialog( markupText ) {
 	dialog.sliceBottom = 256 - sliceMargin ;
 	//*/
 
-    dialog.markupText = markupText ;
+	dialog.markupText = markupText ;
+	//dialog.text = markupText ;
 
-    /*
-    dialog.textWrapping = "wordWrap" ;
-    dialog.textAttr = {
-        fontSize: 30 ,
-        color: '#777' ,
-        outline: true ,
-        frameCornerRadius: '0.2em' ,
-        frameOutlineWidth: '0.1em'
-        //outlineColor: '#afa' ,
-        //lineOutline: true ,
-        //lineColor: '#559'
-    } ;
-    dialog.debugContainer = true ;
-    dialog.clip = false ;
-    dialog.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
-    dialog.autoScale = true ;
-    */
+	/*
+	dialog.textWrapping = "wordWrap" ;
+	dialog.textAttr = {
+		fontSize: 30 ,
+		color: '#777' ,
+		outline: true ,
+		frameCornerRadius: '0.2em' ,
+		frameOutlineWidth: '0.1em'
+		//outlineColor: '#afa' ,
+		//lineOutline: true ,
+		//lineColor: '#559'
+	} ;
+	dialog.debugContainer = true ;
+	dialog.clip = false ;
+	dialog.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
+	dialog.autoScale = true ;
+	*/
 	
 	advancedTexture.addControl( dialog ) ;
 }

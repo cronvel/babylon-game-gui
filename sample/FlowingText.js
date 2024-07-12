@@ -41,7 +41,9 @@ async function createScene() {
 	var flowingText = new BABYLON.GUI.FlowingText( 'flowingText' ) ;
 	//console.log( "BF flowingText.markupText =" ) ;
 	//flowingText.markupText = "[Hello]<green> *my* **friend**, ***stay*** [awhile]<bg:blue> and _listen_... Don't [shake]<fx:shake> !" ;
-	flowingText.markupText = "Some ?[text with infotip][Secret message]! Don't [shake]<fx:shake> !" ;
+	//flowingText.text = "Some regular text !" ;
+	//flowingText.markupText = "Some ?[text with infotip][Secret message]! Don't [shake]<fx:shake> !" ;
+	flowingText.markupText = "Some ?[text with infotip][Secret message... Secret message... Secret message... Secret message...]! Don't [shake]<fx:shake> !" ;
 	//flowingText.markupText = "Don't [shake]<fx:shake> !" ;
 	//console.log( "BF flowingText.width =" ) ;
 	flowingText.width = "300px" ;
@@ -71,12 +73,57 @@ async function createScene() {
 
 	flowingText.onInfotipObservable.add( data => {
 		console.warn( "Infotip:" , data ) ;
+		openInfotip( advancedTexture  , data ) ;
 	} ) ;
 
 	flowingText.onInfotipClosedObservable.add( data => {
 		console.warn( "Infotip Closed:" , data ) ;
+		closeInfotip() ;
 	} ) ;
 
 	return scene ;
+}
+
+
+
+var infotip = null ;
+
+function openInfotip( advancedTexture , data ) {
+	if ( infotip ) { closeInfotip() ; }
+	if ( ! data.hint ) { return ; }
+
+	infotip = new BABYLON.GUI.Dialog( 'infotip' ) ;
+	//infotip.text = data.hint ;
+	infotip.markupText = data.hint ;
+	infotip.width = "300px" ;
+	infotip.height = "200px" ;
+	infotip.setPadding( "10px" ) ;
+	infotip.type = BABYLON.GUI.DecoratedContainer.RECTANGLE ;
+	infotip.backgroundColor = "#888888" ;
+	console.log( "coord:" , data.extBoundingBox.xmax , data.extBoundingBox.ymin ) ;
+	infotip.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP ; infotip.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT ;
+	infotip.left = data.extBoundingBox.xmax + 'px' ; infotip.top = data.extBoundingBox.ymin - 200 + 'px' ;
+	//infotip.left = '-100px' ; infotip.top = '-100px' ;
+	/*
+	infotip.textAttr = {
+		fontSize: 30 ,
+		color: '#777' ,
+		outline: true ,
+		frameCornerRadius: '0.2em' ,
+		frameOutlineWidth: '0.1em'
+		//outlineColor: '#afa' ,
+		//lineOutline: true ,
+		//lineColor: '#559'
+	} ;
+	//*/
+	infotip.autoScale = true ;
+	advancedTexture.addControl( infotip ) ;
+}
+
+
+
+function closeInfotip() {
+	if ( ! infotip ) { return ; }
+	infotip.dispose() ;
 }
 
