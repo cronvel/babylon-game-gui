@@ -12,7 +12,7 @@ async function createScene() {
 	var scene = new BABYLON.Scene( engine ) ;
 
 	// This creates and positions a free camera (non-mesh)
-	var camera = new BABYLON.FreeCamera( "camera1" , new BABYLON.Vector3( 0 , 5 , - 10 ) , scene ) ;
+	var camera = new BABYLON.FreeCamera( 'camera1' , new BABYLON.Vector3( 0 , 5 , - 10 ) , scene ) ;
 
 	// This targets the camera to scene origin
 	camera.setTarget( BABYLON.Vector3.Zero() ) ;
@@ -21,13 +21,13 @@ async function createScene() {
 	camera.attachControl( canvas , true ) ;
 
 	// This creates a light, aiming 0,1,0 - to the sky (non-mesh)
-	var light = new BABYLON.HemisphericLight( "light" , new BABYLON.Vector3( 0 , 1 , 0 ) , scene ) ;
+	var light = new BABYLON.HemisphericLight( 'light' , new BABYLON.Vector3( 0 , 1 , 0 ) , scene ) ;
 
 	// Default intensity is 1. Let's dim the light a small amount
 	light.intensity = 0.7 ;
 
 	// Our built-in 'ground' shape.
-	var ground = BABYLON.MeshBuilder.CreateGround( "ground" , { width: 6 , height: 6 } , scene ) ;
+	var ground = BABYLON.MeshBuilder.CreateGround( 'ground' , { width: 6 , height: 6 } , scene ) ;
 
 	// GUI
 	var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI( 'UI' ) ;
@@ -44,11 +44,12 @@ async function createScene() {
 	//flowingText.text = "Some regular text !" ;
 	//flowingText.markupText = "Some ?[text with infotip][Secret message]! Don't [shake]<fx:shake> !" ;
 	flowingText.markupText = "Some ?[text with infotip][Secret message... Secret message... Secret message... Secret message...]! Don't [shake]<fx:shake> !" ;
+	//flowingText.markupText = "Some ?[text with infotip][Secret message...]! Don't [shake]<fx:shake> !" ;
 	//flowingText.markupText = "Don't [shake]<fx:shake> !" ;
 	//console.log( "BF flowingText.width =" ) ;
-	flowingText.width = "300px" ;
+	flowingText.width = '300px' ;
 	//console.log( "BF flowingText.height =" ) ;
-	flowingText.height = "200px" ;
+	flowingText.height = '200px' ;
 	//flowingText.textWrapping = "wordWrap" ;
 	/*
 	flowingText.textAttr = {
@@ -93,16 +94,20 @@ function openInfotip( advancedTexture , data ) {
 	if ( ! data.hint ) { return ; }
 
 	infotip = new BABYLON.GUI.Dialog( 'infotip' ) ;
-	//infotip.text = data.hint ;
-	infotip.markupText = data.hint ;
-	infotip.width = "300px" ;
-	infotip.height = "200px" ;
-	infotip.setPadding( "10px" ) ;
+	infotip.text = data.hint ;
+	//infotip.markupText = data.hint ;
+	infotip.width = '300px' ;
+	infotip.height = '200px' ;
+	infotip.textPaddingTop = '10px' ;
+	infotip.textPaddingBottom = '10px' ;
+	infotip.textPaddingLeft = '10px' ;
+	infotip.textPaddingRight = '10px' ;
 	infotip.type = BABYLON.GUI.DecoratedContainer.RECTANGLE ;
-	infotip.backgroundColor = "#888888" ;
-	console.log( "coord:" , data.extBoundingBox.xmax , data.extBoundingBox.ymin ) ;
+	infotip.backgroundColor = '#888888' ;
+	//infotip.adaptWidthToChildren = true ; infotip.adaptHeightToChildren = true ;
+	console.log( "coord:" , data.foreignBoundingBox.xmax , data.foreignBoundingBox.ymin ) ;
 	infotip.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP ; infotip.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT ;
-	infotip.left = data.extBoundingBox.xmax + 'px' ; infotip.top = data.extBoundingBox.ymin - 200 + 'px' ;
+	infotip.left = data.foreignBoundingBox.xmax + 'px' ; infotip.top = data.foreignBoundingBox.ymin - 200 + 'px' ;
 	//infotip.left = '-100px' ; infotip.top = '-100px' ;
 	/*
 	infotip.textAttr = {

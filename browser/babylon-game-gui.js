@@ -42,6 +42,8 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 	_decoration = null ;
 	_content = null ;
 
+	_autoScale = false ;	// if true, the box will fit its content
+
 	_backgroundColor = null ;
 	_borderColor = null ;
 	_borderThickness = null ;
@@ -72,7 +74,7 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		super.dispose() ;
 	}
 
-	_getTypeName() { return "DecoratedContainer" ; }
+	_getTypeName() { return 'DecoratedContainer' ; }
 	
 	get decoration() { return this._decoration ; }
 	set decoration( control ) {
@@ -93,13 +95,21 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		if ( this._content ) { this.removeControl( this._content ) ; }
 		this._content = control ;
 		this._content.zIndex = 1 ;
+		this._content.onSizeUpdatedObservable.add( size => this._onContentSizeUpdated( size ) ) ;
 		this.addControl( this._content ) ;
+		if ( this._autoScale && this._content ) { this._onContentSizeUpdated() ; }
 	}
 
 	get type() { return this._type ; }
 	set type( t ) {
 		this._type = t ;
 		this._createDecoration() ;
+	}
+
+	get autoScale() { return this._autoScale ; }
+	set autoScale( v ) {
+		this._autoScale = !! v ;
+		if ( this._autoScale && this._content ) { this._onContentSizeUpdated() ; }
 	}
 
 	get backgroundColor() { return this._backgroundColor ; }
@@ -203,8 +213,8 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 	}
 
 	_setRectanglePropertiesNow( rect = this._decoration ) {
-		rect.width = "100%" ;
-		rect.height = "100%" ;
+		rect.width = '100%' ;
+		rect.height = '100%' ;
 		rect.background = this._backgroundColor ;
 		rect.color = this._borderColor ;
 		rect.thickness = this._borderThickness ;
@@ -219,8 +229,8 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 	}
 
 	_setImagePropertiesNow( image = this._decoration ) {
-		image.width = "100%" ;
-		image.height = "100%" ;
+		image.width = '100%' ;
+		image.height = '100%' ;
 		image.source = this._source ;
 		image.stretch = this._stretch ;
 
@@ -236,6 +246,22 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		this._setImagePropertiesNow( image ) ;
 		// Call the setter
 		this.decoration = image ;
+	}
+	
+	_onContentSizeUpdated( size ) {
+		if ( ! this._autoScale || ! this._content ) { return ; }
+		console.error( "_onContentSizeUpdated():" , size ) ;
+		if ( ! size ) {
+			size = {
+				width: this._content.widthInPixels ,
+				height: this._content.heightInPixels
+			} ;
+		}
+
+		// This fails because content use width/height = 100%
+		return ;
+		this.widthInPixels = size.width + this._content.paddingLeftInPixels + this._content.paddingRightInPixels ;
+		this.heightInPixels = size.height + this._content.paddingTopInPixels + this._content.paddingBottomInPixels ;
 	}
 	
 	/*
@@ -323,16 +349,22 @@ class Dialog extends DecoratedContainer {
 	_text = null ;
 	_markupText = null ;
 	_structuredText = null ;
-	
+
 	constructor( name ) {
 		super( name ) ;
+
+		// Default values
+		this._contentProperties.paddingTop = '40px' ;
+		this._contentProperties.paddingBottom = '40px' ;
+		this._contentProperties.paddingLeft = '50px' ;
+		this._contentProperties.paddingRight = '50px' ;
 	}
 
 	dispose() {
 		super.dispose() ;
 	}
 
-	_getTypeName() { return "Dialog" ; }
+	_getTypeName() { return 'Dialog' ; }
 	
 	/*
 	set autoScale( v ) {
@@ -344,12 +376,25 @@ class Dialog extends DecoratedContainer {
 
 	_setContentPropertiesNow( content = this._content ) {
 		content._autoScale = false ;
-		content.width = "100%" ;
-		content.height = "100%" ;
-		content.setPadding( "40px" , "50px" ) ;
-		content.markupText = this._contentProperties.markupText ;
+		content.width = '100%' ;
+		content.height = '100%' ;
 
-		content.textWrapping = "wordWrap" ;
+		content.paddingTop = this._contentProperties.paddingTop ;
+		content.paddingBottom = this._contentProperties.paddingBottom ;
+		content.paddingLeft = this._contentProperties.paddingLeft ;
+		content.paddingRight = this._contentProperties.paddingRight ;
+
+		if ( this._contentProperties.structuredText ) {
+			content.structuredText = this._contentProperties.structuredText ;
+		}
+		else if ( this._contentProperties.markupText ) {
+			content.markupText = this._contentProperties.markupText ;
+		}
+		else if ( this._contentProperties.text ) {
+			content.text = this._contentProperties.text ;
+		}
+
+		content.textWrapping = 'wordWrap' ;
 		content.textAttr = {
 			fontSize: 30 ,
 			color: '#777' ,
@@ -394,6 +439,11 @@ DecoratedContainer.createCommonContentGetterSetter( Dialog.prototype , {
 	text: 'text' ,
 	markupText: 'markupText' ,
 	structuredText: 'structuredText' ,
+
+	textPaddingTop: 'paddingTop' ,
+	textPaddingBottom: 'paddingBottom' ,
+	textPaddingLeft: 'paddingLeft' ,
+	textPaddingRight: 'paddingRight' ,
 } ) ;
 
 module.exports = Dialog ;
@@ -434,6 +484,8 @@ BABYLON.RegisterClass( 'BABYLON.GUI.Dialog' , Dialog ) ;
 
 
 
+const Observable = BABYLON.Observable ;
+
 const VG = require( './VG.js' ) ;
 
 const svgKit = require( 'svg-kit' ) ;
@@ -467,6 +519,8 @@ class FlowingText extends VG {
 
 	_isAutoVg = true ;
 
+	onSizeUpdatedObservable = new Observable() ;
+
 	constructor( name ) {
 		super( name ) ;
 	}
@@ -480,7 +534,7 @@ class FlowingText extends VG {
 		super.dispose() ;
 	}
 
-	_getTypeName() { return "FlowingText" ; }
+	_getTypeName() { return 'FlowingText' ; }
 	
 	set width( w ) {
 		super.width = w ;
@@ -608,8 +662,18 @@ class FlowingText extends VG {
 			//*/
 			this._vg.viewBox.set( viewBox ) ;
 			this._vgFlowingText.set( viewBox ) ;
+			this._notifySizeUpdated() ;
 		}
 		//console.error( "Exiting _adaptVgSizeNow()" ) ;
+	}
+
+	_notifySizeUpdatedNow() {
+		this.onSizeUpdatedObservable.notifyObservers( {
+			width: this._vg.viewBox.width ,
+			height: this._vg.viewBox.height
+		} ) ;
+
+		return Promise.resolved ;
 	}
 
 	/*
@@ -637,6 +701,7 @@ class FlowingText extends VG {
 	}
 }
 
+FlowingText.prototype._notifySizeUpdated = Promise.debounceUpdate( { waitNextTick: true } , FlowingText.prototype._notifySizeUpdatedNow ) ;
 FlowingText.prototype._generateVg = Promise.debounceUpdate( { waitNextTick: true } , FlowingText.prototype._generateVgNow ) ;
 FlowingText.prototype._adaptVgSize = Promise.debounceUpdate( { waitNextTick: true } , FlowingText.prototype._adaptVgSizeNow ) ;
 
@@ -720,7 +785,7 @@ class VG extends BABYLON.GUI.Control {
 		super.dispose() ;
 	}
 
-	_getTypeName() { return "VG" ; }
+	_getTypeName() { return 'VG' ; }
 
 	get stretch() { return this._stretch ; }
 	set stretch( v ) {
@@ -860,9 +925,9 @@ class VG extends BABYLON.GUI.Control {
 		// From Babylon GUI image.ts
 		if ( ! this._vgRendered ) { return ; }
 
-		// Setting this.width/this.height insterad of super.width/super.height causes FlowingText setter to be called, calling again this._adaptVgSizeNow()
-		super.width = this._vgWidth + "px" ;
-		super.height = this._vgHeight + "px" ;
+		// Setting this.width/this.height instead of super.width/super.height causes FlowingText setter to be called, calling again this._adaptVgSizeNow()
+		super.width = this._vgWidth + 'px' ;
+		super.height = this._vgHeight + 'px' ;
 	}
 
 	_processMeasures( parentMeasure , context ) {
@@ -4521,7 +4586,7 @@ DynamicManager.prototype.convertEventCoords = function( event , convertBackCoord
 	min = convertBackCoords( min ) ;
 	max = convertBackCoords( max ) ;
 
-	event.data.extBoundingBox = {
+	event.data.foreignBoundingBox = {
 		xmin: min.x ,
 		ymin: min.y ,
 		xmax: max.x ,
