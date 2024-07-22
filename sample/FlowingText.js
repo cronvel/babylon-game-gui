@@ -96,8 +96,8 @@ function openInfotip( advancedTexture , data ) {
 	infotip = new BABYLON.GUI.Dialog( 'infotip' ) ;
 	infotip.text = data.hint ;
 	//infotip.markupText = data.hint ;
-	infotip.width = '300px' ;
-	infotip.height = '200px' ;
+	//infotip.width = '300px' ; infotip.height = '200px' ;
+	infotip.idealWidthInPixels = 300 ; infotip.idealHeightInPixels = 200 ;
 	infotip.textPaddingTop = '10px' ;
 	infotip.textPaddingBottom = '10px' ;
 	infotip.textPaddingLeft = '10px' ;
