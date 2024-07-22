@@ -46,6 +46,7 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 	_contentSizeReady = false ;
 	_turnVisibleOnContentSizeReady = false ;
 
+	// Things like Dialog (Infotip) need a size (usually width) to preformat its content
 	_idealHeightInPixels = 0 ;
 	_idealWidthInPixels = 0 ;
 
@@ -107,7 +108,6 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		this.addControl( this._decoration ) ;
 
 		if ( this._autoScale && this._turnVisibleOnContentSizeReady && ! this._contentSizeReady ) {
-			console.error( "O_o Invisible!" ) ;
 			this._decoration.isVisible = false ;
 		}
 	}
@@ -292,22 +292,16 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 	
 	async _onContentSizeUpdated( size ) {
 		if ( ! this._autoScale || ! this._content || ! this._idealWidthInPixels || ! this._idealHeightInPixels ) { return ; }
-		console.error( "BF _onContentSizeUpdated():" , size ) ;
 		if ( ! size ) { size = await this._content._getSizes() ; }
 
-		console.error( "AFT _onContentSizeUpdated():" , size , this._idealWidthInPixels , this._idealHeightInPixels ) ;
 		// When it's zero sized, it's probably in progress
 		if ( ! size || ! size.width || ! size.height || ! size.innerWidth || ! size.innerHeight  ) { return ; }
 		
-		//var width = Math.min( size.innerWidth , this._idealWidthInPixels ) ,
-		//	height = Math.min( size.innerHeight , this._idealHeightInPixels ) ;
 		var width = size.innerWidth ,
 			height = size.innerHeight ;
-		console.error( "AFT Min _onContentSizeUpdated():" , { width , height } ) ;
 
 		width += this._content.paddingLeftInPixels + this._content.paddingRightInPixels ;
 		height += this._content.paddingTopInPixels + this._content.paddingBottomInPixels ;
-		console.error( "AFT Padding _onContentSizeUpdated():" , { width , height } , this.widthInPixels , this.heightInPixels ) ;
 
 		this.widthInPixels = width ;
 		this.heightInPixels = height ;
@@ -315,7 +309,6 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		if ( ! this._contentSizeReady ) {
 			this._contentSizeReady = true ;
 			if ( this._turnVisibleOnContentSizeReady ) {
-				console.error( "O_o Turn visible!!!" ) ;
 				this._decoration.isVisible = true ;
 				this._content.isVisible = true ;
 			}
@@ -722,7 +715,6 @@ class FlowingText extends VG {
 			this._vg.viewBox.set( viewBox ) ;
 			this._vgFlowingText.set( viewBox ) ;
 			this._notifySizeUpdated() ;
-			//this.onSizeUpdatedObservable.notifyObservers( await this._getSizes() ) ;
 		}
 		//console.error( "Exiting _adaptVgSizeNow()" ) ;
 	}
@@ -823,6 +815,7 @@ class VG extends BABYLON.GUI.Control {
 
 	_offscreenCanvas = null ;
 	_context = null ;
+	_emptyContext = true ;
 
 	_stretch = VG.STRETCH_FILL ;
 	_autoScale = false ;
@@ -897,9 +890,6 @@ class VG extends BABYLON.GUI.Control {
 				this._offscreenCanvas.width = this._vgWidth ;
 				this._offscreenCanvas.height = this._vgHeight ;
 			}
-
-			// ._renderCanvas() should be called on a cleared context
-			this._context.reset() ;
 		}
 		
 		await this._renderCanvas() ;
@@ -930,6 +920,11 @@ class VG extends BABYLON.GUI.Control {
 
 	async _renderCanvasNow() {
 		this._vgRendered = false ;
+
+		// VG#renderCanvas() should be called on a cleared context
+		if ( ! this._emptyContext ) { this._context.reset() ; }
+
+		this._emptyContext = false ;
 		await this._vg.renderCanvas( this._context ) ;
 		this._onRendered() ;
 	}
