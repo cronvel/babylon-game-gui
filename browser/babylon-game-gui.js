@@ -43,6 +43,9 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 	_content = null ;
 
 	_autoScale = false ;	// if true, the box will fit its content
+	_contentSizeReady = false ;
+	_turnVisibleOnContentSizeReady = false ;
+
 	_idealHeightInPixels = 0 ;
 	_idealWidthInPixels = 0 ;
 
@@ -98,20 +101,36 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		if ( this._decoration ) { this.removeControl( this._decoration ) ; }
 		this._decoration = control ;
 
-		if ( this._decoration ) {
-			this._decoration.zIndex = 0 ;
-			this.addControl( this._decoration ) ;
+		if ( ! this._decoration ) { return ; }
+
+		this._decoration.zIndex = 0 ;
+		this.addControl( this._decoration ) ;
+
+		if ( this._autoScale && this._turnVisibleOnContentSizeReady && ! this._contentSizeReady ) {
+			console.error( "O_o Invisible!" ) ;
+			this._decoration.isVisible = false ;
 		}
 	}
 
 	get content() { return this._content ; }
 	set content( control ) {
 		if ( this._content ) { this.removeControl( this._content ) ; }
+
 		this._content = control ;
+		if ( ! this._content ) { return ; }
+
 		this._content.zIndex = 1 ;
 		this._content.onSizeUpdatedObservable.add( size => this._onContentSizeUpdated( size ) ) ;
 		this.addControl( this._content ) ;
-		if ( this._autoScale && this._content ) { this._onContentSizeUpdated() ; }
+		
+		if ( this._autoScale ) {
+			if ( this._turnVisibleOnContentSizeReady ) {
+				this._contentSizeReady = false ;
+				this._content.isVisible = false ;
+			}
+
+			this._onContentSizeUpdated() ;
+		}
 	}
 
 	get type() { return this._type ; }
@@ -122,35 +141,16 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 
 	get autoScale() { return this._autoScale ; }
 	set autoScale( v ) {
-		v = !! v ;
-		if ( this._autoScale === v ) { return ; }
-		this._autoScale = v ;
+		this._autoScale = !! v ;
 
 		if ( this._autoScale ) {
-			this.adaptWidthToChildren = true ;
-			this.adaptHeightToChildren = true ;
+			if ( this._content ) { this._onContentSizeUpdated() ; }
 		}
 		else {
-			this.adaptWidthToChildren = false ;
-			this.adaptHeightToChildren = false ;
-		}
-
-		if ( this._content ) {
-			this._fixContentAutoScale( this._content ) ;
-			if ( this._autoScale ) { this._onContentSizeUpdated() ; }
-		}
-	}
-
-	_fixContentAutoScale( content ) {
-		if ( this._autoScale ) {
-			//content.width = '200px' ;
-			//content.height = '200px' ;
-			//content.autoScale = true ;
-		}
-		else {
-			content.autoScale = false ;
-			content.width = '100%' ;
-			content.height = '100%' ;
+			if ( this._turnVisibleOnContentSizeReady ) {
+				if ( this._decoration ) { this._decoration.isVisible = true ; }
+				if ( this._content ) { this._content.isVisible = true ; }
+			}
 		}
 	}
 
@@ -299,17 +299,27 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		// When it's zero sized, it's probably in progress
 		if ( ! size || ! size.width || ! size.height || ! size.innerWidth || ! size.innerHeight  ) { return ; }
 		
-		var width = Math.min( size.innerWidth , this._idealWidthInPixels ) ,
-			height = Math.min( size.innerHeight , this._idealHeightInPixels ) ;
+		//var width = Math.min( size.innerWidth , this._idealWidthInPixels ) ,
+		//	height = Math.min( size.innerHeight , this._idealHeightInPixels ) ;
+		var width = size.innerWidth ,
+			height = size.innerHeight ;
 		console.error( "AFT Min _onContentSizeUpdated():" , { width , height } ) ;
 
 		width += this._content.paddingLeftInPixels + this._content.paddingRightInPixels ;
 		height += this._content.paddingTopInPixels + this._content.paddingBottomInPixels ;
 		console.error( "AFT Padding _onContentSizeUpdated():" , { width , height } , this.widthInPixels , this.heightInPixels ) ;
 
-		//return ;
 		this.widthInPixels = width ;
 		this.heightInPixels = height ;
+
+		if ( ! this._contentSizeReady ) {
+			this._contentSizeReady = true ;
+			if ( this._turnVisibleOnContentSizeReady ) {
+				console.error( "O_o Turn visible!!!" ) ;
+				this._decoration.isVisible = true ;
+				this._content.isVisible = true ;
+			}
+		}
 	}
 	
 	/*
@@ -401,6 +411,8 @@ class Dialog extends DecoratedContainer {
 	constructor( name ) {
 		super( name ) ;
 
+		this._turnVisibleOnContentSizeReady = true ;
+
 		// Default values
 		this._contentProperties.paddingTop = '40px' ;
 		this._contentProperties.paddingBottom = '40px' ;
@@ -414,8 +426,18 @@ class Dialog extends DecoratedContainer {
 
 	_getTypeName() { return 'Dialog' ; }
 	
+	/*
+	set autoScale( v ) {
+		v = !! v ;
+		if ( this._autoScale === v ) { return ; }
+		this._autoScale = v ;
+	}
+	*/
+
 	_setContentPropertiesNow( content = this._content ) {
-		this._fixContentAutoScale( content ) ;
+		content._autoScale = false ;
+		content.width = '100%' ;
+		content.height = '100%' ;
 
 		content.paddingTop = this._contentProperties.paddingTop ;
 		content.paddingBottom = this._contentProperties.paddingBottom ;
@@ -700,6 +722,7 @@ class FlowingText extends VG {
 			this._vg.viewBox.set( viewBox ) ;
 			this._vgFlowingText.set( viewBox ) ;
 			this._notifySizeUpdated() ;
+			//this.onSizeUpdatedObservable.notifyObservers( await this._getSizes() ) ;
 		}
 		//console.error( "Exiting _adaptVgSizeNow()" ) ;
 	}

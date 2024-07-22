@@ -43,7 +43,7 @@ async function createScene() {
 	//flowingText.markupText = "[Hello]<green> *my* **friend**, ***stay*** [awhile]<bg:blue> and _listen_... Don't [shake]<fx:shake> !" ;
 	//flowingText.text = "Some regular text !" ;
 	//flowingText.markupText = "Some ?[text with infotip][Secret message]! Don't [shake]<fx:shake> !" ;
-	flowingText.markupText = "Some ?[text with infotip][Secret message... Secret message... Secret message... Secret message...]! Don't [shake]<fx:shake> !" ;
+	flowingText.markupText = "Some ?[text with infotip][Secret message...]! Don't [shake]<fx:shake> !" ;
 	//flowingText.markupText = "Some ?[text with infotip][Secret message...]! Don't [shake]<fx:shake> !" ;
 	//flowingText.markupText = "Don't [shake]<fx:shake> !" ;
 	//console.log( "BF flowingText.width =" ) ;
@@ -96,8 +96,7 @@ function openInfotip( advancedTexture , data ) {
 	infotip = new BABYLON.GUI.Dialog( 'infotip' ) ;
 	infotip.text = data.hint ;
 	//infotip.markupText = data.hint ;
-	//infotip.width = '300px' ; infotip.height = '200px' ;
-	infotip.idealWidthInPixels = 300 ; infotip.idealHeightInPixels = 200 ;
+	infotip.idealWidthInPixels = 300 ; infotip.idealHeightInPixels = 50 ;
 	infotip.textPaddingTop = '10px' ;
 	infotip.textPaddingBottom = '10px' ;
 	infotip.textPaddingLeft = '10px' ;
@@ -107,7 +106,7 @@ function openInfotip( advancedTexture , data ) {
 	//infotip.adaptWidthToChildren = true ; infotip.adaptHeightToChildren = true ;
 	console.log( "coord:" , data.foreignBoundingBox.xmax , data.foreignBoundingBox.ymin ) ;
 	infotip.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP ; infotip.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT ;
-	infotip.left = data.foreignBoundingBox.xmax + 'px' ; infotip.top = data.foreignBoundingBox.ymin - 200 + 'px' ;
+	infotip.left = data.foreignBoundingBox.xmax + 'px' ; infotip.top = data.foreignBoundingBox.ymin - 70 + 'px' ;
 	//infotip.left = '-100px' ; infotip.top = '-100px' ;
 	/*
 	infotip.textAttr = {
