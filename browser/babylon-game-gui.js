@@ -122,8 +122,36 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 
 	get autoScale() { return this._autoScale ; }
 	set autoScale( v ) {
-		this._autoScale = !! v ;
-		if ( this._autoScale && this._content ) { this._onContentSizeUpdated() ; }
+		v = !! v ;
+		if ( this._autoScale === v ) { return ; }
+		this._autoScale = v ;
+
+		if ( this._autoScale ) {
+			this.adaptWidthToChildren = true ;
+			this.adaptHeightToChildren = true ;
+		}
+		else {
+			this.adaptWidthToChildren = false ;
+			this.adaptHeightToChildren = false ;
+		}
+
+		if ( this._content ) {
+			this._fixContentAutoScale( this._content ) ;
+			if ( this._autoScale ) { this._onContentSizeUpdated() ; }
+		}
+	}
+
+	_fixContentAutoScale( content ) {
+		if ( this._autoScale ) {
+			//content.width = '200px' ;
+			//content.height = '200px' ;
+			//content.autoScale = true ;
+		}
+		else {
+			content.autoScale = false ;
+			content.width = '100%' ;
+			content.height = '100%' ;
+		}
 	}
 
 	get backgroundColor() { return this._backgroundColor ; }
@@ -386,18 +414,8 @@ class Dialog extends DecoratedContainer {
 
 	_getTypeName() { return 'Dialog' ; }
 	
-	/*
-	set autoScale( v ) {
-		v = !! v ;
-		if ( this._autoScale === v ) { return ; }
-		this._autoScale = v ;
-	}
-	*/
-
 	_setContentPropertiesNow( content = this._content ) {
-		content._autoScale = false ;
-		content.width = '100%' ;
-		content.height = '100%' ;
+		this._fixContentAutoScale( content ) ;
 
 		content.paddingTop = this._contentProperties.paddingTop ;
 		content.paddingBottom = this._contentProperties.paddingBottom ;
