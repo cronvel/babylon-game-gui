@@ -3,10 +3,6 @@
 
 /* global BABYLON GAMEGUI */
 
-var svgKit = GAMEGUI.svgKit ;
-
-
-
 async function createScene() {
 	// This creates a basic Babylon Scene object (non-mesh)
 	var scene = new BABYLON.Scene( engine ) ;
@@ -33,10 +29,10 @@ async function createScene() {
 	var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI( 'UI' ) ;
 
 	//console.log( GAMEGUI , BABYLON.GUI ) ;
-	svgKit.fontLib.setFontUrl( 'serif' , './serif.ttf' ) ;
-	svgKit.fontLib.setFontUrl( 'serif' , 'italic' , './serif-italic.ttf' ) ;
-	svgKit.fontLib.setFontUrl( 'serif' , 'bold' , './serif-bold.ttf' ) ;
-	svgKit.fontLib.setFontUrl( 'serif' , 'bold' , 'italic' , './serif-bold+italic.ttf' ) ;
+	GAMEGUI.setFontUrl( 'serif' , './serif.ttf' ) ;
+	GAMEGUI.setFontUrl( 'serif' , 'italic' , './serif-italic.ttf' ) ;
+	GAMEGUI.setFontUrl( 'serif' , 'bold' , './serif-bold.ttf' ) ;
+	GAMEGUI.setFontUrl( 'serif' , 'bold' , 'italic' , './serif-bold+italic.ttf' ) ;
 
 	var flowingText = new BABYLON.GUI.FlowingText( 'flowingText' ) ;
 	//console.log( "BF flowingText.markupText =" ) ;
@@ -51,19 +47,14 @@ async function createScene() {
 	//console.log( "BF flowingText.height =" ) ;
 	flowingText.height = '200px' ;
 	//flowingText.textWrapping = "wordWrap" ;
-	/*
+	//*
 	flowingText.textAttr = {
-		fontSize: 30 ,
 		color: '#777' ,
-		outline: true ,
-		frameCornerRadius: '0.2em' ,
-		frameOutlineWidth: '0.1em'
-		//outlineColor: '#afa' ,
-		//lineOutline: true ,
-		//lineColor: '#559'
+		outlineColor: '#fff'
 	} ;
 	//*/
 	//flowingText.fx = { slowTyping: true } ;
+	//flowingText.fx = { slowTyping: { speed: 0.5 } } ;
 	//console.log( "BF flowingText.verticalAlignment =" ) ;
 	//flowingText.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP ; flowingText.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT ;
 	flowingText.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;

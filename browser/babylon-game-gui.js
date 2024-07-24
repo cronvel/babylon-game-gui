@@ -450,13 +450,11 @@ class Dialog extends DecoratedContainer {
 		content.textWrapping = 'wordWrap' ;
 		content.textAttr = {
 			fontSize: 30 ,
-			color: '#777' ,
+			color: '#fff' ,
 			outline: true ,
+			outlineColor: '#000' ,
 			frameCornerRadius: '0.2em' ,
 			frameOutlineWidth: '0.1em'
-			//outlineColor: '#afa' ,
-			//lineOutline: true ,
-			//lineColor: '#559'
 		} ;
 		content.debugContainer = true ;
 		content.clip = false ;
@@ -552,14 +550,23 @@ class FlowingText extends VG {
 
 	_textAttr = new svgKit.TextAttribute( {
 		fontSize: 30 ,
-		color: '#777' ,
+		color: '#fff' ,
 		outline: true ,
+		outlineColor: '#000' ,
 		frameCornerRadius: '0.2em' ,
 		frameOutlineWidth: '0.1em'
-		//outlineColor: '#afa' ,
-		//lineOutline: true ,
-		//lineColor: '#559'
 	} ) ;
+
+	_textDynamicStyles = {
+		linkUnderline: true ,
+		linkColor: '#c88' ,
+		linkHoverColor: '#aae' ,
+		linkPressColor: '#bbf' ,
+
+		infotipUnderline: true ,
+		infotipColor: '#448' ,
+		infotipHoverColor: '#488'
+	} ;
 
 	_fx = null ;
 
@@ -628,6 +635,21 @@ class FlowingText extends VG {
 		this._generateVg() ;
 	}
 
+	get textDynamicStyles() { return this._textDynamicStyles ; }
+	set textDynamicStyles( _textDynamicStyles ) {
+		if ( ! _textDynamicStyles || typeof _textDynamicStyles !== 'object' ) { return ; }
+		var changed = false ;
+
+		for ( let styleName in _textDynamicStyles ) {
+			if ( this._textDynamicStyles[ styleName ] !== undefined && this._textDynamicStyles[ styleName ] !== _textDynamicStyles[ styleName ]  ) {
+				this._textDynamicStyles[ styleName ] = _textDynamicStyles[ styleName ] ;
+				changed = true ;
+			}
+		}
+
+		if ( changed ) { this._generateVg() ; }
+	}
+
 	get fx() { return this._fx ; }
 	set fx( _fx ) {
 		if ( this._fx === _fx ) { return ; }
@@ -652,10 +674,10 @@ class FlowingText extends VG {
 			width: this.widthInPixels ,
 			height: this.heightInPixels ,
 			attr: this._textAttr ,
+			dynamicStyles: this._textDynamicStyles ,
 			clip: false ,
 			textWrapping: 'wordWrap' ,
-			//fx: this._fx
-			//fx: { slowTyping: { speed: 2 } }
+			fx: this._fx
 		} ;
 
 		if ( this._structuredText ) { params.structuredText = this._structuredText ; }
@@ -803,6 +825,7 @@ BABYLON.RegisterClass( 'BABYLON.GUI.FlowingText' , FlowingText ) ;
 
 const Observable = BABYLON.Observable ;
 
+const svgKit = require( 'svg-kit' ) ;
 const Promise = require( 'seventh' ) ;
 
 
@@ -1025,7 +1048,7 @@ BABYLON.GUI.VG = VG ;
 BABYLON.RegisterClass( 'BABYLON.GUI.VG' , VG ) ;
 
 
-},{"seventh":14}],5:[function(require,module,exports){
+},{"seventh":14,"svg-kit":47}],5:[function(require,module,exports){
 /*
 	Babylon Game GUI
 
@@ -1054,11 +1077,15 @@ BABYLON.RegisterClass( 'BABYLON.GUI.VG' , VG ) ;
 
 "use strict" ;
 
-exports.svgKit = require( 'svg-kit' ) ;
+const svgKit = require( 'svg-kit' ) ;
+
+exports.svgKit = svgKit ;
 exports.VG = require( './VG.js' ) ;
 exports.FlowingText = require( './FlowingText.js' ) ;
 exports.DecoratedContainer = require( './DecoratedContainer.js' ) ;
 exports.Dialog = require( './Dialog.js' ) ;
+
+exports.setFontUrl = ( ... args ) => svgKit.fontLib.setFontUrl( ... args ) ;
 
 
 },{"./DecoratedContainer.js":1,"./Dialog.js":2,"./FlowingText.js":3,"./VG.js":4,"svg-kit":47}],6:[function(require,module,exports){
@@ -7892,6 +7919,7 @@ VGFlowingText.prototype.set = function( params ) {
 		if ( p.infotipUnderline !== undefined ) { style.infotipUnderline = !! p.infotipUnderline ; }
 		if ( p.infotipColor ) { style.infotipColor = p.infotipColor ; }
 		if ( p.infotipHoverColor ) { style.infotipHoverColor = p.infotipHoverColor ; }
+		console.error( "this.dynamicStyles:" , this.dynamicStyles ) ;
 
 		dirty = true ;
 	}
