@@ -448,15 +448,15 @@ class Dialog extends DecoratedContainer {
 		}
 
 		content.textWrapping = 'wordWrap' ;
-		content.textAttr = {
-			fontSize: 30 ,
-			color: '#fff' ,
-			outline: true ,
-			outlineColor: '#000' ,
-			frameCornerRadius: '0.2em' ,
-			frameOutlineWidth: '0.1em'
-		} ;
-		content.debugContainer = true ;
+
+		if ( this._contentProperties.textAttr ) {
+			content.textAttr = this._contentProperties.textAttr ;
+		}
+
+		if ( this._contentProperties.textDynamicStyles ) {
+			content.textDynamicStyles = this._contentProperties.textDynamicStyles ;
+		}
+
 		content.clip = false ;
 
 		console.warn( "dialog's content:" , content ) ;
@@ -494,6 +494,9 @@ DecoratedContainer.createCommonContentGetterSetter( Dialog.prototype , {
 	textPaddingBottom: 'paddingBottom' ,
 	textPaddingLeft: 'paddingLeft' ,
 	textPaddingRight: 'paddingRight' ,
+
+	textAttr: 'textAttr' ,
+	textDynamicStyles: 'textDynamicStyles' ,
 } ) ;
 
 module.exports = Dialog ;

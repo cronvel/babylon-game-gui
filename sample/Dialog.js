@@ -74,19 +74,28 @@ function createDialog( markupText ) {
 	dismissDialog() ;
 
 	dialog = new BABYLON.GUI.Dialog( 'dialog' ) ;
-	dialog.width = "700px" ;
-	dialog.height = "250px" ;
+	//dialog.text = "bob" ;
+	//dialog.width = "700px" ; dialog.height = "250px" ;
+	dialog.idealWidthInPixels = 500 ; dialog.idealHeightInPixels = 50 ;
 	//dialog.paddingLeft = "50px" ;
 	dialog.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
-	
-	/*
+
+	//*
+	// Bug: autoScale does not work without padding
+	dialog.textPaddingTop = '10px' ;
+	dialog.textPaddingBottom = '10px' ;
+	dialog.textPaddingLeft = '10px' ;
+	dialog.textPaddingRight = '10px' ;
+	//*/
+
+	//*
 	dialog.backgroundColor = 'green' ;
 	dialog.borderColor = 'orange' ;
 	dialog.borderThickness = 8 ;
 	dialog.cornerRadius = 4 ;
 	//*/
 	
-	//*
+	/*
 	dialog.type = BABYLON.GUI.DecoratedContainer.IMAGE ;
 	dialog.source = "/sample/9p.png" ;
 	dialog.stretch = BABYLON.GUI.Image.STRETCH_NINE_PATCH ;
@@ -98,25 +107,14 @@ function createDialog( markupText ) {
 	//*/
 
 	dialog.markupText = markupText ;
-	//dialog.text = markupText ;
 
-	/*
-	dialog.textWrapping = "wordWrap" ;
+	
+	//dialog.textWrapping = "wordWrap" ;
 	dialog.textAttr = {
-		fontSize: 30 ,
 		color: '#777' ,
-		outline: true ,
-		frameCornerRadius: '0.2em' ,
-		frameOutlineWidth: '0.1em'
-		//outlineColor: '#afa' ,
-		//lineOutline: true ,
-		//lineColor: '#559'
+		outlineColor: '#fff'
 	} ;
-	dialog.debugContainer = true ;
-	dialog.clip = false ;
-	dialog.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
 	dialog.autoScale = true ;
-	*/
 	
 	advancedTexture.addControl( dialog ) ;
 }
