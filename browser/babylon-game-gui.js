@@ -292,14 +292,17 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 	
 	async _onContentSizeUpdated( size ) {
 		if ( ! this._autoScale || ! this._content || ! this._idealWidthInPixels || ! this._idealHeightInPixels ) { return ; }
+		console.error( "DecoratedContainer size BF: " , size ) ;
 		if ( ! size ) { size = await this._content._getSizes() ; }
 
 		// When it's zero sized, it's probably in progress
+		console.error( "DecoratedContainer size AFT: " , size ) ;
 		if ( ! size || ! size.width || ! size.height || ! size.innerWidth || ! size.innerHeight  ) { return ; }
 		
 		var width = size.innerWidth ,
 			height = size.innerHeight ;
 
+		console.error( "DecoratedContainer _onContentSizeUpdated() padding: " , this._content.paddingLeftInPixels , this._content.paddingRightInPixels , this._content.paddingTopInPixels , this._content.paddingBottomInPixels ) ;
 		width += this._content.paddingLeftInPixels + this._content.paddingRightInPixels ;
 		height += this._content.paddingTopInPixels + this._content.paddingBottomInPixels ;
 
@@ -730,8 +733,11 @@ class FlowingText extends VG {
 			} ;
 		}
 
+		console.error( "_adaptVgSizeNow() padding:" , this.paddingLeftInPixels , this.paddingRightInPixels , this.paddingTopInPixels , this.paddingBottomInPixels ) ;
+		console.error( "_adaptVgSizeNow() viewboxes:" , this._vg.viewBox , viewBox , this._vg.viewBox.isEqualToObject( viewBox ) ) ;
+
 		if ( ! this._vg.viewBox.isEqualToObject( viewBox ) ) {
-			/*
+			//*
 			console.warn( "_adaptVgSizeNow() " , this._autoScale ? '[autoscale] :' : ':' , viewBox ,
 				this.widthInPixels , this.paddingLeftInPixels , this.paddingRightInPixels ,
 				this.heightInPixels , this.paddingTopInPixels , this.paddingBottomInPixels

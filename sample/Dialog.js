@@ -80,7 +80,7 @@ function createDialog( markupText ) {
 	//dialog.paddingLeft = "50px" ;
 	dialog.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
 
-	//*
+	/*
 	// Bug: autoScale does not work without padding
 	dialog.textPaddingTop = '10px' ;
 	dialog.textPaddingBottom = '10px' ;
