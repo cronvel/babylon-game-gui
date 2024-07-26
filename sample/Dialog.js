@@ -76,26 +76,18 @@ function createDialog( markupText ) {
 	dialog = new BABYLON.GUI.Dialog( 'dialog' ) ;
 	//dialog.text = "bob" ;
 	//dialog.width = "700px" ; dialog.height = "250px" ;
-	dialog.idealWidthInPixels = 500 ; dialog.idealHeightInPixels = 50 ;
+	dialog.idealWidthInPixels = 500 ; dialog.idealHeightInPixels = 100 ;
 	//dialog.paddingLeft = "50px" ;
 	dialog.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
 
 	/*
-	// Bug: autoScale does not work without padding
-	dialog.textPaddingTop = '10px' ;
-	dialog.textPaddingBottom = '10px' ;
-	dialog.textPaddingLeft = '10px' ;
-	dialog.textPaddingRight = '10px' ;
-	//*/
-
-	//*
 	dialog.backgroundColor = 'green' ;
 	dialog.borderColor = 'orange' ;
 	dialog.borderThickness = 8 ;
 	dialog.cornerRadius = 4 ;
 	//*/
 	
-	/*
+	//*
 	dialog.type = BABYLON.GUI.DecoratedContainer.IMAGE ;
 	dialog.source = "/sample/9p.png" ;
 	dialog.stretch = BABYLON.GUI.Image.STRETCH_NINE_PATCH ;
@@ -104,6 +96,10 @@ function createDialog( markupText ) {
 	dialog.sliceTop = sliceMargin ;
 	dialog.sliceRight = 256 - sliceMargin ;
 	dialog.sliceBottom = 256 - sliceMargin ;
+	dialog.textPaddingTop = '40px' ;
+	dialog.textPaddingBottom = '40px' ;
+	dialog.textPaddingLeft = '50px' ;
+	dialog.textPaddingRight = '50px' ;
 	//*/
 
 	dialog.markupText = markupText ;

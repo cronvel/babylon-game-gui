@@ -292,17 +292,14 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 	
 	async _onContentSizeUpdated( size ) {
 		if ( ! this._autoScale || ! this._content || ! this._idealWidthInPixels || ! this._idealHeightInPixels ) { return ; }
-		console.error( "DecoratedContainer size BF: " , size ) ;
 		if ( ! size ) { size = await this._content._getSizes() ; }
 
 		// When it's zero sized, it's probably in progress
-		console.error( "DecoratedContainer size AFT: " , size ) ;
 		if ( ! size || ! size.width || ! size.height || ! size.innerWidth || ! size.innerHeight  ) { return ; }
 		
 		var width = size.innerWidth ,
 			height = size.innerHeight ;
 
-		console.error( "DecoratedContainer _onContentSizeUpdated() padding: " , this._content.paddingLeftInPixels , this._content.paddingRightInPixels , this._content.paddingTopInPixels , this._content.paddingBottomInPixels ) ;
 		width += this._content.paddingLeftInPixels + this._content.paddingRightInPixels ;
 		height += this._content.paddingTopInPixels + this._content.paddingBottomInPixels ;
 
@@ -410,10 +407,10 @@ class Dialog extends DecoratedContainer {
 		this._turnVisibleOnContentSizeReady = true ;
 
 		// Default values
-		this._contentProperties.paddingTop = '40px' ;
-		this._contentProperties.paddingBottom = '40px' ;
-		this._contentProperties.paddingLeft = '50px' ;
-		this._contentProperties.paddingRight = '50px' ;
+		this._contentProperties.paddingTop = '10px' ;
+		this._contentProperties.paddingBottom = '10px' ;
+		this._contentProperties.paddingLeft = '10px' ;
+		this._contentProperties.paddingRight = '10px' ;
 	}
 
 	dispose() {
@@ -440,6 +437,15 @@ class Dialog extends DecoratedContainer {
 		content.paddingLeft = this._contentProperties.paddingLeft ;
 		content.paddingRight = this._contentProperties.paddingRight ;
 
+		if ( content.paddingTopInPixels + content.paddingBottomInPixels > this.heightInPixels ) {
+			console.warn( "Warning: Dialog height < padding, expanding height" , this.heightInPixels , content.paddingTopInPixels , content.paddingBottomInPixels ) ;
+			this.heightInPixels = content.paddingTopInPixels + content.paddingBottomInPixels + 1 ;
+		}
+		if ( content.paddingLeftInPixels + content.paddingRightInPixels > this.widthInPixels ) {
+			console.warn( "Warning: Dialog width < padding, expanding width" , this.widthInPixels , content.paddingLeftInPixels , content.paddingRightInPixels ) ;
+			this.widthInPixels = content.paddingLeftInPixels + content.paddingRightInPixels + 1 ;
+		}
+
 		if ( this._contentProperties.structuredText ) {
 			content.structuredText = this._contentProperties.structuredText ;
 		}
@@ -462,7 +468,7 @@ class Dialog extends DecoratedContainer {
 
 		content.clip = false ;
 
-		console.warn( "dialog's content:" , content ) ;
+		//console.warn( "dialog's content:" , content ) ;
 	}
 
 	_createContentNow() {
@@ -733,16 +739,8 @@ class FlowingText extends VG {
 			} ;
 		}
 
-		console.error( "_adaptVgSizeNow() padding:" , this.paddingLeftInPixels , this.paddingRightInPixels , this.paddingTopInPixels , this.paddingBottomInPixels ) ;
-		console.error( "_adaptVgSizeNow() viewboxes:" , this._vg.viewBox , viewBox , this._vg.viewBox.isEqualToObject( viewBox ) ) ;
-
 		if ( ! this._vg.viewBox.isEqualToObject( viewBox ) ) {
-			//*
-			console.warn( "_adaptVgSizeNow() " , this._autoScale ? '[autoscale] :' : ':' , viewBox ,
-				this.widthInPixels , this.paddingLeftInPixels , this.paddingRightInPixels ,
-				this.heightInPixels , this.paddingTopInPixels , this.paddingBottomInPixels
-			) ;
-			//*/
+			//console.warn( "_adaptVgSizeNow() " , this._autoScale ? '[autoscale] :' : ':' , viewBox , this.widthInPixels , this.paddingLeftInPixels , this.paddingRightInPixels , this.heightInPixels , this.paddingTopInPixels , this.paddingBottomInPixels ) ;
 			this._vg.viewBox.set( viewBox ) ;
 			this._vgFlowingText.set( viewBox ) ;
 			this._notifySizeUpdated() ;
@@ -7928,7 +7926,6 @@ VGFlowingText.prototype.set = function( params ) {
 		if ( p.infotipUnderline !== undefined ) { style.infotipUnderline = !! p.infotipUnderline ; }
 		if ( p.infotipColor ) { style.infotipColor = p.infotipColor ; }
 		if ( p.infotipHoverColor ) { style.infotipHoverColor = p.infotipHoverColor ; }
-		console.error( "this.dynamicStyles:" , this.dynamicStyles ) ;
 
 		dirty = true ;
 	}
