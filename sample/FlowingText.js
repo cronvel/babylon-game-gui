@@ -63,6 +63,9 @@ async function createScene() {
 	//console.log( "BF advancedTexture.addControl" ) ;
 	advancedTexture.addControl( flowingText ) ;
 
+	BABYLON.GUI.Dialog.autoInfotip( advancedTexture , flowingText ) ;
+	
+	/*
 	flowingText.onInfotipObservable.add( data => {
 		console.warn( "Infotip:" , data ) ;
 		openInfotip( advancedTexture  , data ) ;
@@ -72,6 +75,7 @@ async function createScene() {
 		console.warn( "Infotip Closed:" , data ) ;
 		closeInfotip() ;
 	} ) ;
+	//*/
 
 	return scene ;
 }
