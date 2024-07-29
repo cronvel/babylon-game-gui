@@ -35,27 +35,28 @@ async function createScene() {
 	GAMEGUI.setFontUrl( 'serif' , 'bold' , 'italic' , './serif-bold+italic.ttf' ) ;
 
 	var flowingText = new BABYLON.GUI.FlowingText( 'flowingText' ) ;
-	//console.log( "BF flowingText.markupText =" ) ;
+
 	//flowingText.markupText = "[Hello]<green> *my* **friend**, ***stay*** [awhile]<bg:blue> and _listen_... Don't [shake]<fx:shake> !" ;
 	//flowingText.text = "Some regular text !" ;
 	//flowingText.markupText = "Some ?[text with infotip][Secret message]! Don't [shake]<fx:shake> !" ;
-	flowingText.markupText = "Some ?[text with infotip][Secret message...]! Don't [shake]<fx:shake> !" ;
+	flowingText.markupText = "Some ?[text with infotip][This is a secret message...]! Don't [shake]<fx:shake> !" ;
 	//flowingText.markupText = "Some ?[text with infotip][Secret message...]! Don't [shake]<fx:shake> !" ;
 	//flowingText.markupText = "Don't [shake]<fx:shake> !" ;
-	//console.log( "BF flowingText.width =" ) ;
+
 	flowingText.width = '300px' ;
-	//console.log( "BF flowingText.height =" ) ;
 	flowingText.height = '200px' ;
 	//flowingText.textWrapping = "wordWrap" ;
+
 	//*
 	flowingText.textAttr = {
 		color: '#777' ,
 		outlineColor: '#fff'
 	} ;
 	//*/
+
 	//flowingText.fx = { slowTyping: true } ;
 	//flowingText.fx = { slowTyping: { speed: 0.5 } } ;
-	//console.log( "BF flowingText.verticalAlignment =" ) ;
+
 	//flowingText.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP ; flowingText.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT ;
 	flowingText.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
 	//console.log( "BF flowingText.autoScale =" ) ;
@@ -63,66 +64,10 @@ async function createScene() {
 	//console.log( "BF advancedTexture.addControl" ) ;
 	advancedTexture.addControl( flowingText ) ;
 
-	BABYLON.GUI.Dialog.autoInfotip( advancedTexture , flowingText ) ;
-	
-	/*
-	flowingText.onInfotipObservable.add( data => {
-		console.warn( "Infotip:" , data ) ;
-		openInfotip( advancedTexture  , data ) ;
+	BABYLON.GUI.Dialog.autoInfotip( advancedTexture , flowingText , {
+		//textAttr: { color: '#77f' }
 	} ) ;
-
-	flowingText.onInfotipClosedObservable.add( data => {
-		console.warn( "Infotip Closed:" , data ) ;
-		closeInfotip() ;
-	} ) ;
-	//*/
 
 	return scene ;
-}
-
-
-
-var infotip = null ;
-
-function openInfotip( advancedTexture , data ) {
-	if ( infotip ) { closeInfotip() ; }
-	if ( ! data.hint ) { return ; }
-
-	infotip = new BABYLON.GUI.Dialog( 'infotip' ) ;
-	infotip.text = data.hint ;
-	//infotip.markupText = data.hint ;
-	infotip.idealWidthInPixels = 300 ; infotip.idealHeightInPixels = 50 ;
-	infotip.textPaddingTop = '10px' ;
-	infotip.textPaddingBottom = '10px' ;
-	infotip.textPaddingLeft = '10px' ;
-	infotip.textPaddingRight = '10px' ;
-	infotip.type = BABYLON.GUI.DecoratedContainer.RECTANGLE ;
-	infotip.backgroundColor = '#888888' ;
-	//infotip.adaptWidthToChildren = true ; infotip.adaptHeightToChildren = true ;
-	console.log( "coord:" , data.foreignBoundingBox.xmax , data.foreignBoundingBox.ymin ) ;
-	infotip.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP ; infotip.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT ;
-	infotip.left = data.foreignBoundingBox.xmax + 'px' ; infotip.top = data.foreignBoundingBox.ymin - 70 + 'px' ;
-	//infotip.left = '-100px' ; infotip.top = '-100px' ;
-	/*
-	infotip.textAttr = {
-		fontSize: 30 ,
-		color: '#777' ,
-		outline: true ,
-		frameCornerRadius: '0.2em' ,
-		frameOutlineWidth: '0.1em'
-		//outlineColor: '#afa' ,
-		//lineOutline: true ,
-		//lineColor: '#559'
-	} ;
-	//*/
-	infotip.autoScale = true ;
-	advancedTexture.addControl( infotip ) ;
-}
-
-
-
-function closeInfotip() {
-	if ( ! infotip ) { return ; }
-	infotip.dispose() ;
 }
 
