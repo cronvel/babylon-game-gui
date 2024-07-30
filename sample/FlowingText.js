@@ -39,7 +39,8 @@ async function createScene() {
 	//flowingText.markupText = "[Hello]<green> *my* **friend**, ***stay*** [awhile]<bg:blue> and _listen_... Don't [shake]<fx:shake> !" ;
 	//flowingText.text = "Some regular text !" ;
 	//flowingText.markupText = "Some ?[text with infotip][Secret message]! Don't [shake]<fx:shake> !" ;
-	flowingText.markupText = "Some ?[text with infotip][This is a secret message...]! Don't [shake]<fx:shake> !" ;
+	//flowingText.markupText = "Some ?[text with infotip][This is a secret message...]! Don't [shake]<fx:shake> !" ;
+	flowingText.markupText = " ?[Lot][Thousands] of ?[infotip][This is a secret message...]: ?[infotip1][infotip1] ?[infotip2][infotip2] ?[infotip3][infotip3]..."
 	//flowingText.markupText = "Some ?[text with infotip][Secret message...]! Don't [shake]<fx:shake> !" ;
 	//flowingText.markupText = "Don't [shake]<fx:shake> !" ;
 
