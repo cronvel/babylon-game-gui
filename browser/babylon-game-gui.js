@@ -94,6 +94,14 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		this.heightInPixels = h ;
 	}
 
+	get isPointerBlocker() { return super.isPointerBlocker ; }
+	set isPointerBlocker( v ) {
+		v = !! v ;
+		super.isPointerBlocker = v ;
+		if ( this._decoration ) { this._decoration.isPointerBlocker = v ; }
+		if ( this._content ) { this._content.isPointerBlocker = v ; }
+	}
+
 	get decoration() { return this._decoration ; }
 	set decoration( control ) {
 		control = control || null ;
@@ -105,6 +113,7 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		if ( ! this._decoration ) { return ; }
 
 		this._decoration.zIndex = 0 ;
+		this._decoration.isPointerBlocker = this.isPointerBlocker ;
 		this.addControl( this._decoration ) ;
 
 		if ( this._autoScale && this._turnVisibleOnContentSizeReady && ! this._contentSizeReady ) {
@@ -120,6 +129,7 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		if ( ! this._content ) { return ; }
 
 		this._content.zIndex = 1 ;
+		this._content.isPointerBlocker = this.isPointerBlocker ;
 		this._content.onSizeUpdatedObservable.add( size => this._onContentSizeUpdated( size ) ) ;
 		this.addControl( this._content ) ;
 		
@@ -252,6 +262,8 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 				this.decoration = null ;
 				break ;
 		}
+
+		if ( this._decoration ) { this._decoration.isPointerBlocker = super.isPointerBlocker ; }
 	}
 
 	_setRectanglePropertiesNow( rect = this._decoration ) {
@@ -476,6 +488,7 @@ class Dialog extends DecoratedContainer {
 		
 		// Call the setter
 		this.content = flowingText ;
+		flowingText.isPointerBlocker = this.isPointerBlocker ;
 		
 		//this._setContentProperties( flowingText ) ;
 		this._setContentPropertiesNow( flowingText ) ;
@@ -523,7 +536,7 @@ Dialog.autoInfotip = ( advancedTexture , control , infotipParams ) => {
 Dialog.openInfotip = ( advancedTexture , control , data , params = {} ) => {
 	if ( control._infotip ) { Dialog.closeInfotip( control ) ; }
 	if ( ! data.hint ) { return ; }
-	
+
 	var infotip = new Dialog( 'infotip' ) ;
 	infotip.text = data.hint ;
 	//infotip.markupText = data.hint ;
@@ -543,30 +556,35 @@ Dialog.openInfotip = ( advancedTexture , control , data , params = {} ) => {
 	console.log( "coord:" , data.foreignBoundingBox.xmax , data.foreignBoundingBox.ymin ) ;
 	infotip.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP ;
 	infotip.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT ;
+
+	let centerX = ( data.foreignBoundingBox.xmin + data.foreignBoundingBox.xmax ) / 2 ;
+	let centerY = ( data.foreignBoundingBox.ymin + data.foreignBoundingBox.ymax ) / 2 ;
+	infotip.left = ( centerX - infotip.idealWidthInPixels / 2 ) + 'px' ;
+	infotip.top = ( centerY - infotip.idealHeightInPixels / 2 ) + 'px' ;
 	//infotip.left = data.foreignBoundingBox.xmax + 'px' ; infotip.top = data.foreignBoundingBox.ymin - 70 + 'px' ;
-	infotip.left = ( ( data.foreignBoundingBox.xmin + data.foreignBoundingBox.xmax ) / 2 ) + 'px' ; infotip.top = ( ( data.foreignBoundingBox.ymin + data.foreignBoundingBox.ymax ) / 2 ) + 'px' ;
 
 	if ( params.textAttr ) { infotip.textAttr = params.textAttr ; }
-	
+
 	//infotip.overlapGroup = params.overlapGroup ?? control.overlapGroup ;
 	infotip.overlapGroup = control.overlapGroup = 1 ;
-	control._fixedOverlap = true ;
-	infotip.overlapDeltaMultiplier = params.overlapDeltaMultiplier ?? 10 ;
-	
+	control._fixedOnOverlap = true ;
+	infotip.overlapDeltaMultiplier = params.overlapDeltaMultiplier ?? 2 ;
+	infotip.isPointerBlocker = false ;
+
 	// Force auto-scaling for all infotip
 	infotip.autoScale = true ;
 
 	var line = new BABYLON.GUI.Line( 'line' )
-	line.lineWidth = 2 ;
-	line.color = '#444' ;
+	line.lineWidth = 1 ;
+	line.color = '#ddd' ;
 	line.connectedControl = infotip ;
-	line.dash = [ 3 , 3 ] ;
-	line.x1 = data.foreignBoundingBox.xmax ;
-	line.y1 = data.foreignBoundingBox.ymin ;
+	//line.dash = [ 3 , 3 ] ;
+	line.x1 = centerX ;
+	line.y1 = centerY ;
 	advancedTexture.addControl( line ) ;
 
 	advancedTexture.addControl( infotip ) ;
-	
+
 	//*
 	advancedTexture.onBeginRenderObservable.add( () => {
 		console.warn( "Deoverlap?" ) ;
@@ -1220,8 +1238,14 @@ const Vector2 = BABYLON.Vector2 ;
 
 
 
-// Code derived from AdvancedDynamicTexture#moveToNonOverlappedPosition()
+// Code derived from AdvancedDynamicTexture#moveToNonOverlappedPosition().
+// It returns true if something has moved.
 AdvancedDynamicTexture.prototype.moveToNonOverlappedRealPosition_mkp = function( overlapGroup , deltaStep = 1 , repelFactor = 1 ) {
+	// CR
+	let changed = false ;
+	let { width , height } = this.getSize() ;
+	// ---
+	
 	let controlsForGroup ;
 
 	if ( Array.isArray( overlapGroup ) ) {
@@ -1236,22 +1260,28 @@ AdvancedDynamicTexture.prototype.moveToNonOverlappedRealPosition_mkp = function(
 
 	controlsForGroup.forEach( ( control1 ) => {
 		// CR:
-		if ( control1._fixedOverlap ) { return ; }
+		if ( control1._fixedOnOverlap ) { return ; }
 		// ---
 
 		let velocity = Vector2.Zero() ;
 		const center = new Vector2( control1.centerX , control1.centerY ) ;
-
+		
 		controlsForGroup.forEach( ( control2 ) => {
-			if ( control1 !== control2 && AdvancedDynamicTexture._Overlaps( control1 , control2 ) ) {
+			if ( control1 !== control2 && isControlOverlaping( control1 , control2 ) ) {
 				// if the two controls overlaps get a direction vector from one control's center to another control's center
 				const diff = center.subtract( new Vector2( control2.centerX , control2.centerY ) ) ;
 				const diffLength = diff.length() ;
 
-				if ( diffLength > 0 ) {
-					// calculate the velocity
-					velocity = velocity.add( diff.normalize().scale( repelFactor / diffLength ) ) ;
+				// CR: force a diff even if null
+				if ( diffLength <= 0.001 ) {
+					diffLength = 0.001 ;
+					diff.x = 0 ;
+					diff.y = -1 ;
 				}
+				// ---
+
+				// calculate the velocity
+				velocity = velocity.add( diff.normalize().scale( repelFactor / diffLength ) ) ;
 			}
 		} ) ;
 
@@ -1259,14 +1289,47 @@ AdvancedDynamicTexture.prototype.moveToNonOverlappedRealPosition_mkp = function(
 			// move the control along the direction vector away from the overlapping control
 			velocity = velocity.normalize().scale( deltaStep * ( control1.overlapDeltaMultiplier ?? 1 ) ) ;
 
-			// CR:
+			// CR: replace offset with the actual position
 			control1.leftInPixels += velocity.x ;
 			control1.topInPixels += velocity.y ;
+			changed = true ;
 			// ---
 		}
+
+		// CR: Force it on-screen
+		let leftOverflow = - control1.leftInPixels + control1.paddingLeftInPixels ;
+		let rightOverflow = control1.leftInPixels + control1.widthInPixels + control1.paddingRightInPixels - width ;
+		let topOverflow = - control1.topInPixels + control1.paddingTopInPixels ;
+		let bottomOverflow = control1.topInPixels + control1.heightInPixels + control1.paddingBottomInPixels - height ;
+
+		//*
+		if ( leftOverflow > 0 && rightOverflow <= 0 ) { control1.leftInPixels += leftOverflow ; changed = true ; }
+		if ( rightOverflow > 0 && leftOverflow <= 0 ) { control1.leftInPixels -= rightOverflow ; changed = true ; }
+		if ( topOverflow > 0 && bottomOverflow <= 0 ) { control1.topInPixels += topOverflow ; changed = true ; }
+		if ( bottomOverflow > 0 && topOverflow <= 0 ) { control1.topInPixels -= bottomOverflow ; changed = true ; }
+		//*/
+
+		console.warn( "overflow:" , leftOverflow , rightOverflow , topOverflow , bottomOverflow ) ;
+		//console.warn( "bottom:" , height , control1.topInPixels , control1.heightInPixels , control1.paddingBottomInPixels ) ; 
+		// ---
 	} ) ;
+
+	// CR:
+	return changed ;
+	// ---
 } ;
 
+function isControlOverlaping( control1 , control2 ) {
+	let width = Math.max( control1.widthInPixels , control2.widthInPixels ) ;
+	let height = Math.max( control1.heightInPixels , control2.heightInPixels ) ;
+
+	return ! (
+		control1.centerX > control2.centerX + width ||
+		control1.centerX + width < control2.centerX ||
+		control1.centerY > control2.centerY + height ||
+		control1.centerY + height < control2.centerY
+	) ;
+}
 
 },{}],7:[function(require,module,exports){
 (function (process,global){(function (){
@@ -21526,7 +21589,7 @@ function parseInline( str , ctx , blockEnd , trim = false ) {
 
 function parseNestedInline( str , ctx , scanEnd , topLevel = false ) {
 	var isSpace ,
-		lastWasSpace = WHITE_SPACES.has( str[ ctx.i - 1 ] ) ;
+		lastWasSpaceOrBegining = ! ctx.i || WHITE_SPACES.has( str[ ctx.i - 1 ] ) ;
 
 	//console.log( "parseInline() -- remaining:" , ctx.i , str.slice( ctx.i ) ) ;
 
@@ -21537,7 +21600,7 @@ function parseNestedInline( str , ctx , scanEnd , topLevel = false ) {
 	for ( ; ctx.i < scanEnd ; ctx.i ++ ) {
 		let char = str[ ctx.i ] ;
 
-		//if ( lastWasSpace ) {}
+		//if ( lastWasSpaceOrBegining ) {}
 		//console.error( "Checking: " , string.inspect( char ) ) ;
 
 		isSpace = WHITE_SPACES.has( char ) ;
@@ -21566,16 +21629,16 @@ function parseNestedInline( str , ctx , scanEnd , topLevel = false ) {
 			addInlineTextChunk( str , ctx ) ;
 			parseStyledText( str , ctx , scanEnd ) ;
 		}
-		else if ( char === '?' && str[ ctx.i + 1 ] === '[' && lastWasSpace ) {
+		else if ( char === '?' && str[ ctx.i + 1 ] === '[' && lastWasSpaceOrBegining ) {
 			addInlineTextChunk( str , ctx ) ;
 			parseInfotipedText( str , ctx , scanEnd ) ;
 		}
-		else if ( char === '!' && str[ ctx.i + 1 ] === '[' && lastWasSpace ) {
+		else if ( char === '!' && str[ ctx.i + 1 ] === '[' && lastWasSpaceOrBegining ) {
 			addInlineTextChunk( str , ctx ) ;
 			parseImage( str , ctx , scanEnd ) ;
 		}
 
-		lastWasSpace = isSpace ;
+		lastWasSpaceOrBegining = isSpace ;
 	}
 
 	addInlineTextChunk( str , ctx ) ;
@@ -42414,7 +42477,7 @@ module.exports={
   "dependencies": {
     "@cronvel/xmldom": "^0.1.32",
     "array-kit": "^0.2.6",
-    "book-source": "^0.3.9",
+    "book-source": "^0.3.10",
     "dom-kit": "^0.5.2",
     "image-size": "^1.0.2",
     "nextgen-events": "^1.5.3",
