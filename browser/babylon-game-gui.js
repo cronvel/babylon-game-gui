@@ -45,6 +45,7 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 	_autoScale = false ;	// if true, the box will fit its content
 	_contentSizeReady = false ;
 	_turnVisibleOnContentSizeReady = false ;
+	autoScaleReady = new Promise() ;
 
 	// Things like Dialog (Infotip) need a size (usually width) to preformat its content
 	_idealHeightInPixels = 0 ;
@@ -94,6 +95,7 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		this.heightInPixels = h ;
 	}
 
+	/*
 	get isPointerBlocker() { return super.isPointerBlocker ; }
 	set isPointerBlocker( v ) {
 		v = !! v ;
@@ -101,6 +103,7 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		if ( this._decoration ) { this._decoration.isPointerBlocker = v ; }
 		if ( this._content ) { this._content.isPointerBlocker = v ; }
 	}
+	*/
 
 	get decoration() { return this._decoration ; }
 	set decoration( control ) {
@@ -113,7 +116,7 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		if ( ! this._decoration ) { return ; }
 
 		this._decoration.zIndex = 0 ;
-		this._decoration.isPointerBlocker = this.isPointerBlocker ;
+		//this._decoration.isPointerBlocker = this.isPointerBlocker ;
 		this.addControl( this._decoration ) ;
 
 		if ( this._autoScale && this._turnVisibleOnContentSizeReady && ! this._contentSizeReady ) {
@@ -129,7 +132,7 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		if ( ! this._content ) { return ; }
 
 		this._content.zIndex = 1 ;
-		this._content.isPointerBlocker = this.isPointerBlocker ;
+		//this._content.isPointerBlocker = this.isPointerBlocker ;
 		this._content.onSizeUpdatedObservable.add( size => this._onContentSizeUpdated( size ) ) ;
 		this.addControl( this._content ) ;
 		
@@ -262,8 +265,6 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 				this.decoration = null ;
 				break ;
 		}
-
-		if ( this._decoration ) { this._decoration.isPointerBlocker = super.isPointerBlocker ; }
 	}
 
 	_setRectanglePropertiesNow( rect = this._decoration ) {
@@ -320,6 +321,7 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 
 		if ( ! this._contentSizeReady ) {
 			this._contentSizeReady = true ;
+			this.autoScaleReady.resolve() ;
 			if ( this._turnVisibleOnContentSizeReady ) {
 				this._decoration.isVisible = true ;
 				this._content.isVisible = true ;
@@ -533,9 +535,10 @@ Dialog.autoInfotip = ( advancedTexture , control , infotipParams ) => {
 	} ) ;
 } ;
 
-Dialog.openInfotip = ( advancedTexture , control , data , params = {} ) => {
+Dialog.openInfotip = async ( advancedTexture , control , data , params = {} ) => {
 	if ( control._infotip ) { Dialog.closeInfotip( control ) ; }
 	if ( ! data.hint ) { return ; }
+	console.log( "Dialog.openInfotip" , data.hint ) ;
 
 	var infotip = new Dialog( 'infotip' ) ;
 	infotip.text = data.hint ;
@@ -552,48 +555,63 @@ Dialog.openInfotip = ( advancedTexture , control , data , params = {} ) => {
 	infotip.type = params.type ?? BABYLON.GUI.DecoratedContainer.RECTANGLE ;
 	infotip.backgroundColor = params.backgroundColor || '#888888' ;
 
-	// Coordinate are relative to top-left
-	console.log( "coord:" , data.foreignBoundingBox.xmax , data.foreignBoundingBox.ymin ) ;
-	infotip.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP ;
-	infotip.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT ;
-
-	let centerX = ( data.foreignBoundingBox.xmin + data.foreignBoundingBox.xmax ) / 2 ;
-	let centerY = ( data.foreignBoundingBox.ymin + data.foreignBoundingBox.ymax ) / 2 ;
-	infotip.left = ( centerX - infotip.idealWidthInPixels / 2 ) + 'px' ;
-	infotip.top = ( centerY - infotip.idealHeightInPixels / 2 ) + 'px' ;
-	//infotip.left = data.foreignBoundingBox.xmax + 'px' ; infotip.top = data.foreignBoundingBox.ymin - 70 + 'px' ;
-
 	if ( params.textAttr ) { infotip.textAttr = params.textAttr ; }
 
 	//infotip.overlapGroup = params.overlapGroup ?? control.overlapGroup ;
 	infotip.overlapGroup = control.overlapGroup = 1 ;
 	control._fixedOnOverlap = true ;
 	infotip.overlapDeltaMultiplier = params.overlapDeltaMultiplier ?? 2 ;
-	infotip.isPointerBlocker = false ;
+	//infotip.isPointerBlocker = false ;
 
 	// Force auto-scaling for all infotip
 	infotip.autoScale = true ;
+
+	// Coordinate are relative to top-left
+	infotip.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP ;
+	infotip.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT ;
+
+	var areaCenterX = ( data.foreignBoundingBox.xmin + data.foreignBoundingBox.xmax ) / 2 ;
+	var areaCenterY = ( data.foreignBoundingBox.ymin + data.foreignBoundingBox.ymax ) / 2 ;
+
+	infotip.autoScaleReady.then( async () => {
+		let margin = 5 ;	// Security margin, to avoid bug with infotip overlapping the triggering area, thus closing the infotip immediately
+		margin = 0 ; // /!\ but there is another bug, so we set it to 0 until fixed... /!\
+		let dx = areaCenterX - control.centerX ;
+		let dy = areaCenterY - control.centerY ;
+		let contentSizes = await infotip._content._getSizes() ;
+		// For some reasons, contentSizes.width and contentSizes.height are not ready soon enough...
+		let width = contentSizes.innerWidth + infotip.paddingLeftInPixels + infotip.paddingRightInPixels ;
+		let height = contentSizes.innerHeight + infotip.paddingTopInPixels + infotip.paddingBottomInPixels ;
+
+		infotip.left = dx > 0 ? data.foreignBoundingBox.xmax + margin + 'px' : data.foreignBoundingBox.xmin - width - margin + 'px' ;
+		infotip.top = dy > 0 ? data.foreignBoundingBox.ymax + margin + 'px' : data.foreignBoundingBox.ymin - height - margin + 'px' ;
+		//console.log( "coord:" , data.foreignBoundingBox.xmax , data.foreignBoundingBox.ymin , dx , dy , contentSizes ) ;
+		//infotip.isVisible = false ;
+		line.isVisible = true ;
+
+		//*
+		advancedTexture.onBeginRenderObservable.add( () => {
+			//console.warn( "Deoverlap?" ) ;
+			advancedTexture.moveToNonOverlappedRealPosition_mkp() ; // this will deoverlap all controls in the AdvancedDynamicTexture with overlapGroup set to a numeric value
+			//advancedTexture.moveToNonOverlappedPosition(this._buttons) ; // this will deoverlap a given array of controls
+			//advancedTexture.moveToNonOverlappedPosition(1) ; // this will deoverlap button-0, button-1 and button-3 (all belongs to group 1) 
+			//advancedTexture.moveToNonOverlappedPosition(2) ; // this will deoverlap button-3 and button-4 (both in group 2)
+		} ) ;
+		//*/
+	} ) ;
+
 
 	var line = new BABYLON.GUI.Line( 'line' )
 	line.lineWidth = 1 ;
 	line.color = '#ddd' ;
 	line.connectedControl = infotip ;
 	//line.dash = [ 3 , 3 ] ;
-	line.x1 = centerX ;
-	line.y1 = centerY ;
+	line.x1 = areaCenterX ;
+	line.y1 = areaCenterY ;
+	line.isVisible = false ;
 	advancedTexture.addControl( line ) ;
 
 	advancedTexture.addControl( infotip ) ;
-
-	//*
-	advancedTexture.onBeginRenderObservable.add( () => {
-		console.warn( "Deoverlap?" ) ;
-		advancedTexture.moveToNonOverlappedRealPosition_mkp() ; // this will deoverlap all controls in the AdvancedDynamicTexture with overlapGroup set to a numeric value
-		//advancedTexture.moveToNonOverlappedPosition(this._buttons) ; // this will deoverlap a given array of controls
-		//advancedTexture.moveToNonOverlappedPosition(1) ; // this will deoverlap button-0, button-1 and button-3 (all belongs to group 1) 
-		//advancedTexture.moveToNonOverlappedPosition(2) ; // this will deoverlap button-3 and button-4 (both in group 2)
-	} ) ;
-	//*/
 
 	control._infotip = infotip ;
 	control._infotipLine = line ;
@@ -1309,7 +1327,7 @@ AdvancedDynamicTexture.prototype.moveToNonOverlappedRealPosition_mkp = function(
 		if ( bottomOverflow > 0 && topOverflow <= 0 ) { control1.topInPixels -= bottomOverflow ; changed = true ; }
 		//*/
 
-		console.warn( "overflow:" , leftOverflow , rightOverflow , topOverflow , bottomOverflow ) ;
+		//console.warn( "overflow:" , leftOverflow , rightOverflow , topOverflow , bottomOverflow ) ;
 		//console.warn( "bottom:" , height , control1.topInPixels , control1.heightInPixels , control1.paddingBottomInPixels ) ; 
 		// ---
 	} ) ;
