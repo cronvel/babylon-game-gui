@@ -31,6 +31,8 @@
 
 
 
+const Observable = BABYLON.Observable ;
+
 const VG = require( './VG.js' ) ;
 
 const Promise = require( 'seventh' ) ;
@@ -64,6 +66,9 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 	_sliceBottom = null ;
 
 	_contentProperties = {} ;
+
+	onInfotipObservable = new Observable() ;
+	onInfotipClosedObservable = new Observable() ;
 
 	static RECTANGLE = 0 ;
 	static IMAGE = 1 ;
@@ -135,7 +140,15 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		//this._content.isPointerBlocker = this.isPointerBlocker ;
 		this._content.onSizeUpdatedObservable.add( size => this._onContentSizeUpdated( size ) ) ;
 		this.addControl( this._content ) ;
-		
+
+		if ( this._content.onInfotipObservable ) {
+			this._content.onInfotipObservable.add( ( ... params ) => this.onInfotipObservable.notifyObservers( ... params ) ) ;
+		}
+
+		if ( this._content.onInfotipClosedObservable ) {
+			this._content.onInfotipClosedObservable.add( ( ... params ) => this.onInfotipClosedObservable.notifyObservers( ... params ) ) ;
+		}
+
 		if ( this._autoScale ) {
 			if ( this._turnVisibleOnContentSizeReady ) {
 				this._contentSizeReady = false ;
@@ -524,15 +537,48 @@ DecoratedContainer.createCommonContentGetterSetter( Dialog.prototype , {
 } ) ;
 
 Dialog.autoInfotip = ( advancedTexture , control , infotipParams ) => {
-	control.onInfotipObservable.add( data => {
+	var active = 0 ;
+	var timer = null ;
+	var count = 0 ;
+
+	const cleanup = () => {
+		control.onInfotipObservable.removeCallback( openInfotip ) ;
+		control.onInfotipClosedObservable.removeCallback( closeInfotip ) ;
+		clearInterval( timer ) ; timer = null ;
+	} ;
+
+	const deoverlap = () => {
+		//console.warn( "Deoverlap?" ) ;
+		//console.log( "Count:" , count ) ;
+		//if ( count ++ > 5 ) { return ; }
+		advancedTexture.mkpDeoverlap() ; // this will deoverlap all controls in the AdvancedDynamicTexture with overlapGroup set to a numeric value
+		//advancedTexture.mkpDeoverlap(this._buttons) ; // this will deoverlap a given array of controls
+		//advancedTexture.mkpDeoverlap(1) ; // this will deoverlap button-0, button-1 and button-3 (all belongs to group 1) 
+		//advancedTexture.mkpDeoverlap(2) ; // this will deoverlap button-3 and button-4 (both in group 2)
+	} ;
+
+	const openInfotip = data => {
 		console.warn( "Infotip:" , data ) ;
 		Dialog.openInfotip( advancedTexture  , control , data , infotipParams ) ;
-	} ) ;
+		active ++ ;
+		count = 0 ;
+		if ( active === 1 ) {
+			timer = setInterval( deoverlap , 20 ) ;
+		}
+	} ;
 
-	control.onInfotipClosedObservable.add( data => {
+	const closeInfotip = data => {
 		console.warn( "Infotip Closed:" , data ) ;
-		Dialog.closeInfotip( control ) ;
-	} ) ;
+		Dialog.closeInfotip( control , data ) ;
+		active -- ;
+		if ( ! active ) {
+			clearInterval( timer ) ; timer = null ;
+		}
+	} ;
+
+	control.onInfotipObservable.add( openInfotip ) ;
+	control.onInfotipClosedObservable.add( closeInfotip ) ;
+	control.onDisposeObservable.addOnce( cleanup ) ;
 } ;
 
 Dialog.openInfotip = async ( advancedTexture , control , data , params = {} ) => {
@@ -542,6 +588,7 @@ Dialog.openInfotip = async ( advancedTexture , control , data , params = {} ) =>
 
 	var infotip = new Dialog( 'infotip' ) ;
 	infotip.text = data.hint ;
+	infotip._entityUid = data.entityUid ;
 	//infotip.markupText = data.hint ;
 
 	infotip.idealWidthInPixels = params.idealWidthInPixels || 500 ;
@@ -575,7 +622,6 @@ Dialog.openInfotip = async ( advancedTexture , control , data , params = {} ) =>
 
 	infotip.autoScaleReady.then( async () => {
 		let margin = 5 ;	// Security margin, to avoid bug with infotip overlapping the triggering area, thus closing the infotip immediately
-		margin = 0 ; // /!\ but there is another bug, so we set it to 0 until fixed... /!\
 		let dx = areaCenterX - control.centerX ;
 		let dy = areaCenterY - control.centerY ;
 		let contentSizes = await infotip._content._getSizes() ;
@@ -588,16 +634,6 @@ Dialog.openInfotip = async ( advancedTexture , control , data , params = {} ) =>
 		//console.log( "coord:" , data.foreignBoundingBox.xmax , data.foreignBoundingBox.ymin , dx , dy , contentSizes ) ;
 		//infotip.isVisible = false ;
 		line.isVisible = true ;
-
-		//*
-		advancedTexture.onBeginRenderObservable.add( () => {
-			//console.warn( "Deoverlap?" ) ;
-			advancedTexture.moveToNonOverlappedRealPosition_mkp() ; // this will deoverlap all controls in the AdvancedDynamicTexture with overlapGroup set to a numeric value
-			//advancedTexture.moveToNonOverlappedPosition(this._buttons) ; // this will deoverlap a given array of controls
-			//advancedTexture.moveToNonOverlappedPosition(1) ; // this will deoverlap button-0, button-1 and button-3 (all belongs to group 1) 
-			//advancedTexture.moveToNonOverlappedPosition(2) ; // this will deoverlap button-3 and button-4 (both in group 2)
-		} ) ;
-		//*/
 	} ) ;
 
 
@@ -617,15 +653,22 @@ Dialog.openInfotip = async ( advancedTexture , control , data , params = {} ) =>
 	control._infotipLine = line ;
 } ;
 
-Dialog.closeInfotip = ( control ) => {
-    if ( control._infotipLine ) {
-    	control._infotipLine.dispose() ;
-    	control._infotipLine = null ;
-	}
+// If data is null, force closing, else close only if the opened infotip is the one who need to be closed
+Dialog.closeInfotip = ( control , data = null ) => {
+	if ( control._infotip ) {
+		if ( ! data || control._infotip._entityUid === data.entityUid ) {
+			control._infotip.dispose() ;
+			control._infotip = null ;
 
-    if ( control._infotip ) {
-	    control._infotip.dispose() ;
-	    control._infotip = null ;
+			if ( control._infotipLine ) {
+				control._infotipLine.dispose() ;
+				control._infotipLine = null ;
+			}
+		}
+	}
+	else if ( control._infotipLine ) {
+		control._infotipLine.dispose() ;
+		control._infotipLine = null ;
 	}
 } ;
 
@@ -1249,7 +1292,7 @@ exports.setFontUrl = ( ... args ) => svgKit.fontLib.setFontUrl( ... args ) ;
 
 /* global BABYLON */
 
-// We will append the suffix _mkp to all method to mark MonKey Patch
+// We will be prefixed by "mkp" to mark MonKey Patch
 
 const AdvancedDynamicTexture = BABYLON.GUI.AdvancedDynamicTexture ;
 const Vector2 = BABYLON.Vector2 ;
@@ -1258,9 +1301,9 @@ const Vector2 = BABYLON.Vector2 ;
 
 // Code derived from AdvancedDynamicTexture#moveToNonOverlappedPosition().
 // It returns true if something has moved.
-AdvancedDynamicTexture.prototype.moveToNonOverlappedRealPosition_mkp = function( overlapGroup , deltaStep = 1 , repelFactor = 1 ) {
+AdvancedDynamicTexture.prototype.mkpDeoverlap = function( overlapGroup , deltaStep = 10 , repelFactor = 1 ) {
 	// CR
-	let changed = false ;
+	let overlap = false , overflow = false ;
 	let { width , height } = this.getSize() ;
 	// ---
 	
@@ -1310,7 +1353,7 @@ AdvancedDynamicTexture.prototype.moveToNonOverlappedRealPosition_mkp = function(
 			// CR: replace offset with the actual position
 			control1.leftInPixels += velocity.x ;
 			control1.topInPixels += velocity.y ;
-			changed = true ;
+			overlap = true ;
 			// ---
 		}
 
@@ -1321,19 +1364,16 @@ AdvancedDynamicTexture.prototype.moveToNonOverlappedRealPosition_mkp = function(
 		let bottomOverflow = control1.topInPixels + control1.heightInPixels + control1.paddingBottomInPixels - height ;
 
 		//*
-		if ( leftOverflow > 0 && rightOverflow <= 0 ) { control1.leftInPixels += leftOverflow ; changed = true ; }
-		if ( rightOverflow > 0 && leftOverflow <= 0 ) { control1.leftInPixels -= rightOverflow ; changed = true ; }
-		if ( topOverflow > 0 && bottomOverflow <= 0 ) { control1.topInPixels += topOverflow ; changed = true ; }
-		if ( bottomOverflow > 0 && topOverflow <= 0 ) { control1.topInPixels -= bottomOverflow ; changed = true ; }
-		//*/
-
-		//console.warn( "overflow:" , leftOverflow , rightOverflow , topOverflow , bottomOverflow ) ;
+		if ( leftOverflow > 0 && rightOverflow <= 0 ) { control1.leftInPixels += leftOverflow ; overflow = true ; }
+		if ( rightOverflow > 0 && leftOverflow <= 0 ) { control1.leftInPixels -= rightOverflow ; overflow = true ; }
+		if ( topOverflow > 0 && bottomOverflow <= 0 ) { control1.topInPixels += topOverflow ; overflow = true ; }
+		if ( bottomOverflow > 0 && topOverflow <= 0 ) { control1.topInPixels -= bottomOverflow ; overflow = true ; }
 		//console.warn( "bottom:" , height , control1.topInPixels , control1.heightInPixels , control1.paddingBottomInPixels ) ; 
 		// ---
 	} ) ;
 
 	// CR:
-	return changed ;
+	return overlap || overflow ;
 	// ---
 } ;
 
@@ -1348,6 +1388,7 @@ function isControlOverlaping( control1 , control2 ) {
 		control1.centerY + height < control2.centerY
 	) ;
 }
+
 
 },{}],7:[function(require,module,exports){
 (function (process,global){(function (){
@@ -4595,6 +4636,7 @@ DynamicArea.prototype.setStatus = function( status ) {
 			} ;
 
 			event.data.boundingBox = this.boundingBox.export() ;
+			event.data.entityUid = this.entity._id ;
 
 			this.toEmit.push( event ) ;
 		}
@@ -5036,7 +5078,7 @@ DynamicManager.prototype.addBabylonControlEventListener = function( observable ,
 
 DynamicManager.prototype.clearBabylonControlEventListener = function() {
 	for ( let [ observable , listener ] of this.babylonControlListeners ) {
-		this.babylonControl[ observable ].remove( listener ) ;
+		this.babylonControl[ observable ].removeCallback( listener ) ;
 	}
 
 	this.babylonControlListeners.length = 0 ;
@@ -5813,8 +5855,12 @@ var autoId = 0 ;
 
 
 function VGEntity( params ) {
-	this._id = '_vgEntId_' + ( autoId ++ ) ;	// Used when a VG has to create unique ID automatically (e.g. creating a <clipPath>)
+	// ._id is used when a VG has to create unique ID automatically (e.g. creating a <clipPath>).
+	// It is the internal unique ID, while id is .id is the userland ID.
+	//this._id = '_vgEntId_' + ( autoId ++ ) ;
+	this._id = '_' + this.constructor.name + '_' + ( autoId ++ ) ;	// Used when a VG has to create unique ID automatically (e.g. creating a <clipPath>)
 	this.id = null ;
+
 	this.boundingBox = new BoundingBox() ;
 	this.class = new Set() ;
 	this.style = {} ;
