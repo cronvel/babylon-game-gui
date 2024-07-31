@@ -417,6 +417,7 @@ BABYLON.RegisterClass( 'BABYLON.GUI.DecoratedContainer' , DecoratedContainer ) ;
 
 const DecoratedContainer = require( './DecoratedContainer.js' ) ;
 const FlowingText = require( './FlowingText.js' ) ;
+const helpers = require( './helpers.js' ) ;
 
 const svgKit = require( 'svg-kit' ) ;
 const Promise = require( 'seventh' ) ;
@@ -537,9 +538,10 @@ DecoratedContainer.createCommonContentGetterSetter( Dialog.prototype , {
 } ) ;
 
 Dialog.autoInfotip = ( advancedTexture , control , infotipParams ) => {
-	var active = 0 ;
-	var timer = null ;
-	var count = 0 ;
+	var active = 0 ,
+		timer = null ,
+		count = 0 ,
+		overlapGroup = infotipParams.overlapGroup ?? null ;
 
 	const cleanup = () => {
 		Dialog.closeInfotip( control ) ;
@@ -549,13 +551,13 @@ Dialog.autoInfotip = ( advancedTexture , control , infotipParams ) => {
 	} ;
 
 	const deoverlap = () => {
+		if ( overlapGroup === null ) { return ; }
 		//console.warn( "Deoverlap?" ) ;
 		//console.log( "Count:" , count ) ;
 		//if ( count ++ > 5 ) { return ; }
-		advancedTexture.mkpDeoverlap() ; // this will deoverlap all controls in the AdvancedDynamicTexture with overlapGroup set to a numeric value
-		//advancedTexture.mkpDeoverlap(this._buttons) ; // this will deoverlap a given array of controls
-		//advancedTexture.mkpDeoverlap(1) ; // this will deoverlap button-0, button-1 and button-3 (all belongs to group 1) 
-		//advancedTexture.mkpDeoverlap(2) ; // this will deoverlap button-3 and button-4 (both in group 2)
+
+		// This will deoverlap all controls in the AdvancedDynamicTexture with that overlapGroup
+		helpers.deoverlapControls( advancedTexture , overlapGroup ) ;
 	} ;
 
 	const openInfotip = data => {
@@ -606,10 +608,11 @@ Dialog.openInfotip = async ( advancedTexture , control , data , params = {} ) =>
 	if ( params.textAttr ) { infotip.textAttr = params.textAttr ; }
 
 	//infotip.overlapGroup = params.overlapGroup ?? control.overlapGroup ;
-	infotip.overlapGroup = control.overlapGroup = 1 ;
-	control._fixedOnOverlap = true ;
-	infotip.overlapDeltaMultiplier = params.overlapDeltaMultiplier ?? 2 ;
-	//infotip.isPointerBlocker = false ;
+	if ( typeof params.overlapGroup === 'number' ) {
+		infotip.overlapGroup = control.overlapGroup = params.overlapGroup ;
+		control._fixedOnOverlap = true ;	// Prevent the control itself to move, only the infotips
+		infotip.overlapDeltaMultiplier = params.overlapDeltaMultiplier ?? 2 ;
+	}
 
 	// Force auto-scaling for all infotip
 	infotip.autoScale = true ;
@@ -625,14 +628,16 @@ Dialog.openInfotip = async ( advancedTexture , control , data , params = {} ) =>
 		let margin = 5 ;	// Security margin, to avoid bug with infotip overlapping the triggering area, thus closing the infotip immediately
 		let dx = areaCenterX - control.centerX ;
 		let dy = areaCenterY - control.centerY ;
-		let contentSizes = await infotip._content._getSizes() ;
-		// For some reasons, contentSizes.width and contentSizes.height are not ready soon enough...
-		let width = contentSizes.innerWidth + infotip.paddingLeftInPixels + infotip.paddingRightInPixels ;
-		let height = contentSizes.innerHeight + infotip.paddingTopInPixels + infotip.paddingBottomInPixels ;
 
-		infotip.left = dx > 0 ? data.foreignBoundingBox.xmax + margin + 'px' : data.foreignBoundingBox.xmin - width - margin + 'px' ;
-		infotip.top = dy > 0 ? data.foreignBoundingBox.ymax + margin + 'px' : data.foreignBoundingBox.ymin - height - margin + 'px' ;
-		//console.log( "coord:" , data.foreignBoundingBox.xmax , data.foreignBoundingBox.ymin , dx , dy , contentSizes ) ;
+		// For some reasons, contentSizes.width and contentSizes.height are not ready soon enough...
+		let contentSizes = await infotip._content._getSizes() ;
+		let width = contentSizes.innerWidth + infotip._content.paddingLeftInPixels + infotip._content.paddingRightInPixels ;
+		let height = contentSizes.innerHeight + infotip._content.paddingTopInPixels + infotip._content.paddingBottomInPixels ;
+
+		infotip.leftInPixels = dx > 0 ? data.foreignBoundingBox.xmax + margin : data.foreignBoundingBox.xmin - width - margin ;
+		infotip.topInPixels = dy > 0 ? data.foreignBoundingBox.ymax + margin : data.foreignBoundingBox.ymin - height - margin ;
+		helpers.forceControlOnScreen( advancedTexture , infotip ) ;
+		//console.log( "coord:" , data.foreignBoundingBox , width , height , contentSizes , infotip._content.paddingLeftInPixels , infotip._content.paddingRightInPixels ) ;
 		//infotip.isVisible = false ;
 		line.isVisible = true ;
 	} ) ;
@@ -678,7 +683,7 @@ BABYLON.GUI.Dialog = Dialog ;
 BABYLON.RegisterClass( 'BABYLON.GUI.Dialog' , Dialog ) ;
 
 
-},{"./DecoratedContainer.js":1,"./FlowingText.js":3,"seventh":15,"svg-kit":48}],3:[function(require,module,exports){
+},{"./DecoratedContainer.js":1,"./FlowingText.js":3,"./helpers.js":6,"seventh":15,"svg-kit":48}],3:[function(require,module,exports){
 /*
 	Babylon Game GUI
 
@@ -1249,10 +1254,9 @@ BABYLON.RegisterClass( 'BABYLON.GUI.VG' , VG ) ;
 
 "use strict" ;
 
-require( './monkey-patching.js' ) ;
-
 const svgKit = require( 'svg-kit' ) ;
 
+exports.helpers = require( './helpers.js' ) ;
 exports.svgKit = svgKit ;
 exports.VG = require( './VG.js' ) ;
 exports.FlowingText = require( './FlowingText.js' ) ;
@@ -1262,7 +1266,7 @@ exports.Dialog = require( './Dialog.js' ) ;
 exports.setFontUrl = ( ... args ) => svgKit.fontLib.setFontUrl( ... args ) ;
 
 
-},{"./DecoratedContainer.js":1,"./Dialog.js":2,"./FlowingText.js":3,"./VG.js":4,"./monkey-patching.js":6,"svg-kit":48}],6:[function(require,module,exports){
+},{"./DecoratedContainer.js":1,"./Dialog.js":2,"./FlowingText.js":3,"./VG.js":4,"./helpers.js":6,"svg-kit":48}],6:[function(require,module,exports){
 /*
 	Babylon Game GUI
 
@@ -1291,22 +1295,41 @@ exports.setFontUrl = ( ... args ) => svgKit.fontLib.setFontUrl( ... args ) ;
 
 "use strict" ;
 
-/* global BABYLON */
 
-// We will be prefixed by "mkp" to mark MonKey Patch
 
 const AdvancedDynamicTexture = BABYLON.GUI.AdvancedDynamicTexture ;
 const Vector2 = BABYLON.Vector2 ;
+
+const helpers = exports ;
+
+
+
+// Force it on-screen
+helpers.forceControlOnScreen = ( advancedTexture , control ) => {
+	var overflow = false ,
+		{ width , height } = advancedTexture.getSize() ;
+
+	var leftOverflow = - control.leftInPixels + control.paddingLeftInPixels ;
+	var rightOverflow = control.leftInPixels + control.widthInPixels + control.paddingRightInPixels - width ;
+	var topOverflow = - control.topInPixels + control.paddingTopInPixels ;
+	var bottomOverflow = control.topInPixels + control.heightInPixels + control.paddingBottomInPixels - height ;
+
+	if ( leftOverflow > 0 && rightOverflow <= 0 ) { control.leftInPixels += leftOverflow ; overflow = true ; }
+	if ( rightOverflow > 0 && leftOverflow <= 0 ) { control.leftInPixels -= rightOverflow ; overflow = true ; }
+	if ( topOverflow > 0 && bottomOverflow <= 0 ) { control.topInPixels += topOverflow ; overflow = true ; }
+	if ( bottomOverflow > 0 && topOverflow <= 0 ) { control.topInPixels -= bottomOverflow ; overflow = true ; }
+	//console.warn( "bottom:" , height , control.topInPixels , control.heightInPixels , control.paddingBottomInPixels ) ; 
+
+	return overflow ;
+} ;
 
 
 
 // Code derived from AdvancedDynamicTexture#moveToNonOverlappedPosition().
 // It returns true if something has moved.
-AdvancedDynamicTexture.prototype.mkpDeoverlap = function( overlapGroup , deltaStep = 10 , repelFactor = 1 ) {
-	// CR
-	let overlap = false , overflow = false ;
-	let { width , height } = this.getSize() ;
-	// ---
+helpers.deoverlapControls = ( advancedTexture , overlapGroup , deltaStep = 10 , repelFactor = 1 ) => {
+	let overlap = false ,
+		overflow = false ;
 	
 	let controlsForGroup ;
 
@@ -1314,33 +1337,30 @@ AdvancedDynamicTexture.prototype.mkpDeoverlap = function( overlapGroup , deltaSt
 		controlsForGroup = overlapGroup ;
 	}
 	else {
-		const descendants = this.getDescendants( true ) ;
+		const descendants = advancedTexture.getDescendants( true ) ;
 		// get only the controls with an overlapGroup property set
 		// if the overlapGroup parameter is set, filter the controls and get only the controls belonging to that overlapGroup
 		controlsForGroup = overlapGroup === undefined ? descendants.filter( ( c ) => c.overlapGroup !== undefined ) : descendants.filter( ( c ) => c.overlapGroup === overlapGroup ) ;
 	}
 
 	controlsForGroup.forEach( ( control1 ) => {
-		// CR:
 		if ( control1._fixedOnOverlap ) { return ; }
-		// ---
 
 		let velocity = Vector2.Zero() ;
 		const center = new Vector2( control1.centerX , control1.centerY ) ;
 		
 		controlsForGroup.forEach( ( control2 ) => {
-			if ( control1 !== control2 && isControlOverlaping( control1 , control2 ) ) {
+			if ( control1 !== control2 && helpers.areControlsOverlaping( control1 , control2 ) ) {
 				// if the two controls overlaps get a direction vector from one control's center to another control's center
 				const diff = center.subtract( new Vector2( control2.centerX , control2.centerY ) ) ;
 				const diffLength = diff.length() ;
 
-				// CR: force a diff even if null
+				// Force a diff even if null
 				if ( diffLength <= 0.001 ) {
 					diffLength = 0.001 ;
 					diff.x = 0 ;
 					diff.y = -1 ;
 				}
-				// ---
 
 				// calculate the velocity
 				velocity = velocity.add( diff.normalize().scale( repelFactor / diffLength ) ) ;
@@ -1350,37 +1370,26 @@ AdvancedDynamicTexture.prototype.mkpDeoverlap = function( overlapGroup , deltaSt
 		if ( velocity.length() > 0 ) {
 			// move the control along the direction vector away from the overlapping control
 			velocity = velocity.normalize().scale( deltaStep * ( control1.overlapDeltaMultiplier ?? 1 ) ) ;
-
-			// CR: replace offset with the actual position
 			control1.leftInPixels += velocity.x ;
 			control1.topInPixels += velocity.y ;
 			overlap = true ;
-			// ---
 		}
 
-		// CR: Force it on-screen
-		let leftOverflow = - control1.leftInPixels + control1.paddingLeftInPixels ;
-		let rightOverflow = control1.leftInPixels + control1.widthInPixels + control1.paddingRightInPixels - width ;
-		let topOverflow = - control1.topInPixels + control1.paddingTopInPixels ;
-		let bottomOverflow = control1.topInPixels + control1.heightInPixels + control1.paddingBottomInPixels - height ;
-
-		//*
-		if ( leftOverflow > 0 && rightOverflow <= 0 ) { control1.leftInPixels += leftOverflow ; overflow = true ; }
-		if ( rightOverflow > 0 && leftOverflow <= 0 ) { control1.leftInPixels -= rightOverflow ; overflow = true ; }
-		if ( topOverflow > 0 && bottomOverflow <= 0 ) { control1.topInPixels += topOverflow ; overflow = true ; }
-		if ( bottomOverflow > 0 && topOverflow <= 0 ) { control1.topInPixels -= bottomOverflow ; overflow = true ; }
+		// Force it on-screen
+		if ( helpers.forceControlOnScreen( advancedTexture , control1 ) ) { overflow = true ; }
 		//console.warn( "bottom:" , height , control1.topInPixels , control1.heightInPixels , control1.paddingBottomInPixels ) ; 
-		// ---
 	} ) ;
 
-	// CR:
 	return overlap || overflow ;
-	// ---
 } ;
 
-function isControlOverlaping( control1 , control2 ) {
-	let width = Math.max( control1.widthInPixels , control2.widthInPixels ) ;
-	let height = Math.max( control1.heightInPixels , control2.heightInPixels ) ;
+
+
+// The original Babylon GUI function was doing really strange things,
+// e.g.: using control1 width and control2 width randomly instead of the average width value...
+helpers.areControlsOverlaping = ( control1 , control2 ) => {
+	let width = ( control1.widthInPixels + control2.widthInPixels ) / 2 ;
+	let height = ( control1.heightInPixels + control2.heightInPixels ) / 2 ;
 
 	return ! (
 		control1.centerX > control2.centerX + width ||
@@ -4896,7 +4905,7 @@ DynamicManager.prototype.onPointerMove = function( canvasCoords , convertBackCoo
 				this.convertEventCoords( event , convertBackCoords ) ;
 				this.toEmit.push( event ) ;
 			}
-				
+
 			dynamic.toEmit.length = 0 ;
 		}
 	}
@@ -42533,7 +42542,7 @@ unicode.isEmojiModifierCodePoint = code =>
 },{"./json-data/unicode-emoji-width-ranges.json":108}],111:[function(require,module,exports){
 module.exports={
   "name": "svg-kit",
-  "version": "0.6.4",
+  "version": "0.6.5",
   "description": "A SVG toolkit, with its own Vector Graphics structure, multiple renderers (svg text, DOM svg, canvas), and featuring Flowing Text.",
   "main": "lib/svg-kit.js",
   "directories": {

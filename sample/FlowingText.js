@@ -61,12 +61,11 @@ async function createScene() {
 
 	//flowingText.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP ; flowingText.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT ;
 	flowingText.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
-	//console.log( "BF flowingText.autoScale =" ) ;
 	flowingText.autoScale = true ;
-	//console.log( "BF advancedTexture.addControl" ) ;
 	advancedTexture.addControl( flowingText ) ;
 
 	BABYLON.GUI.Dialog.autoInfotip( advancedTexture , flowingText , {
+		//overlapGroup: 10
 		//textAttr: { color: '#77f' }
 	} ) ;
 
