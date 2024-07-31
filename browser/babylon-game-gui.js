@@ -142,11 +142,11 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		this.addControl( this._content ) ;
 
 		if ( this._content.onInfotipObservable ) {
-			this._content.onInfotipObservable.add( ( ... params ) => this.onInfotipObservable.notifyObservers( ... params ) ) ;
+			this._content.onInfotipObservable.add( data => this.onInfotipObservable.notifyObservers( data ) ) ;
 		}
 
 		if ( this._content.onInfotipClosedObservable ) {
-			this._content.onInfotipClosedObservable.add( ( ... params ) => this.onInfotipClosedObservable.notifyObservers( ... params ) ) ;
+			this._content.onInfotipClosedObservable.add( data => this.onInfotipClosedObservable.notifyObservers( data ) ) ;
 		}
 
 		if ( this._autoScale ) {
@@ -542,6 +542,7 @@ Dialog.autoInfotip = ( advancedTexture , control , infotipParams ) => {
 	var count = 0 ;
 
 	const cleanup = () => {
+		Dialog.closeInfotip( control ) ;
 		control.onInfotipObservable.removeCallback( openInfotip ) ;
 		control.onInfotipClosedObservable.removeCallback( closeInfotip ) ;
 		clearInterval( timer ) ; timer = null ;

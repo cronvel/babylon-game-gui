@@ -47,7 +47,7 @@ async function createScene() {
 		+ "Once upon a time, there was a [fearsome]<fx:quiver> ?[dragon][A big lizard with wings and breathing fire] that was devastating the country..."
 	) ;
 	
-	dialog.onPointerUpObservable.add( () => {
+	dialog.onPointerUpObservable.addOnce( () => {
 		createDialog(
 			"But a valiant hero deflected the dragon's fire breath with its holy shield, "
 			+ "and stabbed the dragon's heart with its divine sword... "
@@ -63,7 +63,8 @@ async function createScene() {
 
 function dismissDialog() {
 	if ( dialog ) {
-		advancedTexture.removeControl( dialog ) ;
+		dialog.dispose() ;
+		//advancedTexture.removeControl( dialog ) ;
 		dialog = null ;
 	}
 }
