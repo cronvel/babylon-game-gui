@@ -44,7 +44,7 @@ async function createScene() {
 
 	createDialog(
 		"[Hello]<green> *my* **friend**, ***stay*** [awhile]<bg:blue> and _listen_... "
-		+ "Once upon a time, there was a [fearsome]<fx:quiver> ?[dragon][A big lizard with wings and breathing fire] that was devastating the country..."
+		+ "Once upon a time, there was a [fearsome]<fx:quiver> ?[dragon][A dragon is a big lizard with wings and breathing fire!] that was devastating the country..."
 	) ;
 	
 	dialog.onPointerUpObservable.addOnce( () => {
@@ -115,7 +115,9 @@ function createDialog( markupText ) {
 	
 	advancedTexture.addControl( dialog ) ;
 
-	BABYLON.GUI.Dialog.autoInfotip( advancedTexture , dialog , {
+	//BABYLON.GUI.Dialog.autoInfotip( advancedTexture , dialog , {
+	BABYLON.GUI.Dialog.autoOpenAllInfotips( advancedTexture , dialog , {
+		overlapGroup: 10
 		//textAttr: { color: '#77f' }
 	} ) ;
 }

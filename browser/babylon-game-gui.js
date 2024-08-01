@@ -543,10 +543,10 @@ DecoratedContainer.createCommonContentGetterSetter( Dialog.prototype , {
 
 const CONTROL_INFOTIPS_MAP = new Map() ;
 
-Dialog.autoInfotip = ( advancedTexture , control , infotipParams , openAll = false ) => {
-	var active = 0 ,
-		timer = null ,
-		overlapGroup = infotipParams.overlapGroup ?? null ;
+Dialog.autoInfotip = ( advancedTexture , control , infotipParams , openAllOnInit = false ) => {
+	var timer = null ,
+		overlapGroup = infotipParams.overlapGroup ?? null ,
+		controlInfotips = Dialog.getControlInfotips( control ) ;
 
 	const cleanup = () => {
 		Dialog.closeAllInfotips( control ) ;
@@ -557,52 +557,64 @@ Dialog.autoInfotip = ( advancedTexture , control , infotipParams , openAll = fal
 		CONTROL_INFOTIPS_MAP.delete( control ) ;
 	} ;
 
-	const openAllInfotips = ( dynamicManager , now = false ) => {
-		if ( ! now ) {
-			if ( control.autoScaleReady ) {
-				console.log( "waiting for control.autoScaleReady" ) ;
-				control.autoScaleReady.then( () => openAllInfotips( dynamicManager , true ) ) ;
-				return ;
+	if ( openAllOnInit ) {
+		const openAllInfotips = ( dynamicManager , now = false ) => {
+			if ( ! now ) {
+				if ( control.autoScaleReady ) {
+					console.log( "waiting for control.autoScaleReady" ) ;
+					control.autoScaleReady.then( () => openAllInfotips( dynamicManager , true ) ) ;
+					return ;
+				}
+				/*
+				else if ( control.onSizeUpdatedObservable ) {
+					control.onSizeUpdatedObservable.addOnce( () => openAllInfotips( dynamicManager , true ) ) ;
+					return ;
+				}
+				*/
 			}
+			
 			/*
-			else if ( control.onSizeUpdatedObservable ) {
-				control.onSizeUpdatedObservable.addOnce( () => openAllInfotips( dynamicManager , true ) ) ;
-				return ;
-			}
-			*/
-		}
-		
-		setTimeout( () => {
-			let allInfotips = dynamicManager.getAllBabylonControlEmittableEvents( 'infotip' ) ;
-			console.log( "dynamicManager:" , dynamicManager ) ;
-			console.log( "All infotips:" , allInfotips ) ;
-			for ( let data of allInfotips ) {
-				openInfotip( data ) ;
-			}
-		} , 150 ) ;
-	} ;
+				/!\ For some reason, we have to apply a somewhat big timeout, since there is
+				too much asyncness and no event exists that fire when things are stabilized.
 
-	// This is a bit tedious, but we don't know if anything is ready and where it is located
-	if ( control._dynamicManager ) {
-		openAllInfotips( control._dynamicManager ) ;
-	}
-	else if ( control._content ) {
-		if ( control._content._dynamicManager ) {
-			openAllInfotips( control._content._dynamicManager ) ;
+				/!\ This is really dirty, and a more reliable way should be found. /!\
+
+				This happens because control._currentMeasure.left/top are not correct at the time the method is called,
+				even if it should, and it seems to be caused by alignment, that for some reasons is delayed in Babylon GUI?
+				Or is it?
+			*/
+			setTimeout( () => {
+				let allInfotips = dynamicManager.getAllBabylonControlEmittableEvents( 'infotip' ) ;
+				//console.log( "dynamicManager:" , dynamicManager ) ;
+				//console.log( "All infotips:" , allInfotips ) ;
+				for ( let data of allInfotips ) {
+					openInfotip( data ) ;
+				}
+			} , 150 ) ;
+		} ;
+
+		// This is a bit tedious, but we don't know if anything is ready and where it is located
+		if ( control._dynamicManager ) {
+			openAllInfotips( control._dynamicManager ) ;
 		}
-		else if ( control._content.onDynamicManagerCreatedObservable ) {
-			control._content.onDynamicManagerCreatedObservable.addOnce( dynamicManager => openAllInfotips( dynamicManager ) ) ;
-		}
-	}
-	else if ( control.onDynamicManagerCreatedObservable ) {
-		control.onDynamicManagerCreatedObservable.addOnce( dynamicManager => openAllInfotips( dynamicManager ) ) ;
-	}
-	else if ( control.onContentCreatedObservable ) {
-		control.onContentCreatedObservable.addOnce( content => {
-			if ( content.onDynamicManagerCreatedObservable ) {
-				content.onDynamicManagerCreatedObservable.addOnce( dynamicManager => openAllInfotips( dynamicManager ) ) ;
+		else if ( control._content ) {
+			if ( control._content._dynamicManager ) {
+				openAllInfotips( control._content._dynamicManager ) ;
 			}
-		} ) ;
+			else if ( control._content.onDynamicManagerCreatedObservable ) {
+				control._content.onDynamicManagerCreatedObservable.addOnce( dynamicManager => openAllInfotips( dynamicManager ) ) ;
+			}
+		}
+		else if ( control.onDynamicManagerCreatedObservable ) {
+			control.onDynamicManagerCreatedObservable.addOnce( dynamicManager => openAllInfotips( dynamicManager ) ) ;
+		}
+		else if ( control.onContentCreatedObservable ) {
+			control.onContentCreatedObservable.addOnce( content => {
+				if ( content.onDynamicManagerCreatedObservable ) {
+					content.onDynamicManagerCreatedObservable.addOnce( dynamicManager => openAllInfotips( dynamicManager ) ) ;
+				}
+			} ) ;
+		}
 	}
 	
 	const deoverlap = () => {
@@ -613,19 +625,17 @@ Dialog.autoInfotip = ( advancedTexture , control , infotipParams , openAll = fal
 	} ;
 
 	const openInfotip = data => {
-		console.warn( "Infotip:" , data ) ;
+		//console.warn( "Infotip:" , data ) ;
 		Dialog.openInfotip( advancedTexture  , control , data , infotipParams ) ;
-		active ++ ;
-		if ( active === 1 ) {
+		if ( Object.keys( controlInfotips ).length === 1 ) {
 			timer = setInterval( deoverlap , 20 ) ;
 		}
 	} ;
 
 	const closeInfotip = data => {
-		console.warn( "Infotip Closed:" , data ) ;
+		//console.warn( "Infotip Closed:" , data ) ;
 		Dialog.closeInfotip( control , data ) ;
-		active -- ;
-		if ( ! active ) {
+		if ( ! Object.keys( controlInfotips ).length ) {
 			clearInterval( timer ) ;
 			timer = null ;
 		}
@@ -635,6 +645,8 @@ Dialog.autoInfotip = ( advancedTexture , control , infotipParams , openAll = fal
 	control.onInfotipClosedObservable.add( closeInfotip ) ;
 	control.onDisposeObservable.addOnce( cleanup ) ;
 } ;
+
+Dialog.autoOpenAllInfotips = ( advancedTexture , control , infotipParams ) => Dialog.autoInfotip( advancedTexture , control , infotipParams , true ) ;
 
 
 
@@ -649,8 +661,6 @@ Dialog.getControlInfotips = control => {
 	return controlInfotips ;
 } ;
 
-Dialog.autoOpenAllInfotips = ( advancedTexture , control , infotipParams ) => Dialog.autoInfotip( advancedTexture , control , infotipParams , true ) ;
-
 
 
 Dialog.openInfotip = async ( advancedTexture , control , data , params = {} ) => {
@@ -661,7 +671,7 @@ Dialog.openInfotip = async ( advancedTexture , control , data , params = {} ) =>
 	if ( ! data.hint ) { return ; }
 	var infotipControls = controlInfotips[ uid ] = {} ;
 
-	console.log( "Dialog.openInfotip" , data.hint ) ;
+	//console.log( "Dialog.openInfotip" , data.hint ) ;
 
 	var dialog = infotipControls.dialog = new Dialog( 'infotipDialog' ) ;
 	dialog.text = data.hint ;
@@ -1380,9 +1390,11 @@ exports.setFontUrl = ( ... args ) => svgKit.fontLib.setFontUrl( ... args ) ;
 
 "use strict" ;
 
+/* global BABYLON */
 
 
-const AdvancedDynamicTexture = BABYLON.GUI.AdvancedDynamicTexture ;
+
+//const AdvancedDynamicTexture = BABYLON.GUI.AdvancedDynamicTexture ;
 const Vector2 = BABYLON.Vector2 ;
 
 const helpers = exports ;
@@ -1403,20 +1415,21 @@ helpers.forceControlOnScreen = ( advancedTexture , control ) => {
 	if ( rightOverflow > 0 && leftOverflow <= 0 ) { control.leftInPixels -= rightOverflow ; overflow = true ; }
 	if ( topOverflow > 0 && bottomOverflow <= 0 ) { control.topInPixels += topOverflow ; overflow = true ; }
 	if ( bottomOverflow > 0 && topOverflow <= 0 ) { control.topInPixels -= bottomOverflow ; overflow = true ; }
-	//console.warn( "bottom:" , height , control.topInPixels , control.heightInPixels , control.paddingBottomInPixels ) ; 
+	//console.warn( "bottom:" , height , control.topInPixels , control.heightInPixels , control.paddingBottomInPixels ) ;
 
 	return overflow ;
 } ;
 
 
 
-// Code derived from AdvancedDynamicTexture#moveToNonOverlappedPosition().
+// Initially derived from AdvancedDynamicTexture#moveToNonOverlappedPosition(), but almost rewritten entirely.
 // It returns true if something has moved.
 helpers.deoverlapControls = ( advancedTexture , overlapGroup , deltaStep = 10 , repelFactor = 1 ) => {
-	let overlap = false ,
-		overflow = false ;
-	
-	let controlsForGroup ;
+	let controlsForGroup ,
+		overlap = false ,
+		overflow = false ,
+		velocities = new Map() ;
+
 
 	if ( Array.isArray( overlapGroup ) ) {
 		controlsForGroup = overlapGroup ;
@@ -1428,14 +1441,21 @@ helpers.deoverlapControls = ( advancedTexture , overlapGroup , deltaStep = 10 , 
 		controlsForGroup = overlapGroup === undefined ? descendants.filter( ( c ) => c.overlapGroup !== undefined ) : descendants.filter( ( c ) => c.overlapGroup === overlapGroup ) ;
 	}
 
-	controlsForGroup.forEach( ( control1 ) => {
-		if ( control1._fixedOnOverlap ) { return ; }
+	for ( let control of controlsForGroup ) {
+		velocities.set( control , Vector2.Zero() ) ;
+	}
 
-		let velocity = Vector2.Zero() ;
+	for ( let i = 0 ; i < controlsForGroup.length - 1 ; i ++ ) {
+		let control1 = controlsForGroup[ i ] ,
+			velocity1 = velocities.get( control1 ) ;
+
 		const center = new Vector2( control1.centerX , control1.centerY ) ;
-		
-		controlsForGroup.forEach( ( control2 ) => {
-			if ( control1 !== control2 && helpers.areControlsOverlaping( control1 , control2 ) ) {
+
+		for ( let j = i + 1 ; j < controlsForGroup.length ; j ++ ) {
+			let control2 = controlsForGroup[ j ] ,
+				velocity2 = velocities.get( control2 ) ;
+
+			if ( helpers.areControlsOverlaping( control1 , control2 ) ) {
 				// if the two controls overlaps get a direction vector from one control's center to another control's center
 				const diff = center.subtract( new Vector2( control2.centerX , control2.centerY ) ) ;
 				let diffLength = diff.length() ;
@@ -1444,26 +1464,34 @@ helpers.deoverlapControls = ( advancedTexture , overlapGroup , deltaStep = 10 , 
 				if ( diffLength <= 0.001 ) {
 					diffLength = 0.001 ;
 					diff.x = 0 ;
-					diff.y = -1 ;
+					diff.y = - 1 ;
 				}
 
-				// calculate the velocity
-				velocity = velocity.add( diff.normalize().scale( repelFactor / diffLength ) ) ;
+				const delta = diff.normalize().scale( repelFactor / diffLength ) ;
+
+				// update the velocities
+				velocity1.addInPlace( delta ) ;
+				velocity2.subtractInPlace( delta ) ;
 			}
-		} ) ;
+		}
+	}
+
+	for ( let control of controlsForGroup ) {
+		if ( control._fixedOnOverlap ) { continue ; }
+		let velocity = velocities.get( control ) ;
 
 		if ( velocity.length() > 0 ) {
 			// move the control along the direction vector away from the overlapping control
-			velocity = velocity.normalize().scale( deltaStep * ( control1.overlapDeltaMultiplier ?? 1 ) ) ;
-			control1.leftInPixels += velocity.x ;
-			control1.topInPixels += velocity.y ;
+			velocity = velocity.normalize().scaleInPlace( deltaStep * ( control.overlapDeltaMultiplier ?? 1 ) ) ;
+			control.leftInPixels += velocity.x ;
+			control.topInPixels += velocity.y ;
 			overlap = true ;
 		}
 
 		// Force it on-screen
-		if ( helpers.forceControlOnScreen( advancedTexture , control1 ) ) { overflow = true ; }
-		//console.warn( "bottom:" , height , control1.topInPixels , control1.heightInPixels , control1.paddingBottomInPixels ) ; 
-	} ) ;
+		if ( helpers.forceControlOnScreen( advancedTexture , control ) ) { overflow = true ; }
+		//console.warn( "bottom:" , height , control1.topInPixels , control1.heightInPixels , control1.paddingBottomInPixels ) ;
+	}
 
 	return overlap || overflow ;
 } ;
@@ -1482,7 +1510,7 @@ helpers.areControlsOverlaping = ( control1 , control2 ) => {
 		control1.centerY > control2.centerY + height ||
 		control1.centerY + height < control2.centerY
 	) ;
-}
+} ;
 
 
 },{}],7:[function(require,module,exports){
@@ -5198,7 +5226,6 @@ DynamicManager.prototype.manageBabylonControl = function( control ) {
 	} ;
 
 	const convertBackCoords = coords => {
-		console.log( "convert back for .manageBabylonControl()" , this.babylonControl._currentMeasure.left , this.babylonControl._currentMeasure.top , this.babylonControl ) ;
 		return {
 			x: coords.x + this.babylonControl._currentMeasure.left ,
 			y: coords.y + this.babylonControl._currentMeasure.top
@@ -5236,7 +5263,6 @@ DynamicManager.prototype.getAllBabylonControlEmittableEvents = function( eventNa
 	return this.getAllEmittableEvents(
 		eventName ,
 		coords => {
-			console.log( "convert back for .getAllBabylonControlEmittableEvents()" , this.babylonControl._currentMeasure.left , this.babylonControl._currentMeasure.top , this.babylonControl ) ;
 			return {
 				x: coords.x + this.babylonControl._currentMeasure.left ,
 				y: coords.y + this.babylonControl._currentMeasure.top

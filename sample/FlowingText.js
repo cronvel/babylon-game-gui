@@ -64,7 +64,8 @@ async function createScene() {
 	flowingText.autoScale = true ;
 	advancedTexture.addControl( flowingText ) ;
 
-	BABYLON.GUI.Dialog.autoInfotip( advancedTexture , flowingText , {
+	//BABYLON.GUI.Dialog.autoInfotip( advancedTexture , flowingText , {
+	BABYLON.GUI.Dialog.autoOpenAllInfotips( advancedTexture , flowingText , {
 		overlapGroup: 10
 		//textAttr: { color: '#77f' }
 	} ) ;
