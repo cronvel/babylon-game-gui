@@ -67,6 +67,7 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 
 	_contentProperties = {} ;
 
+	onContentCreatedObservable = new Observable() ;
 	onInfotipObservable = new Observable() ;
 	onInfotipClosedObservable = new Observable() ;
 
@@ -157,6 +158,8 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 
 			this._onContentSizeUpdated() ;
 		}
+
+		this.onContentCreatedObservable.notifyObservers( this._content ) ;
 	}
 
 	get type() { return this._type ; }
@@ -419,7 +422,6 @@ const DecoratedContainer = require( './DecoratedContainer.js' ) ;
 const FlowingText = require( './FlowingText.js' ) ;
 const helpers = require( './helpers.js' ) ;
 
-const svgKit = require( 'svg-kit' ) ;
 const Promise = require( 'seventh' ) ;
 
 
@@ -446,7 +448,7 @@ class Dialog extends DecoratedContainer {
 	}
 
 	_getTypeName() { return 'Dialog' ; }
-	
+
 	/*
 	set autoScale( v ) {
 		v = !! v ;
@@ -501,16 +503,16 @@ class Dialog extends DecoratedContainer {
 
 	_createContentNow() {
 		var flowingText = new FlowingText( this.name + ':flowingText' ) ;
-		
+
 		// Call the setter
 		this.content = flowingText ;
 		flowingText.isPointerBlocker = this.isPointerBlocker ;
-		
+
 		//this._setContentProperties( flowingText ) ;
 		this._setContentPropertiesNow( flowingText ) ;
 		//return Promise.resolved ;
 	}
-	
+
 	/*
 	_layout( parentMeasure , context ) {
 		console.warn( "Calling Dialog _layout(), width:" , this.width , this.widthInPixels , this._content?.width , this._content?.widthInPixels ) ;
@@ -534,39 +536,77 @@ DecoratedContainer.createCommonContentGetterSetter( Dialog.prototype , {
 	textPaddingRight: 'paddingRight' ,
 
 	textAttr: 'textAttr' ,
-	textDynamicStyles: 'textDynamicStyles' ,
+	textDynamicStyles: 'textDynamicStyles'
 } ) ;
 
-Dialog.autoInfotip = ( advancedTexture , control , infotipParams ) => {
+
+
+const CONTROL_INFOTIPS_MAP = new Map() ;
+
+Dialog.autoInfotip = ( advancedTexture , control , infotipParams , openAll = false ) => {
 	var active = 0 ,
 		timer = null ,
-		count = 0 ,
 		overlapGroup = infotipParams.overlapGroup ?? null ;
 
-	setTimeout( () => {
-		let dynamicManager =
-			control._dynamicManager ? control._dynamicManager :
-			control._content ? control._content._dynamicManager :
-			null ;
-
-		console.log( "dynamicManager:" , dynamicManager ) ;
-		if ( dynamicManager ) {
-			console.log( "All infotips:" , dynamicManager.getAllBabylonControlEmittableEvents( 'infotip' ) ) ;
-		}
-	} , 300 ) ;
-	
 	const cleanup = () => {
-		Dialog.closeInfotip( control ) ;
+		Dialog.closeAllInfotips( control ) ;
 		control.onInfotipObservable.removeCallback( openInfotip ) ;
 		control.onInfotipClosedObservable.removeCallback( closeInfotip ) ;
-		clearInterval( timer ) ; timer = null ;
+		clearInterval( timer ) ;
+		timer = null ;
+		CONTROL_INFOTIPS_MAP.delete( control ) ;
 	} ;
 
+	const openAllInfotips = ( dynamicManager , now = false ) => {
+		if ( ! now ) {
+			if ( control.autoScaleReady ) {
+				console.log( "waiting for control.autoScaleReady" ) ;
+				control.autoScaleReady.then( () => openAllInfotips( dynamicManager , true ) ) ;
+				return ;
+			}
+			/*
+			else if ( control.onSizeUpdatedObservable ) {
+				control.onSizeUpdatedObservable.addOnce( () => openAllInfotips( dynamicManager , true ) ) ;
+				return ;
+			}
+			*/
+		}
+		
+		setTimeout( () => {
+			let allInfotips = dynamicManager.getAllBabylonControlEmittableEvents( 'infotip' ) ;
+			console.log( "dynamicManager:" , dynamicManager ) ;
+			console.log( "All infotips:" , allInfotips ) ;
+			for ( let data of allInfotips ) {
+				openInfotip( data ) ;
+			}
+		} , 150 ) ;
+	} ;
+
+	// This is a bit tedious, but we don't know if anything is ready and where it is located
+	if ( control._dynamicManager ) {
+		openAllInfotips( control._dynamicManager ) ;
+	}
+	else if ( control._content ) {
+		if ( control._content._dynamicManager ) {
+			openAllInfotips( control._content._dynamicManager ) ;
+		}
+		else if ( control._content.onDynamicManagerCreatedObservable ) {
+			control._content.onDynamicManagerCreatedObservable.addOnce( dynamicManager => openAllInfotips( dynamicManager ) ) ;
+		}
+	}
+	else if ( control.onDynamicManagerCreatedObservable ) {
+		control.onDynamicManagerCreatedObservable.addOnce( dynamicManager => openAllInfotips( dynamicManager ) ) ;
+	}
+	else if ( control.onContentCreatedObservable ) {
+		control.onContentCreatedObservable.addOnce( content => {
+			if ( content.onDynamicManagerCreatedObservable ) {
+				content.onDynamicManagerCreatedObservable.addOnce( dynamicManager => openAllInfotips( dynamicManager ) ) ;
+			}
+		} ) ;
+	}
+	
 	const deoverlap = () => {
 		if ( overlapGroup === null ) { return ; }
-		//console.warn( "Deoverlap?" ) ;
-		//console.log( "Count:" , count ) ;
-		//if ( count ++ > 5 ) { return ; }
 
 		// This will deoverlap all controls in the AdvancedDynamicTexture with that overlapGroup
 		helpers.deoverlapControls( advancedTexture , overlapGroup ) ;
@@ -576,7 +616,6 @@ Dialog.autoInfotip = ( advancedTexture , control , infotipParams ) => {
 		console.warn( "Infotip:" , data ) ;
 		Dialog.openInfotip( advancedTexture  , control , data , infotipParams ) ;
 		active ++ ;
-		count = 0 ;
 		if ( active === 1 ) {
 			timer = setInterval( deoverlap , 20 ) ;
 		}
@@ -587,7 +626,8 @@ Dialog.autoInfotip = ( advancedTexture , control , infotipParams ) => {
 		Dialog.closeInfotip( control , data ) ;
 		active -- ;
 		if ( ! active ) {
-			clearInterval( timer ) ; timer = null ;
+			clearInterval( timer ) ;
+			timer = null ;
 		}
 	} ;
 
@@ -596,106 +636,137 @@ Dialog.autoInfotip = ( advancedTexture , control , infotipParams ) => {
 	control.onDisposeObservable.addOnce( cleanup ) ;
 } ;
 
-Dialog.openInfotip = async ( advancedTexture , control , data , params = {} ) => {
-	if ( control._infotip ) { Dialog.closeInfotip( control ) ; }
-	if ( ! data.hint ) { return ; }
-	console.log( "Dialog.openInfotip" , data.hint ) ;
 
-	var infotip = new Dialog( 'infotip' ) ;
-	infotip.text = data.hint ;
-	infotip._entityUid = data.entityUid ;
-	//infotip.markupText = data.hint ;
 
-	infotip.idealWidthInPixels = params.idealWidthInPixels || 500 ;
-	infotip.idealHeightInPixels = params.idealHeightInPixels || 50 ;
+Dialog.getControlInfotips = control => {
+	var controlInfotips = CONTROL_INFOTIPS_MAP.get( control ) ;
 
-	infotip.textPaddingTop = params.textPaddingTop ?? '10px' ;
-	infotip.textPaddingBottom = params.textPaddingBottom ?? '10px' ;
-	infotip.textPaddingLeft = params.textPaddingLeft ?? '10px' ;
-	infotip.textPaddingRight = params.textPaddingRight ?? '10px' ;
-
-	infotip.type = params.type ?? BABYLON.GUI.DecoratedContainer.RECTANGLE ;
-	infotip.backgroundColor = params.backgroundColor || '#888888' ;
-
-	if ( params.textAttr ) { infotip.textAttr = params.textAttr ; }
-
-	//infotip.overlapGroup = params.overlapGroup ?? control.overlapGroup ;
-	if ( typeof params.overlapGroup === 'number' ) {
-		infotip.overlapGroup = control.overlapGroup = params.overlapGroup ;
-		control._fixedOnOverlap = true ;	// Prevent the control itself to move, only the infotips
-		infotip.overlapDeltaMultiplier = params.overlapDeltaMultiplier ?? 2 ;
+	if ( ! controlInfotips ) {
+		controlInfotips = {} ;
+		CONTROL_INFOTIPS_MAP.set( control , controlInfotips ) ;
 	}
 
-	// Force auto-scaling for all infotip
-	infotip.autoScale = true ;
+	return controlInfotips ;
+} ;
+
+Dialog.autoOpenAllInfotips = ( advancedTexture , control , infotipParams ) => Dialog.autoInfotip( advancedTexture , control , infotipParams , true ) ;
+
+
+
+Dialog.openInfotip = async ( advancedTexture , control , data , params = {} ) => {
+	var controlInfotips = Dialog.getControlInfotips( control ) ,
+		uid = data.entityUid ;
+
+	if ( controlInfotips[ uid ] ) { Dialog.closeInfotip( control , uid ) ; }
+	if ( ! data.hint ) { return ; }
+	var infotipControls = controlInfotips[ uid ] = {} ;
+
+	console.log( "Dialog.openInfotip" , data.hint ) ;
+
+	var dialog = infotipControls.dialog = new Dialog( 'infotipDialog' ) ;
+	dialog.text = data.hint ;
+	dialog._entityUid = data.entityUid ;
+	//dialog.markupText = data.hint ;
+
+	dialog.idealWidthInPixels = params.idealWidthInPixels || 500 ;
+	dialog.idealHeightInPixels = params.idealHeightInPixels || 50 ;
+
+	dialog.textPaddingTop = params.textPaddingTop ?? '10px' ;
+	dialog.textPaddingBottom = params.textPaddingBottom ?? '10px' ;
+	dialog.textPaddingLeft = params.textPaddingLeft ?? '10px' ;
+	dialog.textPaddingRight = params.textPaddingRight ?? '10px' ;
+
+	dialog.type = params.type ?? BABYLON.GUI.DecoratedContainer.RECTANGLE ;
+	dialog.backgroundColor = params.backgroundColor || '#888888' ;
+
+	if ( params.textAttr ) { dialog.textAttr = params.textAttr ; }
+
+	//dialog.overlapGroup = params.overlapGroup ?? control.overlapGroup ;
+	if ( typeof params.overlapGroup === 'number' ) {
+		dialog.overlapGroup = control.overlapGroup = params.overlapGroup ;
+		control._fixedOnOverlap = true ;	// Prevent the control itself to move, only the infotip's dialogs
+		dialog.overlapDeltaMultiplier = params.overlapDeltaMultiplier ?? 2 ;
+	}
+
+	// Force auto-scaling for all infotip dialog
+	dialog.autoScale = true ;
 
 	// Coordinate are relative to top-left
-	infotip.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP ;
-	infotip.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT ;
+	dialog.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP ;
+	dialog.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT ;
 
 	var areaCenterX = ( data.foreignBoundingBox.xmin + data.foreignBoundingBox.xmax ) / 2 ;
 	var areaCenterY = ( data.foreignBoundingBox.ymin + data.foreignBoundingBox.ymax ) / 2 ;
 
-	infotip.autoScaleReady.then( async () => {
+	dialog.autoScaleReady.then( async () => {
 		let margin = 5 ;	// Security margin, to avoid bug with infotip overlapping the triggering area, thus closing the infotip immediately
 		let dx = areaCenterX - control.centerX ;
 		let dy = areaCenterY - control.centerY ;
 
 		// For some reasons, contentSizes.width and contentSizes.height are not ready soon enough...
-		let contentSizes = await infotip._content._getSizes() ;
-		let width = contentSizes.innerWidth + infotip._content.paddingLeftInPixels + infotip._content.paddingRightInPixels ;
-		let height = contentSizes.innerHeight + infotip._content.paddingTopInPixels + infotip._content.paddingBottomInPixels ;
+		let contentSizes = await dialog._content._getSizes() ;
+		let width = contentSizes.innerWidth + dialog._content.paddingLeftInPixels + dialog._content.paddingRightInPixels ;
+		let height = contentSizes.innerHeight + dialog._content.paddingTopInPixels + dialog._content.paddingBottomInPixels ;
 
-		infotip.leftInPixels = dx > 0 ? data.foreignBoundingBox.xmax + margin : data.foreignBoundingBox.xmin - width - margin ;
-		infotip.topInPixels = dy > 0 ? data.foreignBoundingBox.ymax + margin : data.foreignBoundingBox.ymin - height - margin ;
-		helpers.forceControlOnScreen( advancedTexture , infotip ) ;
-		//console.log( "coord:" , data.foreignBoundingBox , width , height , contentSizes , infotip._content.paddingLeftInPixels , infotip._content.paddingRightInPixels ) ;
-		//infotip.isVisible = false ;
+		dialog.leftInPixels = dx > 0 ? data.foreignBoundingBox.xmax + margin : data.foreignBoundingBox.xmin - width - margin ;
+		dialog.topInPixels = dy > 0 ? data.foreignBoundingBox.ymax + margin : data.foreignBoundingBox.ymin - height - margin ;
+		helpers.forceControlOnScreen( advancedTexture , dialog ) ;
+		//console.log( "coord:" , data.foreignBoundingBox , width , height , contentSizes , dialog._content.paddingLeftInPixels , dialog._content.paddingRightInPixels ) ;
+		//dialog.isVisible = false ;
 		line.isVisible = true ;
 	} ) ;
 
 
-	var line = new BABYLON.GUI.Line( 'line' )
+	var line = infotipControls.line = new BABYLON.GUI.Line( 'infotipLine' ) ;
 	line.lineWidth = 1 ;
 	line.color = '#ddd' ;
-	line.connectedControl = infotip ;
+	line.connectedControl = dialog ;
 	//line.dash = [ 3 , 3 ] ;
 	line.x1 = areaCenterX ;
 	line.y1 = areaCenterY ;
 	line.isVisible = false ;
 	advancedTexture.addControl( line ) ;
 
-	advancedTexture.addControl( infotip ) ;
-
-	control._infotip = infotip ;
-	control._infotipLine = line ;
+	advancedTexture.addControl( dialog ) ;
 } ;
+
+
 
 // If data is null, force closing, else close only if the opened infotip is the one who need to be closed
+// Dialog.closeInfotip( control , uid | data )
 Dialog.closeInfotip = ( control , data = null ) => {
-	if ( control._infotip ) {
-		if ( ! data || control._infotip._entityUid === data.entityUid ) {
-			control._infotip.dispose() ;
-			control._infotip = null ;
+	var controlInfotips = Dialog.getControlInfotips( control ) ,
+		uid = data && typeof data === 'object' ? data.entityUid : data ;
 
-			if ( control._infotipLine ) {
-				control._infotipLine.dispose() ;
-				control._infotipLine = null ;
-			}
-		}
+	var infotipControls = controlInfotips[ uid ] ;
+	if ( ! infotipControls ) { return ; }
+
+	if ( infotipControls.dialog ) {
+		infotipControls.dialog.dispose() ;
 	}
-	else if ( control._infotipLine ) {
-		control._infotipLine.dispose() ;
-		control._infotipLine = null ;
+
+	if ( infotipControls.line ) {
+		infotipControls.line.dispose() ;
 	}
+
+	delete controlInfotips[ uid ] ;
 } ;
+
+
+
+Dialog.closeAllInfotips = ( control ) => {
+	var controlInfotips = Dialog.getControlInfotips( control ) ;
+	for ( let uid of Object.keys( controlInfotips ) ) { Dialog.closeInfotip( control , uid ) ; }
+} ;
+
+
 
 module.exports = Dialog ;
 BABYLON.GUI.Dialog = Dialog ;
 BABYLON.RegisterClass( 'BABYLON.GUI.Dialog' , Dialog ) ;
 
 
-},{"./DecoratedContainer.js":1,"./FlowingText.js":3,"./helpers.js":6,"seventh":15,"svg-kit":48}],3:[function(require,module,exports){
+},{"./DecoratedContainer.js":1,"./FlowingText.js":3,"./helpers.js":6,"seventh":15}],3:[function(require,module,exports){
 /*
 	Babylon Game GUI
 
@@ -1036,7 +1107,8 @@ class VG extends BABYLON.GUI.Control {
 
 	_dynamicManager = null ;
 
-	onRenderedObservable = new Observable() ;
+	onVgRenderedObservable = new Observable() ;
+	onDynamicManagerCreatedObservable = new Observable() ;
 	onInfotipObservable = new Observable() ;
 	onInfotipClosedObservable = new Observable() ;
 
@@ -1128,6 +1200,7 @@ class VG extends BABYLON.GUI.Control {
 		// Forward dynamic manager's events to the Babylon Control's observable
 		this._dynamicManager.on( 'infotip' , data => this.onInfotipObservable.notifyObservers( data ) ) ;
 		this._dynamicManager.on( 'infotipClosed' , data => this.onInfotipClosedObservable.notifyObservers( data ) ) ;
+		this.onDynamicManagerCreatedObservable.notifyObservers( this._dynamicManager ) ;
 	}
 
 	async _renderCanvasNow() {
@@ -1144,7 +1217,7 @@ class VG extends BABYLON.GUI.Control {
 	_onRendered() {
 		this._vgRendered = true ;
 		if ( this._autoScale ) { this.synchronizeSizeWithContent() ; }
-		this.onRenderedObservable.notifyObservers( this ) ;
+		this.onVgRenderedObservable.notifyObservers( this ) ;
 		this._markAsDirty() ;
 	}
 
@@ -1365,7 +1438,7 @@ helpers.deoverlapControls = ( advancedTexture , overlapGroup , deltaStep = 10 , 
 			if ( control1 !== control2 && helpers.areControlsOverlaping( control1 , control2 ) ) {
 				// if the two controls overlaps get a direction vector from one control's center to another control's center
 				const diff = center.subtract( new Vector2( control2.centerX , control2.centerY ) ) ;
-				const diffLength = diff.length() ;
+				let diffLength = diff.length() ;
 
 				// Force a diff even if null
 				if ( diffLength <= 0.001 ) {
@@ -5125,6 +5198,7 @@ DynamicManager.prototype.manageBabylonControl = function( control ) {
 	} ;
 
 	const convertBackCoords = coords => {
+		console.log( "convert back for .manageBabylonControl()" , this.babylonControl._currentMeasure.left , this.babylonControl._currentMeasure.top , this.babylonControl ) ;
 		return {
 			x: coords.x + this.babylonControl._currentMeasure.left ,
 			y: coords.y + this.babylonControl._currentMeasure.top
@@ -5162,6 +5236,7 @@ DynamicManager.prototype.getAllBabylonControlEmittableEvents = function( eventNa
 	return this.getAllEmittableEvents(
 		eventName ,
 		coords => {
+			console.log( "convert back for .getAllBabylonControlEmittableEvents()" , this.babylonControl._currentMeasure.left , this.babylonControl._currentMeasure.top , this.babylonControl ) ;
 			return {
 				x: coords.x + this.babylonControl._currentMeasure.left ,
 				y: coords.y + this.babylonControl._currentMeasure.top
