@@ -1305,6 +1305,14 @@ class VG extends BABYLON.GUI.Control {
 		context.save() ;
 		this._applyStates( context ) ;
 
+		// It is the responsibility of a specific control to manage shadow
+		if ( this.shadowBlur || this.shadowOffsetX || this.shadowOffsetY ) {
+			context.shadowColor = this.shadowColor;
+			context.shadowBlur = this.shadowBlur;
+			context.shadowOffsetX = this.shadowOffsetX;
+			context.shadowOffsetY = this.shadowOffsetY;
+		}
+
 		if ( this._stretch === VG.STRETCH_UNIFORM ) {
 			let hRatio = this._currentMeasure.width / this._vgWidth ,
 				vRatio = this._currentMeasure.height / this._vgHeight ,

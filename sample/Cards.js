@@ -147,6 +147,27 @@ async function createScene() {
 	card.onPointerUpObservable.add( () => {
 		alert( "card clicked!" ) ;
 	} ) ;
+
+	card.transformCenterX = 0.5 ;
+	card.transformCenterY = 1 ;
+	card.isPointerBlocker = true ;
+	card.hoverCursor = 'pointer' ;
+
+	card.onPointerEnterObservable.add( () => {
+		card.scaleX = card.scaleY = 1.2 ;
+		//card.rotation = 0.2 ;
+		card.zIndex = 1 ;
+		card.shadowColor = '#ff0' ;
+		card.shadowBlur = 20 ;
+	} ) ;
+	card.onPointerOutObservable.add( () => {
+		card.scaleX = card.scaleY = 1 ;
+		//card.rotation = 0 ;
+		card.zIndex = 0 ;
+		card.shadowColor = '#000' ;
+		card.shadowBlur = 0 ;
+	} ) ;
+
 	advancedTexture.addControl( card ) ;
 
 	return scene ;
