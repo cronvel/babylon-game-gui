@@ -7,7 +7,7 @@ var svgKit = GAMEGUI.svgKit ;
 
 
 
-function createCardVg() {
+function createCardVg( id = null ) {
 	let x = 0 ,
 		y = 0 ,
 		width = 250 ,
@@ -97,11 +97,52 @@ function createCardVg() {
 			outline: true ,
 			outlineWidth: 2
 		} ,
-		markupText: "Black Dragon"
+		markupText: "Black Dragon" + ( id !== null ? ' #' + id : '' )
 	} ) ;
 	vg.addEntity( cardName ) ;
 
 	return vg ;
+}
+
+
+
+function createCard( id = null ) {
+	var cardVg = createCardVg( id ) ;
+
+	var card = new BABYLON.GUI.Card( 'card' , cardVg ) ;
+
+	card.width = "300px" ;
+	card.height = "200px" ;
+	//card.stretch = BABYLON.GUI.VG.STRETCH_UNIFORM ;
+	card.stretch = BABYLON.GUI.VG.STRETCH_EXTEND ; card.autoScale = true ;
+	card.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
+
+	card.transformCenterX = 0.5 ;
+	card.transformCenterY = 1 ;
+	card.isPointerBlocker = true ;
+	card.hoverCursor = 'pointer' ;
+
+	card.onPointerEnterObservable.add( () => {
+		card.scaleX = card.scaleY = 1.2 ;
+		//card.rotation = 0.2 ;
+		//card.zIndex = 1 ;
+		card.shadowColor = '#ff0' ;
+		card.shadowBlur = 20 ;
+	} ) ;
+
+	card.onPointerOutObservable.add( () => {
+		card.scaleX = card.scaleY = 1 ;
+		//card.rotation = 0 ;
+		//card.zIndex = 0 ;
+		card.shadowColor = '#000' ;
+		card.shadowBlur = 0 ;
+	} ) ;
+
+	card.onPointerUpObservable.add( () => {
+		alert( "card clicked: " + id ) ;
+	} ) ;
+
+	return card ;
 }
 
 
@@ -137,39 +178,22 @@ async function createScene() {
 	svgKit.fontLib.setFontUrl( 'serif' , 'bold' , 'italic' , './serif-bold+italic.ttf' ) ;
 	//await svgKit.fontLib.preloadFontFamily( 'serif' ) ;
 
-	var cardVg = createCardVg() ;
-	var card = new BABYLON.GUI.Card( 'card' , cardVg ) ;
-	card.width = "300px" ;
-	card.height = "200px" ;
-	//card.stretch = BABYLON.GUI.VG.STRETCH_UNIFORM ;
-	card.stretch = BABYLON.GUI.VG.STRETCH_EXTEND ; card.autoScale = true ;
-	card.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
-	card.onPointerUpObservable.add( () => {
-		alert( "card clicked!" ) ;
-	} ) ;
 
-	card.transformCenterX = 0.5 ;
-	card.transformCenterY = 1 ;
-	card.isPointerBlocker = true ;
-	card.hoverCursor = 'pointer' ;
+	//var handPanel = new BABYLON.GUI.HandPanel( 'handPanel' ) ;
+	var handPanel = new BABYLON.GUI.StackPanel( 'handPanel' ) ;
+	handPanel.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
+	handPanel.isVertical = false ;
+	handPanel.clipChildren = false ;
+	handPanel.clipContent = false ;
+	advancedTexture.addControl( handPanel ) ;
 
-	card.onPointerEnterObservable.add( () => {
-		card.scaleX = card.scaleY = 1.2 ;
-		//card.rotation = 0.2 ;
-		card.zIndex = 1 ;
-		card.shadowColor = '#ff0' ;
-		card.shadowBlur = 20 ;
-	} ) ;
-	card.onPointerOutObservable.add( () => {
-		card.scaleX = card.scaleY = 1 ;
-		//card.rotation = 0 ;
-		card.zIndex = 0 ;
-		card.shadowColor = '#000' ;
-		card.shadowBlur = 0 ;
-	} ) ;
+	for ( let i = 0 ; i < 5 ; i ++ ) {
+		let card = createCard( i ) ;
+		handPanel.addControl( card ) ;
+	}
 
-	advancedTexture.addControl( card ) ;
-
+	//advancedTexture.addControl( card ) ;
+	
 	return scene ;
 }
 
