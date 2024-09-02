@@ -125,7 +125,7 @@ function createCard( id = null ) {
 	card.onPointerEnterObservable.add( () => {
 		card.scaleX = card.scaleY = 1.2 ;
 		//card.rotation = 0.2 ;
-		//card.zIndex = 1 ;
+		card.zIndex = 1000 ;
 		card.shadowColor = '#ff0' ;
 		card.shadowBlur = 20 ;
 	} ) ;
@@ -133,7 +133,7 @@ function createCard( id = null ) {
 	card.onPointerOutObservable.add( () => {
 		card.scaleX = card.scaleY = 1 ;
 		//card.rotation = 0 ;
-		//card.zIndex = 0 ;
+		card.zIndex = card.parent ? card.parent.getControlLayoutOrder() : 0 ;
 		card.shadowColor = '#000' ;
 		card.shadowBlur = 0 ;
 	} ) ;
@@ -188,7 +188,7 @@ async function createScene() {
 	handPanel.clipContent = false ;
 	handPanel.background = '#8d8' ;
 	handPanel.spacing = -80 ;
-	handPanel.topInPixels = -50 ;
+	//handPanel.topInPixels = -50 ;
 	console.warn( "Handpanel:" , handPanel ) ;
 	advancedTexture.addControl( handPanel ) ;
 
