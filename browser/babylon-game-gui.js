@@ -41,8 +41,10 @@ const Promise = require( 'seventh' ) ;
 
 
 class Card extends VG {
-	_angle = 0 ;
-	_flip = 0 ;
+	
+	layoutTopInPixels = 0 ;
+	layoutLeftInPixels = 0 ;
+	layoutRotation = 0 ;
 
 	constructor( name , vg , backVg ) {
 		super( name , vg ) ;
@@ -1283,31 +1285,40 @@ class HandPanel extends BABYLON.GUI.Container {
 		var offsetMin = ( this._pseudoRadius + Math.cos( rotationMax ) * this._pseudoRadius ) / 2 ;
 		var rotation = - rotationMax ;
 
+		console.warn( "Rebuilding layout" ) ;
 		for ( let index = 0 ; index < childrenCount ; index ++ ) {
 			let child = this._layoutOrderedChildren[ index ] ;
 			if ( ! child.isVisible || child.notRenderable ) { continue ; }
 
-			let top = - ( Math.cos( rotation ) * this._pseudoRadius - offsetMin ) ;
+			let autoTop = child.topInPixels === child.layoutTopInPixels ;
+			child.layoutTopInPixels = - ( Math.cos( rotation ) * this._pseudoRadius - offsetMin ) ;
 
-			if ( child.top !== top + "px" ) {
-				child.top = top + "px" ;
+			let autoLeft = child.leftInPixels === child.layoutLeftInPixels ;
+			child.layoutLeftInPixels = stackWidth ;
+
+			let autoRotation = child.rotation === child.layoutRotation ;
+			child.layoutRotation = rotation ;
+
+			// Apply top/left/rotation
+
+			if ( autoTop && child.topInPixels !== child.layoutTopInPixels ) {
+				child.topInPixels = child.layoutTopInPixels ;
 				this._rebuildLayout = true ;
 				child._top.ignoreAdaptiveScaling = true ;
 			}
 
-			if ( child.left !== stackWidth + "px" ) {
-				child.left = stackWidth + "px" ;
+			if ( autoLeft && child.leftInPixels !== child.layoutLeftInPixels ) {
+				child.leftInPixels = child.layoutLeftInPixels ;
 				this._rebuildLayout = true ;
 				child._left.ignoreAdaptiveScaling = true ;
 			}
 
-			if ( child.rotation !== rotation ) {
-				child.rotation = rotation ;
+			if ( autoRotation && child.rotation !== child.layoutRotation ) {
+				child.rotation = child.layoutRotation ;
 				this._rebuildLayout = true ;
 			}
 
 			stackWidth += child._currentMeasure.width + child._paddingLeftInPixels + child._paddingRightInPixels + ( index < childrenCount - 1 ? this._spacing : 0 ) ;
-
 			rotation += rotationIncrement ;
 		}
 

@@ -124,7 +124,8 @@ function createCard( id = null ) {
 
 	card.onPointerEnterObservable.add( () => {
 		card.scaleX = card.scaleY = 1.2 ;
-		//card.rotation = 0.2 ;
+		card.topInPixels = 0 ;
+		card.rotation = 0 ;
 		card.zIndex = 1000 ;
 		card.shadowColor = '#ff0' ;
 		card.shadowBlur = 20 ;
@@ -132,8 +133,17 @@ function createCard( id = null ) {
 
 	card.onPointerOutObservable.add( () => {
 		card.scaleX = card.scaleY = 1 ;
-		//card.rotation = 0 ;
-		card.zIndex = card.parent ? card.parent.getControlLayoutOrder() : 0 ;
+		card.topInPixels = card.layoutTopInPixels ;
+		card.rotation = card.layoutRotation ;
+
+		if ( card.parent instanceof BABYLON.GUI.HandPanel ) {
+			card.zIndex = card.parent.getControlLayoutOrder( card ) ;
+			//console.warn( "Restore z-index:" , card.parent.getControlLayoutOrder( card ) ) ;
+		}
+		else {
+			card.zIndex = 0 ;
+		}
+
 		card.shadowColor = '#000' ;
 		card.shadowBlur = 0 ;
 	} ) ;
