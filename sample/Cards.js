@@ -179,12 +179,17 @@ async function createScene() {
 	//await svgKit.fontLib.preloadFontFamily( 'serif' ) ;
 
 
-	//var handPanel = new BABYLON.GUI.HandPanel( 'handPanel' ) ;
-	var handPanel = new BABYLON.GUI.StackPanel( 'handPanel' ) ;
+	var handPanel = new BABYLON.GUI.HandPanel( 'handPanel-HP' ) ;
+	//var handPanel = new BABYLON.GUI.StackPanel( 'handPanel-SP' ) ;
+
 	handPanel.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
 	handPanel.isVertical = false ;
 	handPanel.clipChildren = false ;
 	handPanel.clipContent = false ;
+	handPanel.background = '#8d8' ;
+	handPanel.spacing = -80 ;
+	handPanel.topInPixels = -50 ;
+	console.warn( "Handpanel:" , handPanel ) ;
 	advancedTexture.addControl( handPanel ) ;
 
 	for ( let i = 0 ; i < 5 ; i ++ ) {
