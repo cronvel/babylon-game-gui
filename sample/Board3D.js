@@ -7,7 +7,7 @@ var svgKit = GAMEGUI.svgKit ;
 
 
 
-function createCardVg( id = null ) {
+function createTileVg_( id = null ) {
 	let x = 0 ,
 		y = 0 ,
 		width = 250 ,
@@ -31,7 +31,7 @@ function createCardVg( id = null ) {
 		//invertY: true
 	} ) ;
 
-	var cardFrame = new svgKit.VGRect( {
+	var tile3dFrame = new svgKit.VGRect( {
 		x , y , width , height ,
 		rx: 10 ,
 		ry: 10 ,
@@ -40,7 +40,7 @@ function createCardVg( id = null ) {
 			stroke: '#777'
 		}
 	} ) ;
-	vg.addEntity( cardFrame ) ;
+	vg.addEntity( tile3dFrame ) ;
 
 	var image = new svgKit.VGImage( {
 		x: topRect.x ,
@@ -64,7 +64,7 @@ function createCardVg( id = null ) {
 	} ) ;
 	vg.addEntity( textRect ) ;
 
-	var cardRule = new svgKit.VGFlowingText( {
+	var tile3dRule = new svgKit.VGFlowingText( {
 		x: bottomRect.x + 0.5 * padding ,
 		y: bottomRect.y + 0.5 * padding ,
 		width: bottomRect.width - padding ,
@@ -80,9 +80,9 @@ function createCardVg( id = null ) {
 		} ,
 		markupText: "A fierce dragon breathing fire..."
 	} ) ;
-	vg.addEntity( cardRule ) ;
+	vg.addEntity( tile3dRule ) ;
 
-	var cardName = new svgKit.VGFlowingText( {
+	var tile3dName = new svgKit.VGFlowingText( {
 		x: 0.5 * padding ,
 		y: 0.25 * padding ,
 		width: width - padding ,
@@ -99,24 +99,90 @@ function createCardVg( id = null ) {
 		} ,
 		markupText: "Black Dragon" + ( id !== null ? ' #' + id : '' )
 	} ) ;
-	vg.addEntity( cardName ) ;
+	vg.addEntity( tile3dName ) ;
 
 	return vg ;
 }
 
 
 
-function createCard( id = null ) {
-	var cardVg = createCardVg( id ) ;
+function createTileVg( id = null ) {
+	let padding = 10 ,
+		radius = 100 ,
+		rCos60 = 0.5 * radius ,
+		rSin60 = Math.sin( Math.PI / 3 ) * radius ,
+		offsetX = rSin60 + padding ,
+		offsetY = radius + padding ,
+		northX = offsetX , northY = offsetY - radius ,
+		southX = offsetX , southY = offsetY + radius ,
+		northWestX = offsetX - rSin60 , northWestY = offsetY - rCos60 ,
+		northEastX = offsetX + rSin60 , northEastY = offsetY - rCos60 ,
+		southWestX = offsetX - rSin60 , southWestY = offsetY + rCos60 ,
+		southEastX = offsetX + rSin60 , southEastY = offsetY + rCos60 ;
 
-	var card = new BABYLON.GUI.Card( 'card' + ( id !== null ? '#' + id : '' ) , cardVg ) ;
+	console.warn( "coords:" , { 
+		padding,radius,rCos60,rSin60,offsetX,offsetY,coords: {
+			northX,northY,southX,southY,northWestX,northWestY,northEastX,northEastY,southWestX,southWestY,southEastX,southEastY
+		}
+	} ) ;
 
-	card.width = "300px" ;
-	card.height = "200px" ;
-	//card.stretch = BABYLON.GUI.VG.STRETCH_UNIFORM ;
-	card.stretch = BABYLON.GUI.VG.STRETCH_EXTEND ;
+	var vg = new svgKit.VG( {
+		viewBox: { x: 0 , y: 0 , width: 2 * offsetX , height: 2 * offsetY }
+		//invertY: true
+	} ) ;
+	
 
-	return card ;
+	var hexFrame = new svgKit.VGPath( {
+		style: {
+			fill: '#7ac' ,
+			stroke: '#777'
+		}
+	} ) ;
+	hexFrame.moveTo( { x: northX , y: northY } )
+		.lineTo( { x: northEastX , y: northEastY } )
+		.lineTo( { x: southEastX , y: southEastY } )
+		.lineTo( { x: southX , y: southY } )
+		.lineTo( { x: southWestX , y: southWestY } )
+		.lineTo( { x: northWestX , y: northWestY } )
+		.lineTo( { x: northX , y: northY } )
+		.close() ;
+	vg.addEntity( hexFrame ) ;
+
+	var tileName = new svgKit.VGFlowingText( {
+		x: offsetX - 0.5 * radius ,
+		y: offsetY + 0.25 * radius ,
+		width: 1.5 * radius ,
+		height: radius ,
+		//clip: false ,
+		//debugContainer: true ,
+		//textWrapping: 'ellipsis' ,
+		textWrapping: 'wordWrap' ,
+		attr: {
+			fontSize: 0.3 * radius ,
+			color: '#444' ,
+			outline: true ,
+			outlineWidth: 2
+		} ,
+		markupText: "Tile" + ( id !== null ? ' #' + id : '' )
+	} ) ;
+	vg.addEntity( tileName ) ;
+
+	return vg ;
+}
+
+
+
+function createTile( id = null ) {
+	var tile3dVg = createTileVg( id ) ;
+
+	var tile3d = new BABYLON.GUI.VG( 'tile3d' + ( id !== null ? '#' + id : '' ) , tile3dVg ) ;
+
+	tile3d.width = "300px" ;
+	tile3d.height = "350px" ;
+	//tile3d.stretch = BABYLON.GUI.VG.STRETCH_UNIFORM ;
+	tile3d.stretch = BABYLON.GUI.VG.STRETCH_EXTEND ;
+
+	return tile3d ;
 }
 
 
@@ -153,25 +219,12 @@ async function createScene() {
 	//await svgKit.fontLib.preloadFontFamily( 'serif' ) ;
 
 
-	var handPanel = new BABYLON.GUI.HandPanel( 'handPanel-HP' ) ;
-	//var handPanel = new BABYLON.GUI.StackPanel( 'handPanel-SP' ) ;
-
-	handPanel.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
-	handPanel.isVertical = false ;
-	handPanel.clipChildren = false ;
-	handPanel.clipContent = false ;
-	handPanel.background = '#8d8' ;
-	handPanel.spacing = -80 ;
-	//handPanel.topInPixels = -50 ;
-	console.warn( "Handpanel:" , handPanel ) ;
-	advancedTexture.addControl( handPanel ) ;
-
-	for ( let i = 0 ; i < 5 ; i ++ ) {
-		let card = createCard( i ) ;
-		handPanel.addControl( card ) ;
+	for ( let i = 0 ; i < 1 ; i ++ ) {
+		let tile3d = createTile( i ) ;
+		advancedTexture.addControl( tile3d ) ;
 	}
 
-	//advancedTexture.addControl( card ) ;
+	//advancedTexture.addControl( tile3d ) ;
 	
 	return scene ;
 }

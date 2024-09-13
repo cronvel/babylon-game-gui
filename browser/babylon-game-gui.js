@@ -1159,6 +1159,7 @@ BABYLON.RegisterClass( 'BABYLON.GUI.FlowingText' , FlowingText ) ;
 
 
 
+const Card = require( './Card.js' ) ;
 //const Observable = BABYLON.Observable ;
 
 //const Promise = require( 'seventh' ) ;
@@ -1170,6 +1171,10 @@ class HandPanel extends BABYLON.GUI.Container {
 	_spacing = 0 ;
 	_rotationPerCardInDegree = 5 ;
 	_pseudoRadius = 2500 ;
+	_highlightScale = 1.2 ;
+	_highlightColor = '#ff0' ;
+	_highlightBlur = 20 ;
+
 	_layoutOrderedChildren = [] ;
 
 
@@ -1201,14 +1206,34 @@ class HandPanel extends BABYLON.GUI.Container {
 		this._markAsDirty() ;
 	}
 
+	get highlightScale() { return this._highlightScale ; }
+	set highlightScale( value ) {
+		if ( this._highlightScale === value ) { return ; }
+		this._highlightScale = value ;
+		this._markAsDirty() ;
+	}
+
+	get highlightColor() { return this._highlightColor ; }
+	set highlightColor( value ) {
+		if ( this._highlightColor === value ) { return ; }
+		this._highlightColor = value ;
+		this._markAsDirty() ;
+	}
+
+	get highlightBlur() { return this._highlightBlur ; }
+	set highlightBlur( value ) {
+		if ( this._highlightBlur === value ) { return ; }
+		this._highlightBlur = value ;
+		this._markAsDirty() ;
+	}
+
 	addControl( control ) {
-		if ( ! control ) { return this ; }
+		if ( ! control || ! ( control instanceof Card ) ) { return this ; }
 
 		var index = this._children.indexOf( control ) ;
 		if ( index !== -1 ) { return this ; }
 
-		// Force a zIndex
-		control._zIndex = this._children.length ;
+		this._autoCardBehavior( control ) ;
 
 		control._link( this._host ) ;
 		control._markAllAsDirty() ;
@@ -1243,6 +1268,48 @@ class HandPanel extends BABYLON.GUI.Container {
 
 	getControlLayoutOrder( control ) {
 		return this._layoutOrderedChildren.indexOf( control ) ;
+	}
+
+	_autoCardBehavior( control ) {
+		// Force a zIndex
+		control._zIndex = this._children.length ;
+		
+		control.autoScale = true ;
+		control.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
+
+		control.transformCenterX = 0.5 ;
+		control.transformCenterY = 1 ;
+		control.isPointerBlocker = true ;
+		control.hoverCursor = 'pointer' ;
+
+		control.onPointerEnterObservable.add( () => {
+			control.scaleX = control.scaleY = this._highlightScale ;
+			control.topInPixels = 0 ;
+			control.rotation = 0 ;
+			control.zIndex = 1000 ;
+
+			if ( this._highlightColor && this._highlightBlur ) {
+				control.shadowColor = this._highlightColor ;
+				control.shadowBlur = this._highlightBlur ;
+			}
+		} ) ;
+
+		control.onPointerOutObservable.add( () => {
+			control.scaleX = control.scaleY = 1 ;
+			control.topInPixels = control.layoutTopInPixels ;
+			control.rotation = control.layoutRotation ;
+
+			control.zIndex = this.getControlLayoutOrder( control ) ;
+			//console.warn( "Restore z-index:" , this.getControlLayoutOrder( control ) ) ;
+
+			control.shadowColor = '#000' ;
+			control.shadowBlur = 0 ;
+		} ) ;
+
+		// /!\ Temp:
+		control.onPointerUpObservable.add( () => {
+			alert( "card clicked: " + control.name ) ;
+		} ) ;
 	}
 
 	_reOrderControl( control ) {
@@ -1356,7 +1423,7 @@ BABYLON.GUI.HandPanel = HandPanel ;
 BABYLON.RegisterClass( 'BABYLON.GUI.HandPanel' , HandPanel ) ;
 
 
-},{}],6:[function(require,module,exports){
+},{"./Card.js":1}],6:[function(require,module,exports){
 /*
 	Babylon Game GUI
 
@@ -39983,6 +40050,7 @@ builders.forwardTurn = ( command , build ) => {
 
 VGPath.prototype.close = function() {
 	this.commands.push( { type: 'close' } ) ;
+	return this ;
 } ;
 
 VGPath.prototype.move = function( data ) {
@@ -39992,6 +40060,7 @@ VGPath.prototype.move = function( data ) {
 		x: data.x || 0 ,
 		y: data.y || 0
 	} ) ;
+	return this ;
 } ;
 
 VGPath.prototype.moveTo = function( data ) {
@@ -40000,6 +40069,7 @@ VGPath.prototype.moveTo = function( data ) {
 		x: data.x || 0 ,
 		y: data.y || 0
 	} ) ;
+	return this ;
 } ;
 
 VGPath.prototype.line = function( data ) {
@@ -40009,6 +40079,7 @@ VGPath.prototype.line = function( data ) {
 		x: data.x || 0 ,
 		y: data.y || 0
 	} ) ;
+	return this ;
 } ;
 
 VGPath.prototype.lineTo = function( data ) {
@@ -40017,6 +40088,7 @@ VGPath.prototype.lineTo = function( data ) {
 		x: data.x || 0 ,
 		y: data.y || 0
 	} ) ;
+	return this ;
 } ;
 
 VGPath.prototype.curve = function( data ) {
@@ -40030,6 +40102,7 @@ VGPath.prototype.curve = function( data ) {
 		x: data.x || 0 ,
 		y: data.y || 0
 	} ) ;
+	return this ;
 } ;
 
 VGPath.prototype.curveTo = function( data ) {
@@ -40042,6 +40115,7 @@ VGPath.prototype.curveTo = function( data ) {
 		x: data.x || 0 ,
 		y: data.y || 0
 	} ) ;
+	return this ;
 } ;
 
 VGPath.prototype.smoothCurve = function( data ) {
@@ -40053,6 +40127,7 @@ VGPath.prototype.smoothCurve = function( data ) {
 		x: data.x || 0 ,
 		y: data.y || 0
 	} ) ;
+	return this ;
 } ;
 
 VGPath.prototype.smoothCurveTo = function( data ) {
@@ -40063,6 +40138,7 @@ VGPath.prototype.smoothCurveTo = function( data ) {
 		x: data.x || 0 ,
 		y: data.y || 0
 	} ) ;
+	return this ;
 } ;
 
 // q-curve = Quadratic curve, it uses just one controle point instead of two
@@ -40075,6 +40151,7 @@ VGPath.prototype.qCurve = function( data ) {
 		x: data.x || 0 ,
 		y: data.y || 0
 	} ) ;
+	return this ;
 } ;
 
 VGPath.prototype.qCurveTo = function( data ) {
@@ -40085,6 +40162,7 @@ VGPath.prototype.qCurveTo = function( data ) {
 		x: data.x || 0 ,
 		y: data.y || 0
 	} ) ;
+	return this ;
 } ;
 
 VGPath.prototype.smoothQCurve = function( data ) {
@@ -40094,6 +40172,7 @@ VGPath.prototype.smoothQCurve = function( data ) {
 		x: data.x || 0 ,
 		y: data.y || 0
 	} ) ;
+	return this ;
 } ;
 
 VGPath.prototype.smoothQCurveTo = function( data ) {
@@ -40102,6 +40181,7 @@ VGPath.prototype.smoothQCurveTo = function( data ) {
 		x: data.x || 0 ,
 		y: data.y || 0
 	} ) ;
+	return this ;
 } ;
 
 VGPath.prototype.arc = function( data ) {
@@ -40124,6 +40204,7 @@ VGPath.prototype.arc = function( data ) {
 		x: data.x || 0 ,
 		y: data.y || 0
 	} ) ;
+	return this ;
 } ;
 
 VGPath.prototype.arcTo = function( data ) {
@@ -40145,6 +40226,7 @@ VGPath.prototype.arcTo = function( data ) {
 		x: data.x || 0 ,
 		y: data.y || 0
 	} ) ;
+	return this ;
 } ;
 
 // All angles use positive as Y-axis to X-axis (Spellcast usage)
@@ -40169,6 +40251,7 @@ VGPath.prototype.negativeArc = function( data ) {
 		x: data.x || 0 ,
 		y: data.y || 0
 	} ) ;
+	return this ;
 } ;
 
 // All angles use positive as Y-axis to X-axis (Spellcast usage)
@@ -40192,6 +40275,7 @@ VGPath.prototype.negativeArcTo = function( data ) {
 		x: data.x || 0 ,
 		y: data.y || 0
 	} ) ;
+	return this ;
 } ;
 
 
@@ -40214,6 +40298,7 @@ VGPath.prototype.centerArc = function( data ) {
 		x: data.x || 0 ,
 		y: data.y || 0
 	} ) ;
+	return this ;
 } ;
 
 VGPath.prototype.centerArcTo = function( data ) {
@@ -40228,6 +40313,7 @@ VGPath.prototype.centerArcTo = function( data ) {
 		x: data.x || 0 ,
 		y: data.y || 0
 	} ) ;
+	return this ;
 } ;
 
 
@@ -40241,6 +40327,7 @@ VGPath.prototype.penUp = function( data ) {
 		type: 'pen' ,
 		u: true
 	} ) ;
+	return this ;
 } ;
 
 VGPath.prototype.penDown = function( data ) {
@@ -40248,6 +40335,7 @@ VGPath.prototype.penDown = function( data ) {
 		type: 'pen' ,
 		u: false
 	} ) ;
+	return this ;
 } ;
 
 VGPath.prototype.forward = function( data ) {
@@ -40255,6 +40343,7 @@ VGPath.prototype.forward = function( data ) {
 		type: 'forward' ,
 		l: typeof data === 'number' ? data : data.length || data.l || 0
 	} ) ;
+	return this ;
 } ;
 
 VGPath.prototype.backward = function( data ) {
@@ -40262,6 +40351,7 @@ VGPath.prototype.backward = function( data ) {
 		type: 'forward' ,
 		l: - ( typeof data === 'number' ? data : data.length || data.l || 0 )
 	} ) ;
+	return this ;
 } ;
 
 // Turn using positive as X-axis to Y-axis
@@ -40271,6 +40361,7 @@ VGPath.prototype.turn = function( data ) {
 		rel: true ,
 		a: typeof data === 'number' ? data : data.angle || data.a || 0
 	} ) ;
+	return this ;
 } ;
 
 // Turn from X-axis to Y-axis
@@ -40279,6 +40370,7 @@ VGPath.prototype.turnTo = function( data ) {
 		type: 'turn' ,
 		a: typeof data === 'number' ? data : data.angle || data.a || 0
 	} ) ;
+	return this ;
 } ;
 
 // Turn using positive as Y-axis to X-axis (Spellcast usage)
@@ -40288,6 +40380,7 @@ VGPath.prototype.negativeTurn = function( data ) {
 		rel: true ,
 		a: - ( typeof data === 'number' ? data : data.angle || data.a || 0 )
 	} ) ;
+	return this ;
 } ;
 
 // Turn from Y-axis to X-axis (clockwise when Y point upward, the invert of the standard 2D computer graphics) (Spellcast usage)
@@ -40296,6 +40389,7 @@ VGPath.prototype.negativeTurnTo = function( data ) {
 		type: 'turn' ,
 		a: 90 - ( typeof data === 'number' ? data : data.angle || data.a || 0 )
 	} ) ;
+	return this ;
 } ;
 
 // A turtle-like way of doing a curve: combine a forward and turn, moving along a circle
@@ -40305,6 +40399,7 @@ VGPath.prototype.forwardTurn = function( data ) {
 		l: data.length || data.l || 0 ,
 		a: data.angle || data.a || 0
 	} ) ;
+	return this ;
 } ;
 
 // Turn using positive as Y-axis to X-axis (clockwise when Y point upward, the invert of the standard 2D computer graphics) (Spellcast usage)
@@ -40314,6 +40409,7 @@ VGPath.prototype.forwardNegativeTurn = function( data ) {
 		l: data.length || data.l || 0 ,
 		a: - ( data.angle || data.a || 0 )
 	} ) ;
+	return this ;
 } ;
 
 
@@ -43006,7 +43102,7 @@ unicode.isEmojiModifierCodePoint = code =>
 },{"./json-data/unicode-emoji-width-ranges.json":101}],103:[function(require,module,exports){
 module.exports={
   "name": "svg-kit",
-  "version": "0.6.6",
+  "version": "0.6.7",
   "description": "A SVG toolkit, with its own Vector Graphics structure, multiple renderers (svg text, DOM svg, canvas), and featuring Flowing Text.",
   "main": "lib/svg-kit.js",
   "directories": {
