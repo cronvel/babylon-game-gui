@@ -64,7 +64,7 @@ BABYLON.GUI.Card = Card ;
 BABYLON.RegisterClass( 'BABYLON.GUI.Card' , Card ) ;
 
 
-},{"./VG.js":6,"seventh":48,"svg-kit":98}],2:[function(require,module,exports){
+},{"./VG.js":6,"seventh":48,"svg-kit":101}],2:[function(require,module,exports){
 /*
 	Babylon Game GUI
 
@@ -1126,7 +1126,7 @@ BABYLON.GUI.FlowingText = FlowingText ;
 BABYLON.RegisterClass( 'BABYLON.GUI.FlowingText' , FlowingText ) ;
 
 
-},{"./VG.js":6,"seventh":48,"svg-kit":98}],5:[function(require,module,exports){
+},{"./VG.js":6,"seventh":48,"svg-kit":101}],5:[function(require,module,exports){
 /*
 	Babylon Game GUI
 
@@ -1691,7 +1691,7 @@ BABYLON.GUI.VG = VG ;
 BABYLON.RegisterClass( 'BABYLON.GUI.VG' , VG ) ;
 
 
-},{"seventh":48,"svg-kit":98}],7:[function(require,module,exports){
+},{"seventh":48,"svg-kit":101}],7:[function(require,module,exports){
 /*
 	Babylon Game GUI
 
@@ -1735,7 +1735,7 @@ exports.HandPanel = require( './HandPanel.js' ) ;
 exports.setFontUrl = ( ... args ) => svgKit.fontLib.setFontUrl( ... args ) ;
 
 
-},{"./Card.js":1,"./DecoratedContainer.js":2,"./Dialog.js":3,"./FlowingText.js":4,"./HandPanel.js":5,"./VG.js":6,"./helpers.js":8,"svg-kit":98}],8:[function(require,module,exports){
+},{"./Card.js":1,"./DecoratedContainer.js":2,"./Dialog.js":3,"./FlowingText.js":4,"./HandPanel.js":5,"./VG.js":6,"./helpers.js":8,"svg-kit":101}],8:[function(require,module,exports){
 /*
 	Babylon Game GUI
 
@@ -8666,7 +8666,7 @@ domKit.html = ( $element , html ) => $element.innerHTML = html ;
 
 
 }).call(this)}).call(this,require('_process'))
-},{"@cronvel/xmldom":9,"_process":110}],32:[function(require,module,exports){
+},{"@cronvel/xmldom":9,"_process":113}],32:[function(require,module,exports){
 /*
 	Next-Gen Events
 
@@ -25211,7 +25211,7 @@ module.exports={
 
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"buffer":106,"fs":104}],36:[function(require,module,exports){
+},{"buffer":109,"fs":107}],36:[function(require,module,exports){
 /**
  * chroma.js - JavaScript library for color conversions
  *
@@ -26831,7 +26831,7 @@ exports.Palette = require( './Palette.js' ) ;
 }(typeof self === "undefined" ? typeof global === "undefined" ? this : global : self));
 
 }).call(this)}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"_process":110}],41:[function(require,module,exports){
+},{"_process":113}],41:[function(require,module,exports){
 /*
 	Seventh
 
@@ -28539,7 +28539,7 @@ if ( process.browser ) {
 
 
 }).call(this)}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("timers").setImmediate)
-},{"_process":110,"setimmediate":40,"timers":111}],45:[function(require,module,exports){
+},{"_process":113,"setimmediate":40,"timers":114}],45:[function(require,module,exports){
 /*
 	Seventh
 
@@ -29341,7 +29341,7 @@ Promise.resolveSafeTimeout = function( timeout , value ) {
 
 
 }).call(this)}).call(this,require('_process'))
-},{"./seventh.js":48,"_process":110}],47:[function(require,module,exports){
+},{"./seventh.js":48,"_process":113}],47:[function(require,module,exports){
 /*
 	Seventh
 
@@ -31720,7 +31720,7 @@ function round( v , step ) {
 
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"./StringNumber.js":50,"./ansi.js":51,"./escape.js":53,"./inspect.js":56,"./naturalSort.js":60,"./unicode.js":65,"buffer":106}],55:[function(require,module,exports){
+},{"./StringNumber.js":50,"./ansi.js":51,"./escape.js":53,"./inspect.js":56,"./naturalSort.js":60,"./unicode.js":65,"buffer":109}],55:[function(require,module,exports){
 /*
 	String Kit
 
@@ -32800,7 +32800,7 @@ inspectStyle.html = Object.assign( {} , inspectStyle.none , {
 
 
 }).call(this)}).call(this,{"isBuffer":require("../../../../../../../../opt/node-v20.11.0/lib/node_modules/browserify/node_modules/is-buffer/index.js")},require('_process'))
-},{"../../../../../../../../opt/node-v20.11.0/lib/node_modules/browserify/node_modules/is-buffer/index.js":108,"./ansi.js":51,"./escape.js":53,"_process":110}],57:[function(require,module,exports){
+},{"../../../../../../../../opt/node-v20.11.0/lib/node_modules/browserify/node_modules/is-buffer/index.js":111,"./ansi.js":51,"./escape.js":53,"_process":113}],57:[function(require,module,exports){
 arguments[4][29][0].apply(exports,arguments)
 },{"dup":29}],58:[function(require,module,exports){
 /*
@@ -34249,7 +34249,7 @@ DynamicArea.prototype.restore = function( canvasCtx ) {
 } ;
 
 
-},{"../package.json":103,"./BoundingBox.js":67}],69:[function(require,module,exports){
+},{"../package.json":106,"./BoundingBox.js":67}],69:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -34280,7 +34280,7 @@ DynamicArea.prototype.restore = function( canvasCtx ) {
 
 
 
-const canvas = require( './canvas.js' ) ;
+const canvasUtilities = require( './canvas-utilities.js' ) ;
 
 const LeanEvents = require( 'nextgen-events/lib/LeanEvents.js' ) ;
 const Promise = require( 'seventh' ) ;
@@ -34382,7 +34382,7 @@ DynamicManager.prototype.onTick = function() {
 
 DynamicManager.prototype.onPointerMove = function( canvasCoords , convertBackCoords ) {
 	let outdated = false ;
-	let contextCoords = canvas.canvasToContextCoords( this.ctx , canvasCoords ) ;
+	let contextCoords = canvasUtilities.canvasToContextCoords( this.ctx , canvasCoords ) ;
 
 	for ( let dynamic of this.vg.dynamicAreaIterator() ) {
 		if ( dynamic.boundingBox.isInside( contextCoords ) ) {
@@ -34416,7 +34416,7 @@ DynamicManager.prototype.onPointerMove = function( canvasCoords , convertBackCoo
 
 DynamicManager.prototype.onPointerPress = function( canvasCoords , convertBackCoords ) {
 	let outdated = false ;
-	let contextCoords = canvas.canvasToContextCoords( this.ctx , canvasCoords ) ;
+	let contextCoords = canvasUtilities.canvasToContextCoords( this.ctx , canvasCoords ) ;
 
 	for ( let dynamic of this.vg.dynamicAreaIterator() ) {
 		if ( dynamic.boundingBox.isInside( contextCoords ) ) {
@@ -34448,7 +34448,7 @@ DynamicManager.prototype.onPointerPress = function( canvasCoords , convertBackCo
 
 DynamicManager.prototype.onPointerRelease = function( canvasCoords , convertBackCoords ) {
 	let outdated = false ;
-	let contextCoords = canvas.canvasToContextCoords( this.ctx , canvasCoords ) ;
+	let contextCoords = canvasUtilities.canvasToContextCoords( this.ctx , canvasCoords ) ;
 
 	for ( let dynamic of this.vg.dynamicAreaIterator() ) {
 		if ( dynamic.boundingBox.isInside( contextCoords ) ) {
@@ -34479,8 +34479,8 @@ DynamicManager.prototype.onPointerRelease = function( canvasCoords , convertBack
 
 
 DynamicManager.prototype.convertEventCoords = function( eventData , convertBackCoords ) {
-	let min = canvas.contextToCanvasCoords( this.ctx , { x: eventData.boundingBox.xmin , y: eventData.boundingBox.ymin } ) ,
-		max = canvas.contextToCanvasCoords( this.ctx , { x: eventData.boundingBox.xmax , y: eventData.boundingBox.ymax } ) ;
+	let min = canvasUtilities.contextToCanvasCoords( this.ctx , { x: eventData.boundingBox.xmin , y: eventData.boundingBox.ymin } ) ,
+		max = canvasUtilities.contextToCanvasCoords( this.ctx , { x: eventData.boundingBox.xmax , y: eventData.boundingBox.ymax } ) ;
 
 	min = convertBackCoords( min ) ;
 	max = convertBackCoords( max ) ;
@@ -34530,8 +34530,8 @@ DynamicManager.prototype.manageBrowserCanvas = function() {
 
 	this.timer = setInterval( () => this.onTick() , this.tickTime ) ;
 
-	const convertCoords = event => canvas.screenToCanvasCoords( this.ctx.canvas , { x: event.clientX , y: event.clientY } ) ;
-	const convertBackCoords = coords => canvas.canvasToScreenCoords( this.ctx.canvas , coords ) ;
+	const convertCoords = event => canvasUtilities.screenToCanvasCoords( this.ctx.canvas , { x: event.clientX , y: event.clientY } ) ;
+	const convertBackCoords = coords => canvasUtilities.canvasToScreenCoords( this.ctx.canvas , coords ) ;
 
 	this.addCanvasEventListener( 'mousemove' , event => this.onPointerMove( convertCoords( event ) , convertBackCoords ) ) ;
 	this.addCanvasEventListener( 'mousedown' , event => this.onPointerPress( convertCoords( event ) , convertBackCoords ) ) ;
@@ -34560,7 +34560,7 @@ DynamicManager.prototype.clearCanvasEventListener = function() {
 DynamicManager.prototype.getAllBrowserEmittableEvents = function( eventName ) {
 	return this.getAllEmittableEvents(
 		eventName ,
-		coords => canvas.canvasToScreenCoords( this.ctx.canvas , coords )
+		coords => canvasUtilities.canvasToScreenCoords( this.ctx.canvas , coords )
 	) ;
 } ;
 
@@ -34640,7 +34640,7 @@ DynamicManager.prototype.getAllBabylonControlEmittableEvents = function( eventNa
 } ;
 
 
-},{"../package.json":103,"./canvas.js":91,"nextgen-events/lib/LeanEvents.js":32,"seventh":48}],70:[function(require,module,exports){
+},{"../package.json":106,"./canvas-utilities.js":93,"nextgen-events/lib/LeanEvents.js":32,"seventh":48}],70:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -34758,6 +34758,199 @@ Metric.isEqual = function( a , b ) {
 
 
 },{}],71:[function(require,module,exports){
+/*
+	SVG Kit
+
+	Copyright (c) 2017 - 2023 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+const pathUtilities = require( './path-utilities.js' ) ;
+
+
+
+function Polygon( params ) {
+	// Note: all properties should be copied to VGPolygon as well
+	this.points = [] ;
+	this.sides = [] ;
+	this.clockwise = true ;
+	this.autofix = false ;
+	this.badPolygon = false ;
+
+	if ( params ) { this.set( params ) ; }
+}
+
+module.exports = Polygon ;
+
+
+
+Polygon.prototype.set = function( params ) {
+	if ( params.points ) { this.setPoints( params.points ) ; }
+	if ( typeof params.clockwise === 'boolean' ) { this.clockwise = params.clockwise ; }
+} ;
+
+
+
+Polygon.prototype.setPoints = function( points ) {
+	this.points.length = 0 ;
+	this.sides.length = 0 ;
+
+	if ( ! Array.isArray( points ) ) { return ; }
+	for ( let point of points ) { this.addPoint( point , true ) ; }
+	this.addClosingSide() ;
+
+	if ( this.autofix ) { this.fixPolygon() ; }
+} ;
+
+
+
+Polygon.prototype.addPoint = function( point , noClosingSide = false ) {
+	if ( ! point || typeof point !== 'object' ) { return ; }
+
+	this.points.push( {
+		x: + point.x || 0 ,
+		y: + point.y || 0
+	} ) ;
+
+	this.addLastSide() ;
+	if ( ! noClosingSide ) { this.addClosingSide() ; }
+} ;
+
+
+
+Polygon.prototype.addLastSide = function() {
+	var count = this.points.length ;
+	if ( count <= 1 ) { return ; }
+	this.sides[ count - 2 ] = this.getParametricLineParameters( this.points[ count - 2 ] , this.points[ count - 1 ] ) ;
+} ;
+
+
+
+Polygon.prototype.addClosingSide = function() {
+	var count = this.points.length ;
+	if ( count < 3 ) { return ; }
+	this.sides[ count - 1 ] = this.getParametricLineParameters( this.points[ count - 1 ] , this.points[ 0 ] ) ;
+} ;
+
+
+
+Polygon.prototype.export = function( data = {} ) {
+	data.points = this.points.map( p => ( { x: p.x , y: p.y } ) ) ;
+	return data ;
+} ;
+
+
+
+Polygon.prototype.toD = function( invertY = false ) {
+	return pathUtilities.polygonPointsToD( this.points , invertY ) ;
+} ;
+
+
+
+/*
+	Get the parametric line equation's parameters.
+	The equation is:   ax + by + c
+	The result is =0 on the line, >0 on the left (point 1 toward point 2), <0 on the right.
+*/
+Polygon.prototype.getParametricLineParameters = function( point1 , point2 ) {
+	var dx = point2.x - point1.x ,
+		dy = point2.y - point1.y ;
+
+	return {
+		a: - dy ,
+		b: dx ,
+		c: - dx * point1.y + dy * point1.x
+	} ;
+} ;
+
+
+
+Polygon.prototype.isInside = function( coords ) {
+	if ( ! this.sides.length ) { return false ; }
+
+	return this.clockwise ?
+		this.sides.every( side => Polygon.sideTest( side , coords ) <= 0 ) :
+		this.sides.every( side => Polygon.sideTest( side , coords ) >= 0 ) ;
+} ;
+
+
+
+// Find out if the points are really clowkwise or anti-clockwise
+Polygon.prototype.fixPolygon = function( coords ) {
+	if ( ! this.sides.length ) { return ; }
+
+	var clockwiseOk = true ,
+		antiClockwiseOk = true ;
+
+	this.badPolygon = false ;
+
+	for ( let i = 0 ; i < this.sides.length ; i ++ ) {
+		let side = this.sides[ i ] ;
+
+		for ( let j = i + 2 ; j < this.points.length ; j ++ ) {
+			if ( j === i || j === ( i + 1 ) % this.sides.length ) {
+				// We don't check points of the current side
+				continue ;
+			}
+
+			let point = this.points[ j ] ;
+
+			if ( clockwiseOk && Polygon.sideTest( side , point ) > 0 ) { clockwiseOk = false ; }
+			if ( antiClockwiseOk && Polygon.sideTest( side , point ) < 0 ) { antiClockwiseOk = false ; }
+
+			if ( ! clockwiseOk && ! antiClockwiseOk ) {
+				console.warn( "Bad polygon, probably not simple/convex" ) ;
+				this.badPolygon = true ;
+				return ;
+			}
+		}
+	}
+
+	if ( clockwiseOk && ! antiClockwiseOk ) {
+		console.warn( "Clockwise detected!" ) ;
+		this.clockwise = true ;
+	}
+	else if ( ! clockwiseOk && antiClockwiseOk ) {
+		console.warn( "Anti-clockwise detected!" ) ;
+		this.clockwise = false ;
+	}
+	else {
+		console.warn( "Bad polygon" ) ;
+		this.badPolygon = true ;
+	}
+} ;
+
+
+
+Polygon.sideTest = function( side , coords ) {
+	return side.a * coords.x + side.b * coords.y + side.c ;
+} ;
+
+
+},{"./path-utilities.js":100}],72:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -34915,7 +35108,7 @@ VG.prototype.addCssRule = function( rule ) {
 } ;
 
 
-},{"../package.json":103,"./VGContainer.js":73,"palette-shade":39}],72:[function(require,module,exports){
+},{"../package.json":106,"./VGContainer.js":74,"palette-shade":39}],73:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -35024,7 +35217,7 @@ VGClip.prototype.svgContentGroupAttributes = function() {
 } ;
 
 
-},{"../package.json":103,"./VGContainer.js":73,"./VGEntity.js":75,"./svg-kit.js":98,"array-kit":13}],73:[function(require,module,exports){
+},{"../package.json":106,"./VGContainer.js":74,"./VGEntity.js":76,"./svg-kit.js":101,"array-kit":13}],74:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -35230,7 +35423,7 @@ VGContainer.prototype.morphSvgDom = function() {
 } ;
 
 
-},{"../package.json":103,"./VGEntity.js":75,"./svg-kit.js":98,"array-kit":13}],74:[function(require,module,exports){
+},{"../package.json":106,"./VGEntity.js":76,"./svg-kit.js":101,"array-kit":13}],75:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -35262,7 +35455,7 @@ VGContainer.prototype.morphSvgDom = function() {
 
 
 const VGEntity = require( './VGEntity.js' ) ;
-const canvas = require( './canvas.js' ) ;
+const canvasUtilities = require( './canvas-utilities.js' ) ;
 
 
 
@@ -35347,7 +35540,7 @@ VGEllipse.prototype.renderHookForCanvas = function( canvasCtx , options = {} , i
 	canvasCtx.save() ;
 	canvasCtx.beginPath() ;
 	canvasCtx.ellipse( this.x , this.y + yOffset , this.rx , this.ry , 0 , 0 , 2 * Math.PI ) ;
-	canvas.fillAndStrokeUsingStyle( canvasCtx , this.style , master?.palette ) ;
+	canvasUtilities.fillAndStrokeUsingStyle( canvasCtx , this.style , master?.palette ) ;
 	canvasCtx.restore() ;
 } ;
 
@@ -35359,7 +35552,7 @@ VGEllipse.prototype.renderHookForPath2D = function( path2D , canvasCtx , options
 } ;
 
 
-},{"../package.json":103,"./VGEntity.js":75,"./canvas.js":91}],75:[function(require,module,exports){
+},{"../package.json":106,"./VGEntity.js":76,"./canvas-utilities.js":93}],76:[function(require,module,exports){
 (function (process){(function (){
 /*
 	SVG Kit
@@ -35395,7 +35588,7 @@ const BoundingBox = require( './BoundingBox.js' ) ;
 const DynamicArea = require( './DynamicArea.js' ) ;
 
 const fontLib = require( './fontLib.js' ) ;
-const misc = require( './misc.js' ) ;
+const colorUtilities = require( './color-utilities.js' ) ;
 const fx = require( './fx/fx.js' ) ;
 
 const dom = require( 'dom-kit' ) ;
@@ -35648,6 +35841,20 @@ VGEntity.prototype.dynamicAreaIterator = function* () {
 
 
 
+VGEntity.prototype.isInside = function( coords ) {
+	if ( this.isContainer ) {
+		return this.entities.some( entity => entity.isInside( coords ) ) ;
+	}
+
+	if ( this.boundingBox ) {
+		return this.boundingBox.isInside( coords ) ;
+	}
+
+	return false ;
+} ;
+
+
+
 // Use the preserveUpperCase option, cause the value can be in camelCased already
 VGEntity.prototype.toCamelCase = value => camel.toCamelCase( value , true ) ;
 
@@ -35694,7 +35901,7 @@ VGEntity.prototype.styleToString = function( style , palette , addInitialSpace =
 			v = '' + v + STYLE_PROPERTY_UNIT[ key ] ;
 		}
 		else if ( STYLE_PROPERTY_COLOR[ key ] ) {
-			v = misc.colorToString( v , palette ) ;
+			v = colorUtilities.colorToString( v , palette ) ;
 		}
 
 		str += this.escape( camel.camelCaseToDash( key ) ) + ':' + this.escape( v ) + ';' ;
@@ -35718,7 +35925,7 @@ VGEntity.prototype.domStyle = function( $element , style , palette ) {
 			v = '' + v + STYLE_PROPERTY_UNIT[ key ] ;
 		}
 		else if ( STYLE_PROPERTY_COLOR[ key ] ) {
-			v = misc.colorToString( v , palette ) ;
+			v = colorUtilities.colorToString( v , palette ) ;
 		}
 
 		$element.style[ key ] = v ;
@@ -36279,7 +36486,7 @@ VGEntity.prototype.getBoundingBox = function() { return null ; } ;
 
 
 }).call(this)}).call(this,require('_process'))
-},{"../package.json":103,"./BoundingBox.js":67,"./DynamicArea.js":68,"./fontLib.js":92,"./fx/fx.js":93,"./misc.js":96,"_process":110,"dom-kit":31,"seventh":48,"string-kit/lib/camel":99,"string-kit/lib/escape":100}],76:[function(require,module,exports){
+},{"../package.json":106,"./BoundingBox.js":67,"./DynamicArea.js":68,"./color-utilities.js":94,"./fontLib.js":96,"./fx/fx.js":97,"_process":113,"dom-kit":31,"seventh":48,"string-kit/lib/camel":102,"string-kit/lib/escape":103}],77:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -36364,7 +36571,7 @@ StructuredTextLine.prototype.fuseEqualAttr = function() {
 } ;
 
 
-},{"./TextMetrics.js":80}],77:[function(require,module,exports){
+},{"./TextMetrics.js":81}],78:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -36604,7 +36811,7 @@ StructuredTextPart.prototype.checkLineSplit = function() {
 } ;
 
 
-},{"./TextAttribute.js":79,"./TextMetrics.js":80,"string-kit/lib/escape.js":100}],78:[function(require,module,exports){
+},{"./TextAttribute.js":80,"./TextMetrics.js":81,"string-kit/lib/escape.js":103}],79:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -36879,7 +37086,7 @@ StructuredTextRenderer.prototype.populateStyle = function( part , style ) {
 } ;
 
 
-},{}],79:[function(require,module,exports){
+},{}],80:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -36910,7 +37117,7 @@ StructuredTextRenderer.prototype.populateStyle = function( part , style ) {
 
 
 
-const misc = require( '../misc.js' ) ;
+const colorUtilities = require( '../color-utilities.js' ) ;
 const Metric = require( '../Metric.js' ) ;
 const Color = require( 'palette-shade' ).Color ;
 
@@ -37334,12 +37541,12 @@ TextAttribute.prototype.getTextSvgStyleString = function( inherit = null , relTo
 		str += 'opacity:' + opacity + ';' ;
 	}
 
-	str += 'fill:' + misc.colorToString( color , palette ) + ';' ;
+	str += 'fill:' + colorUtilities.colorToString( color , palette ) + ';' ;
 
 	if ( outline && ( outlineWidth = this.getOutlineWidth( inherit , relTo ) ) ) {
 		let outlineColor = this.getOutlineColor( inherit ) ;
-		if ( outlineColor ) { str += 'stroke:' + misc.colorToString( outlineColor , palette ) + ';' ; }
-		else { str += 'stroke:' + misc.colorToString( color , palette ) + ';' ; }
+		if ( outlineColor ) { str += 'stroke:' + colorUtilities.colorToString( outlineColor , palette ) + ';' ; }
+		else { str += 'stroke:' + colorUtilities.colorToString( color , palette ) + ';' ; }
 
 		// It should force paint-order to stroke first, or some font will not be displayed as intended:
 		// some strokes can happen in the middle of a letter.
@@ -37366,12 +37573,12 @@ TextAttribute.prototype.getTextSvgStyle = function( inherit = null , relTo = nul
 		style.opacity = opacity ;
 	}
 
-	style.fill = misc.colorToString( color , palette ) ;
+	style.fill = colorUtilities.colorToString( color , palette ) ;
 
 	if ( outline && ( outlineWidth = this.getOutlineWidth( inherit , relTo ) ) ) {
 		let outlineColor = this.getOutlineColor( inherit ) ;
-		if ( outlineColor ) { style.stroke = misc.colorToString( outlineColor , palette ) ; }
-		else { style.stroke = misc.colorToString( color , palette ) ; }
+		if ( outlineColor ) { style.stroke = colorUtilities.colorToString( outlineColor , palette ) ; }
+		else { style.stroke = colorUtilities.colorToString( color , palette ) ; }
 
 		style.strokeWidth = outlineWidth * 2 ;
 		style.paintOrder = 'stroke' ;
@@ -37396,12 +37603,12 @@ TextAttribute.prototype.getLineSvgStyleString = function( inherit = null , relTo
 		str += 'opacity:' + opacity + ';' ;
 	}
 
-	str += 'fill:' + misc.colorToString( color , palette ) + ';' ;
+	str += 'fill:' + colorUtilities.colorToString( color , palette ) + ';' ;
 
 	if ( outline && ( outlineWidth = this.getLineOutlineWidth( inherit , relTo ) ) ) {
 		let outlineColor = this.getLineOutlineColor( inherit ) ;
-		if ( outlineColor ) { str += 'stroke:' + misc.colorToString( outlineColor , palette ) + ';' ; }
-		else { str += 'stroke:' + misc.colorToString( color , palette ) + ';' ; }
+		if ( outlineColor ) { str += 'stroke:' + colorUtilities.colorToString( outlineColor , palette ) + ';' ; }
+		else { str += 'stroke:' + colorUtilities.colorToString( color , palette ) + ';' ; }
 
 		// It should force paint-order to stroke first, so the outline is out of the content.
 		// As a result, outline width is multiplied by 2 because half of the stroke width is overwritten by the fill pass.
@@ -37427,12 +37634,12 @@ TextAttribute.prototype.getLineSvgStyle = function( inherit = null , relTo = nul
 		style.opacity = opacity ;
 	}
 
-	style.fill = misc.colorToString( color , palette ) ;
+	style.fill = colorUtilities.colorToString( color , palette ) ;
 
 	if ( outline && ( outlineWidth = this.getLineOutlineWidth( inherit , relTo ) ) ) {
 		let outlineColor = this.getLineOutlineColor( inherit ) ;
-		if ( outlineColor ) { style.stroke = misc.colorToString( outlineColor , palette ) ; }
-		else { style.stroke = misc.colorToString( color , palette ) ; }
+		if ( outlineColor ) { style.stroke = colorUtilities.colorToString( outlineColor , palette ) ; }
+		else { style.stroke = colorUtilities.colorToString( color , palette ) ; }
 
 		style.strokeWidth = outlineWidth * 2 ;
 		style.paintOrder = 'stroke' ;
@@ -37456,12 +37663,12 @@ TextAttribute.prototype.getFrameSvgStyleString = function( inherit = null , relT
 		str += 'opacity:' + opacity + ';' ;
 	}
 
-	str += 'fill:' + misc.colorToString( color , palette ) + ';' ;
+	str += 'fill:' + colorUtilities.colorToString( color , palette ) + ';' ;
 
 	if ( outlineWidth ) {
 		let outlineColor = this.getFrameOutlineColor( inherit ) ;
-		if ( outlineColor ) { str += 'stroke:' + misc.colorToString( outlineColor , palette ) + ';' ; }
-		else { str += 'stroke:' + misc.colorToString( color , palette ) + ';' ; }
+		if ( outlineColor ) { str += 'stroke:' + colorUtilities.colorToString( outlineColor , palette ) + ';' ; }
+		else { str += 'stroke:' + colorUtilities.colorToString( color , palette ) + ';' ; }
 
 		// It should force paint-order to stroke first, so the outline is out of the content.
 		// As a result, outline width is multiplied by 2 because half of the stroke width is overwritten by the fill pass.
@@ -37486,12 +37693,12 @@ TextAttribute.prototype.getFrameSvgStyle = function( inherit = null , relTo = nu
 		style.opacity = opacity ;
 	}
 
-	style.fill = misc.colorToString( color , palette ) ;
+	style.fill = colorUtilities.colorToString( color , palette ) ;
 
 	if ( outlineWidth ) {
 		let outlineColor = this.getFrameOutlineColor( inherit ) ;
-		if ( outlineColor ) { style.stroke = misc.colorToString( outlineColor , palette ) ; }
-		else { style.stroke = misc.colorToString( color , palette ) ; }
+		if ( outlineColor ) { style.stroke = colorUtilities.colorToString( outlineColor , palette ) ; }
+		else { style.stroke = colorUtilities.colorToString( color , palette ) ; }
 
 		style.strokeWidth = outlineWidth * 2 ;
 		style.paintOrder = 'stroke' ;
@@ -37501,7 +37708,7 @@ TextAttribute.prototype.getFrameSvgStyle = function( inherit = null , relTo = nu
 } ;
 
 
-},{"../Metric.js":70,"../misc.js":96,"palette-shade":39}],80:[function(require,module,exports){
+},{"../Metric.js":70,"../color-utilities.js":94,"palette-shade":39}],81:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -37641,7 +37848,7 @@ TextMetrics.measureStructuredTextPart = async function( part , inheritedAttr ) {
 } ;
 
 
-},{"../fontLib.js":92,"../getImageSize.js":95}],81:[function(require,module,exports){
+},{"../fontLib.js":96,"../getImageSize.js":99}],82:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -37686,7 +37893,7 @@ const bookSource = require( 'book-source' ) ;
 const StructuredTextRenderer = require( './StructuredTextRenderer.js' ) ;
 
 const fontLib = require( '../fontLib.js' ) ;
-const canvas = require( '../canvas.js' ) ;
+const canvasUtilities = require( '../canvas-utilities.js' ) ;
 
 const dom = require( 'dom-kit' ) ;
 
@@ -38394,7 +38601,7 @@ VGFlowingText.prototype.renderAfterHookForCanvas = async function( canvasCtx , o
 
 		canvasCtx.beginPath() ;
 		canvasCtx.rect( this.x , this.y + yOffset , this.width , this.height ) ;
-		canvas.fillAndStrokeUsingSvgStyle( canvasCtx , { fill: 'none' , stroke: '#f33' } ) ;
+		canvasUtilities.fillAndStrokeUsingSvgStyle( canvasCtx , { fill: 'none' , stroke: '#f33' } ) ;
 	}
 } ;
 
@@ -38461,7 +38668,7 @@ VGFlowingText.prototype.computeXYOffset = function() {
 } ;
 
 
-},{"../../package.json":103,"../BoundingBox.js":67,"../VGPseudoContainer.js":87,"../canvas.js":91,"../fontLib.js":92,"./StructuredTextLine.js":76,"./StructuredTextPart.js":77,"./StructuredTextRenderer.js":78,"./TextAttribute.js":79,"./TextMetrics.js":80,"./VGFlowingTextImagePart.js":82,"./VGFlowingTextPart.js":83,"book-source":22,"dom-kit":31}],82:[function(require,module,exports){
+},{"../../package.json":106,"../BoundingBox.js":67,"../VGPseudoContainer.js":89,"../canvas-utilities.js":93,"../fontLib.js":96,"./StructuredTextLine.js":77,"./StructuredTextPart.js":78,"./StructuredTextRenderer.js":79,"./TextAttribute.js":80,"./TextMetrics.js":81,"./VGFlowingTextImagePart.js":83,"./VGFlowingTextPart.js":84,"book-source":22,"dom-kit":31}],83:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -38611,7 +38818,7 @@ VGFlowingTextImagePart.prototype.renderHookForCanvas = async function( canvasCtx
 } ;
 
 
-},{"../../package.json":103,"../VGPseudoEntity.js":88,"dom-kit":31}],83:[function(require,module,exports){
+},{"../../package.json":106,"../VGPseudoEntity.js":90,"dom-kit":31}],84:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -38649,7 +38856,7 @@ const TextMetrics = require( './TextMetrics.js' ) ;
 //const BoundingBox = require( '../BoundingBox.js' ) ;
 
 const fontLib = require( '../fontLib.js' ) ;
-const canvas = require( '../canvas.js' ) ;
+const canvasUtilities = require( '../canvas-utilities.js' ) ;
 
 const unicode = require( 'string-kit/lib/unicode.js' ) ;
 
@@ -38947,7 +39154,7 @@ VGFlowingTextPart.prototype.renderHookForCanvas = async function( canvasCtx , op
 			canvasCtx.rect( this.metrics.x , frameY , this.metrics.width , frameHeight ) ;
 		}
 
-		canvas.fillAndStrokeUsingSvgStyle( canvasCtx , frameStyle ) ;
+		canvasUtilities.fillAndStrokeUsingSvgStyle( canvasCtx , frameStyle ) ;
 	}
 
 	if ( underline || lineThrough ) {
@@ -38959,7 +39166,7 @@ VGFlowingTextPart.prototype.renderHookForCanvas = async function( canvasCtx , op
 		let underlineY = this.metrics.baselineY - this.metrics.descender * 0.6 - lineThickness + yOffset ;
 		canvasCtx.beginPath() ;
 		canvasCtx.rect( this.metrics.x , underlineY , this.metrics.width , lineThickness ) ;
-		canvas.fillAndStrokeUsingSvgStyle( canvasCtx , lineStyle ) ;
+		canvasUtilities.fillAndStrokeUsingSvgStyle( canvasCtx , lineStyle ) ;
 	}
 
 	if ( this.fxData.perCharacter ) {
@@ -38981,7 +39188,7 @@ VGFlowingTextPart.prototype.renderHookForCanvas = async function( canvasCtx , op
 			// There is no simple way to translate a path2D, except by applying a translation to the canvas, then restoring
 			canvasCtx.save() ;
 			canvasCtx.translate( fxData.x || 0 , fxData.y || 0 ) ;
-			canvas.fillAndStrokeUsingSvgStyle( canvasCtx , textStyle , path2D ) ;
+			canvasUtilities.fillAndStrokeUsingSvgStyle( canvasCtx , textStyle , path2D ) ;
 			canvasCtx.restore() ;
 
 			i ++ ;
@@ -38999,14 +39206,14 @@ VGFlowingTextPart.prototype.renderHookForCanvas = async function( canvasCtx , op
 		let textStyle = ( this.fxData.attr ?? this.attr ).getTextSvgStyle( parentAttr , fontSize , master?.palette ) ;
 		//console.log( "textStyle:" , textStyle ) ;
 
-		canvas.fillAndStrokeUsingSvgStyle( canvasCtx , textStyle , path2D ) ;
+		canvasUtilities.fillAndStrokeUsingSvgStyle( canvasCtx , textStyle , path2D ) ;
 	}
 
 	if ( lineThrough ) {
 		let lineThroughY = this.metrics.baselineY - this.metrics.ascender * 0.25 - lineThickness + yOffset ;
 		canvasCtx.beginPath() ;
 		canvasCtx.rect( this.metrics.x , lineThroughY , this.metrics.width , lineThickness ) ;
-		canvas.fillAndStrokeUsingSvgStyle( canvasCtx , lineStyle ) ;
+		canvasUtilities.fillAndStrokeUsingSvgStyle( canvasCtx , lineStyle ) ;
 	}
 } ;
 
@@ -39050,7 +39257,7 @@ VGFlowingTextPart.prototype.renderHookForPath2D = async function( path2D , canva
 } ;
 
 
-},{"../../package.json":103,"../VGPseudoEntity.js":88,"../canvas.js":91,"../fontLib.js":92,"./TextAttribute.js":79,"./TextMetrics.js":80,"string-kit/lib/unicode.js":102}],84:[function(require,module,exports){
+},{"../../package.json":106,"../VGPseudoEntity.js":90,"../canvas-utilities.js":93,"../fontLib.js":96,"./TextAttribute.js":80,"./TextMetrics.js":81,"string-kit/lib/unicode.js":105}],85:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -39107,7 +39314,7 @@ VGGroup.prototype.set = function( params ) {
 } ;
 
 
-},{"../package.json":103,"./VGContainer.js":73,"./svg-kit.js":98}],85:[function(require,module,exports){
+},{"../package.json":106,"./VGContainer.js":74,"./svg-kit.js":101}],86:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -39688,7 +39895,7 @@ VGImage.prototype.getNinePatchCoordsList = function( imageSize ) {
 } ;
 
 
-},{"../package.json":103,"./VGEntity.js":75,"./getImageSize.js":95,"dom-kit":31}],86:[function(require,module,exports){
+},{"../package.json":106,"./VGEntity.js":76,"./getImageSize.js":99,"dom-kit":31}],87:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -39720,7 +39927,8 @@ VGImage.prototype.getNinePatchCoordsList = function( imageSize ) {
 
 
 const VGEntity = require( './VGEntity.js' ) ;
-const canvas = require( './canvas.js' ) ;
+const canvasUtilities = require( './canvas-utilities.js' ) ;
+const pathUtilities = require( './path-utilities.js' ) ;
 
 
 
@@ -39765,7 +39973,7 @@ VGPath.prototype.export = function( data = {} ) {
 
 VGPath.prototype.svgAttributes = function( master = this ) {
 	var attr = {
-		// That enigmatic SVG attribute 'd' probably means 'data' or 'draw'
+		// SVG attribute 'd' (data)
 		d: this.toD()
 	} ;
 
@@ -39776,21 +39984,7 @@ VGPath.prototype.svgAttributes = function( master = this ) {
 
 // Build the SVG 'd' attribute
 VGPath.prototype.toD = function() {
-	var build = {
-		root: this.root ,
-		d: '' ,
-		pu: false ,	// Pen Up, when true, turtle-like commands move without tracing anything
-		cx: 0 ,		// cursor position x
-		cy: 0 ,		// cursor position y
-		ca: this.root.invertY ? - Math.PI / 2 : Math.PI / 2		// cursor angle, default to positive Y-axis
-	} ;
-
-	this.commands.forEach( ( command , index ) => {
-		if ( index ) { build.d += ' ' ; }
-		builders[ command.type ]( command , build ) ;
-	} ) ;
-
-	return build.d ;
+	return pathUtilities.commandsToD( this.commands , this.root.invertY ) ;
 } ;
 
 
@@ -39798,7 +39992,7 @@ VGPath.prototype.toD = function() {
 VGPath.prototype.renderHookForCanvas = function( canvasCtx , options = {} , isRedraw = false , master = this ) {
 	canvasCtx.save() ;
 	canvasCtx.beginPath() ;
-	canvas.fillAndStrokeUsingStyle( canvasCtx , this.style , master?.palette , new Path2D( this.toD() ) ) ;
+	canvasUtilities.fillAndStrokeUsingStyle( canvasCtx , this.style , master?.palette , new Path2D( this.toD() ) ) ;
 	canvasCtx.restore() ;
 } ;
 
@@ -39810,242 +40004,9 @@ VGPath.prototype.renderHookForPath2D = function( path2D , canvasCtx , options = 
 
 
 
-const degToRad = deg => deg * Math.PI / 180 ;
-const radToDeg = rad => rad * 180 / Math.PI ;
-
-
-
-const builders = {} ;
-
-builders.close = ( command , build ) => {
-	build.d += 'z' ;
-} ;
-
-builders.move = ( command , build ) => {
-	var y = build.root.invertY ? - command.y : command.y ;
-
-	if ( command.rel ) {
-		build.d += 'm ' + command.x + ' ' + y ;
-		build.cx += command.x ;
-		build.cy += y ;
-	}
-	else {
-		build.d += 'M ' + command.x + ' ' + y ;
-		build.cx = command.x ;
-		build.cy = y ;
-	}
-} ;
-
-builders.line = ( command , build ) => {
-	var y = build.root.invertY ? - command.y : command.y ;
-
-	if ( command.rel ) {
-		build.d += 'l ' + command.x + ' ' + y ;
-		build.cx += command.x ;
-		build.cy += y ;
-	}
-	else {
-		build.d += 'L ' + command.x + ' ' + y ;
-		build.cx = command.x ;
-		build.cy = y ;
-	}
-} ;
-
-builders.curve = ( command , build ) => {
-	var cy1 = build.root.invertY ? - command.cy1 : command.cy1 ,
-		cy2 = build.root.invertY ? - command.cy2 : command.cy2 ,
-		y = build.root.invertY ? - command.y : command.y ;
-
-	if ( command.rel ) {
-		build.d += 'c ' + command.cx1 + ' ' + cy1 + ' ' + command.cx2 + ' ' + cy2 + ' '  + command.x + ' ' + y ;
-		build.cx += command.x ;
-		build.cy += y ;
-	}
-	else {
-		build.d += 'C ' + command.cx1 + ' ' + cy1 + ' ' + command.cx2 + ' ' + cy2 + ' '  + command.x + ' ' + y ;
-		build.cx = command.x ;
-		build.cy = y ;
-	}
-} ;
-
-builders.smoothCurve = ( command , build ) => {
-	var cy = build.root.invertY ? - command.cy : command.cy ,
-		y = build.root.invertY ? - command.y : command.y ;
-
-	if ( command.rel ) {
-		build.d += 's ' + command.cx + ' ' + cy + ' ' + command.x + ' ' + y ;
-		build.cx += command.x ;
-		build.cy += y ;
-	}
-	else {
-		build.d += 'S ' + command.cx + ' ' + cy + ' ' + command.x + ' ' + y ;
-		build.cx = command.x ;
-		build.cy = y ;
-	}
-} ;
-
-builders.qCurve = ( command , build ) => {
-	var cy = build.root.invertY ? - command.cy : command.cy ,
-		y = build.root.invertY ? - command.y : command.y ;
-
-	if ( command.rel ) {
-		build.d += 'q ' + command.cx + ' ' + cy + ' ' + command.x + ' ' + y ;
-		build.cx += command.x ;
-		build.cy += y ;
-	}
-	else {
-		build.d += 'Q ' + command.cx + ' ' + cy + ' ' + command.x + ' ' + y ;
-		build.cx = command.x ;
-		build.cy = y ;
-	}
-} ;
-
-builders.smoothQCurve = ( command , build ) => {
-	var y = build.root.invertY ? - command.y : command.y ;
-
-	if ( command.rel ) {
-		build.d += 't ' + command.x + ' ' + y ;
-		build.cx += command.x ;
-		build.cy += y ;
-	}
-	else {
-		build.d += 'T ' + command.x + ' ' + y ;
-		build.cx = command.x ;
-		build.cy = y ;
-	}
-} ;
-
-builders.arc = ( command , build ) => {
-	var ra = build.root.invertY ? - command.ra : command.ra ,
-		pr = build.root.invertY ? ! command.pr : command.pr ,
-		y = build.root.invertY ? - command.y : command.y ;
-
-	if ( command.rel ) {
-		build.d += 'a ' + command.rx + ' ' + command.ry + ' ' + ra + ' ' + ( + command.la ) + ' '  + ( + pr ) + ' ' + command.x + ' ' + y ;
-		build.cx += command.x ;
-		build.cy += y ;
-	}
-	else {
-		build.d += 'A ' + command.rx + ' ' + command.ry + ' ' + ra + ' ' + ( + command.la ) + ' '  + ( + pr ) + ' ' + command.x + ' ' + y ;
-		build.cx = command.x ;
-		build.cy = y ;
-	}
-} ;
-
-// VG-specific
-
 /*
-	Approximation of circles using cubic bezier curves.
-
-	Controle point distance/radius ratio for quarter of circle: 0.55228475 or 4/3 (sqrt(2)-1)
-	For half of a circle: 4/3
-
-	From: https://www.tinaja.com/glib/bezcirc2.pdf
-	The arc is bissected by the X-axis.
-	x0 = cos( / 2)			y0 = sin( / 2)
-	x3 = x1					y3 = - y0
-	x1 = (4 - x0) / 3		y1 = (1 - x0)(3 - x0) / 3 y0
-	x2 = x1					y2 = -y1
-
-	This distance ensure that the mid-time point is exactly on the arc.
-	It works very well for angle ranging from 0-90°, can be good enough for 90-180°,
-	but it's bad for greater than 180°.
-	In fact it's not possible to approximate a 270° arc with a single cubic bezier curve.
-*/
-function controleDistance( angle ) {
-	if ( ! angle ) { return 0 ; }
-	var angleRad = degToRad( angle ) ;
-	var x0 = Math.cos( angleRad / 2 ) ,
-		y0 = Math.sin( angleRad / 2 ) ,
-		x1 = ( 4 - x0 ) / 3 ,
-		y1 = ( 1 - x0 ) * ( 3 - x0 ) / ( 3 * y0 ) ;
-	return Math.sqrt( ( x0 - x1 ) ** 2 + ( y0 - y1 ) ** 2 ) ;
-}
-
-builders.centerArc = ( command , build ) => {
-
-	// ---------------------------------------------------------------------------------- NOT CODED ----------------------------------------------------------------
-
-	// It's supposed to ease circle creation inside path, converting them to SVG curves...
-
-	var { x , y , cx , cy } = command ;
-
-	if ( command.rel ) {
-		x += build.cx ;
-		y += build.cy ;
-		cx += build.cx ;
-		cy += build.cy ;
-	}
-
-	var startAngle = Math.atan2( build.cy - cy , build.cx - cx ) ,
-		endAngle = Math.atan2( y - cy , x - cx ) ;
-
-	build.cx = x ;
-	build.cy = y ;
-} ;
-
-// Turtle-like
-
-builders.pen = ( command , build ) => {
-	build.pu = command.u ;
-} ;
-
-builders.forward = ( command , build ) => {
-	var dx = command.l * Math.cos( build.ca ) ,
-		dy = command.l * Math.sin( build.ca ) ;
-
-	if ( build.pu ) { build.d += 'm ' + dx + ' ' + dy ; }
-	else { build.d += 'l ' + dx + ' ' + dy ; }
-
-	build.cx += dx ;
-	build.cy += dy ;
-} ;
-
-builders.turn = ( command , build ) => {
-	var a = build.root.invertY ? - command.a : command.a ;
-
-	if ( command.rel ) {
-		build.ca += degToRad( a ) ;
-	}
-	else {
-		build.ca = degToRad( a ) ;
-	}
-} ;
-
-builders.forwardTurn = ( command , build ) => {
-	var a = build.root.invertY ? - command.a : command.a ;
-
-	/*
-		We will first transpose to a circle of center 0,0 and we are starting at x=radius,y=0 and moving positively
-	*/
-	var angleRad = degToRad( a ) ,
-		angleSign = angleRad >= 0 ? 1 : - 1 ,
-		alpha = Math.abs( angleRad ) ,
-		radius = command.l / alpha ,
-		trX = radius * Math.cos( alpha ) ,
-		trY = radius * Math.sin( alpha ) ,
-		dist = Math.sqrt( ( radius - trX ) ** 2 + trY ** 2 ) ,
-		beta = Math.atan2( radius - trX , trY ) ;	// beta is the deviation
-
-	var dx = dist * Math.cos( build.ca + angleSign * beta ) ,
-		dy = dist * Math.sin( build.ca + angleSign * beta ) ;
-
-	if ( build.pu ) {
-		build.d += 'm ' + dx + ' ' + dy ;
-	}
-	else {
-		build.d += 'a ' + radius + ' ' + radius + ' 0 ' + ( alpha > Math.PI ? 1 : 0 ) + ' '  + ( angleRad >= 0 ? 1 : 0 ) + ' ' + dx + ' ' + dy ;
-	}
-
-	build.cx += dx ;
-	build.cy += dy ;
-	build.ca += angleRad ;
-} ;
-
-
-
-/*
-	First, true SVG path commands
+	Now add path commands.
+	First, true SVG path commands.
 */
 
 VGPath.prototype.close = function() {
@@ -40281,7 +40242,7 @@ VGPath.prototype.negativeArcTo = function( data ) {
 
 
 /*
-	VG-specific commands
+	VG-specific commands.
 */
 
 // Better arc-like command, but use curve behind the scene
@@ -40319,7 +40280,7 @@ VGPath.prototype.centerArcTo = function( data ) {
 
 
 /*
-	Turtle-like commands
+	Turtle-like commands.
 */
 
 VGPath.prototype.penUp = function( data ) {
@@ -40413,7 +40374,154 @@ VGPath.prototype.forwardNegativeTurn = function( data ) {
 } ;
 
 
-},{"../package.json":103,"./VGEntity.js":75,"./canvas.js":91}],87:[function(require,module,exports){
+},{"../package.json":106,"./VGEntity.js":76,"./canvas-utilities.js":93,"./path-utilities.js":100}],88:[function(require,module,exports){
+/*
+	SVG Kit
+
+	Copyright (c) 2017 - 2023 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+const VGEntity = require( './VGEntity.js' ) ;
+const Polygon = require( './Polygon.js' ) ;
+const canvasUtilities = require( './canvas-utilities.js' ) ;
+
+
+
+function VGPolygon( params ) {
+	VGEntity.call( this , params ) ;
+
+	// Note: All properties of Polygon should be copied here
+	this.points = [] ;
+	this.sides = [] ;
+	this.clockwise = true ;
+	this.autofix = true ;
+	this.badPolygon = false ;
+
+	if ( params ) { this.set( params ) ; }
+}
+
+module.exports = VGPolygon ;
+
+VGPolygon.prototype = Object.create( VGEntity.prototype ) ;
+VGPolygon.prototype.constructor = VGPolygon ;
+VGPolygon.prototype.__prototypeUID__ = 'svg-kit/VGPolygon' ;
+VGPolygon.prototype.__prototypeVersion__ = require( '../package.json' ).version ;
+
+// Pseudo inheritance from Polygon:
+Object.assign( VGPolygon.prototype , Polygon.prototype ) ;
+
+
+
+VGPolygon.prototype.svgTag = 'path' ;
+
+
+
+VGPolygon.prototype.set = function( params ) {
+	Polygon.prototype.set.call( this , params ) ;
+	VGEntity.prototype.set.call( this , params ) ;
+
+	if ( params.build ) { this.build( params.build ) ; }
+
+	if ( params.points && this.badPolygon ) {
+		//throw new Error( "Bad polygon (not simple, not convex, or degenerate case)" ) ;
+	}
+} ;
+
+
+
+VGPolygon.prototype.export = function( data = {} ) {
+	VGEntity.prototype.export.call( this , data ) ;
+	Polygon.prototype.export.call( this , data ) ;
+	return data ;
+} ;
+
+
+
+const degToRad = deg => deg * Math.PI / 180 ;
+
+VGPolygon.prototype.build = function( data = {} ) {
+	var points = [] ,
+		cx = data.cx !== undefined ? + data.cx || 0 : + data.x || 0 ,
+		cy = data.cy !== undefined ? + data.cy || 0 : + data.y || 0 ,
+		sides = + data.sides || 1 ,
+		angleInc = 2 * Math.PI / sides ,
+		angle = data.angleDeg !== undefined ? degToRad( + data.angleDeg || 0 ) : + data.angle || 0 ,
+		radius = + data.radius || 0 ;
+
+	for ( let i = 0 ; i < sides ; i ++ , angle += angleInc ) {
+		points.push( {
+			x: cx + Math.cos( angle ) * radius ,
+			y: cy + Math.sin( angle ) * radius
+		} ) ;
+	}
+	console.warn( "points: " , points ) ;
+
+	this.set( { points } ) ;
+} ;
+
+
+
+//VGPolygon.prototype.isInside = function( coords ) { return Polygon.prototype.isInside.call( this , coords ) ; } ;
+
+
+
+VGPolygon.prototype.svgAttributes = function( master = this ) {
+	var attr = {
+		// SVG attribute 'd' (data)
+		d: this.toD()
+	} ;
+
+	return attr ;
+} ;
+
+
+
+// Build the SVG 'd' attribute
+VGPolygon.prototype.toD = function() {
+	return Polygon.prototype.toD.call( this , this.root.invertY ) ;
+} ;
+
+
+
+VGPolygon.prototype.renderHookForCanvas = function( canvasCtx , options = {} , isRedraw = false , master = this ) {
+	canvasCtx.save() ;
+	canvasCtx.beginPath() ;
+	canvasUtilities.fillAndStrokeUsingStyle( canvasCtx , this.style , master?.palette , new Path2D( this.toD() ) ) ;
+	canvasCtx.restore() ;
+} ;
+
+
+
+VGPolygon.prototype.renderHookForPath2D = function( path2D , canvasCtx , options = {} , master = this ) {
+	path2D.addPath( new Path2D( this.toD() ) ) ;
+} ;
+
+
+},{"../package.json":106,"./Polygon.js":71,"./VGEntity.js":76,"./canvas-utilities.js":93}],89:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -40509,7 +40617,7 @@ VGPseudoContainer.prototype.clearPseudoEntities = function() {
 VGPseudoContainer.prototype.computePseudoEntities = async function() {} ;
 
 
-},{"../package.json":103,"./VGEntity.js":75,"./svg-kit.js":98,"array-kit":13}],88:[function(require,module,exports){
+},{"../package.json":106,"./VGEntity.js":76,"./svg-kit.js":101,"array-kit":13}],90:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -40567,7 +40675,7 @@ VGPseudoEntity.prototype.__prototypeVersion__ = require( '../package.json' ).ver
 //VGPseudoEntity.prototype.isPseudoEntity = true ;
 
 
-},{"../package.json":103,"./VGEntity.js":75,"./svg-kit.js":98,"array-kit":13}],89:[function(require,module,exports){
+},{"../package.json":106,"./VGEntity.js":76,"./svg-kit.js":101,"array-kit":13}],91:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -40599,7 +40707,7 @@ VGPseudoEntity.prototype.__prototypeVersion__ = require( '../package.json' ).ver
 
 
 const VGEntity = require( './VGEntity.js' ) ;
-const canvas = require( './canvas.js' ) ;
+const canvasUtilities = require( './canvas-utilities.js' ) ;
 
 
 
@@ -40624,6 +40732,10 @@ VGRect.prototype = Object.create( VGEntity.prototype ) ;
 VGRect.prototype.constructor = VGRect ;
 VGRect.prototype.__prototypeUID__ = 'svg-kit/VGRect' ;
 VGRect.prototype.__prototypeVersion__ = require( '../package.json' ).version ;
+
+
+
+VGRect.prototype.svgTag = 'rect' ;
 
 
 
@@ -40659,10 +40771,6 @@ VGRect.prototype.export = function( data = {} ) {
 
 
 
-VGRect.prototype.svgTag = 'rect' ;
-
-
-
 VGRect.prototype.svgAttributes = function( master = this ) {
 	var attr = {
 		x: this.x ,
@@ -40691,7 +40799,7 @@ VGRect.prototype.renderHookForCanvas = function( canvasCtx , options = {} , isRe
 		canvasCtx.rect( this.x , this.y + yOffset , this.width , this.height ) ;
 	}
 
-	canvas.fillAndStrokeUsingStyle( canvasCtx , this.style , master?.palette ) ;
+	canvasUtilities.fillAndStrokeUsingStyle( canvasCtx , this.style , master?.palette ) ;
 	canvasCtx.restore() ;
 } ;
 
@@ -40709,7 +40817,7 @@ VGRect.prototype.renderHookForPath2D = function( path2D , canvasCtx , options = 
 } ;
 
 
-},{"../package.json":103,"./VGEntity.js":75,"./canvas.js":91}],90:[function(require,module,exports){
+},{"../package.json":106,"./VGEntity.js":76,"./canvas-utilities.js":93}],92:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -40886,7 +40994,7 @@ VGText.prototype.renderHookForCanvas = function( canvasCtx , options = {} , isRe
 } ;
 
 
-},{"../package.json":103,"./VGEntity.js":75}],91:[function(require,module,exports){
+},{"../package.json":106,"./VGEntity.js":76}],93:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -40917,7 +41025,7 @@ VGText.prototype.renderHookForCanvas = function( canvasCtx , options = {} , isRe
 
 
 
-const misc = require( './misc.js' ) ;
+const colorUtilities = require( './color-utilities.js' ) ;
 
 
 
@@ -40942,14 +41050,14 @@ canvas._fillAndStroke = ( canvasCtx , style , path2d = null , convertColor = fal
 	var fillStyle =
 			style.fill && style.fill !== 'none' ?
 				convertColor ?
-					misc.colorToString( style.fill , palette ) :
+					colorUtilities.colorToString( style.fill , palette ) :
 					style.fill :
 				null ;
 
 	var strokeStyle =
 			style.stroke && style.stroke !== 'none' ?
 				convertColor ?
-					misc.colorToString( style.stroke , palette ) :
+					colorUtilities.colorToString( style.stroke , palette ) :
 					style.stroke :
 				null ;
 
@@ -41049,7 +41157,601 @@ canvas.contextToCanvasCoords = ( canvasCtx , contextCoords ) => {
 } ;
 
 
-},{"./misc.js":96}],92:[function(require,module,exports){
+},{"./color-utilities.js":94}],94:[function(require,module,exports){
+/*
+	SVG Kit
+
+	Copyright (c) 2017 - 2023 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+const Color = require( 'palette-shade' ).Color ;
+
+
+
+const colorUtilities = {} ;
+module.exports = colorUtilities ;
+
+
+
+const FALLBACK_COLOR = '#f0f' ;
+
+colorUtilities.colorToString = ( color , palette = null ) => {
+	if ( ! color ) { return FALLBACK_COLOR ; }
+
+	if ( typeof color === 'string' ) {
+		if ( color[ 0 ] === '%' ) {
+			if ( ! palette ) { return FALLBACK_COLOR ; }
+			return palette.getHex( Color.parse( color.slice( 1 ) ) ) ;
+		}
+
+		return color ;
+	}
+
+	if ( typeof color === 'object' ) {
+		if ( ! palette ) { return FALLBACK_COLOR ; }
+		return palette.getHex( color ) ;
+	}
+
+	return FALLBACK_COLOR ;
+} ;
+
+
+
+// From Terminal-kit's misc.hexToRgba()
+colorUtilities.hexToRgba = hex => {
+	// Strip the # if necessary
+	if ( hex[ 0 ] === '#' ) { hex = hex.slice( 1 ) ; }
+
+	if ( hex.length === 3 ) {
+		hex = hex[ 0 ] + hex[ 0 ] + hex[ 1 ] + hex[ 1 ] + hex[ 2 ] + hex[ 2 ] ;
+	}
+
+	return {
+		r: parseInt( hex.slice( 0 , 2 ) , 16 ) || 0 ,
+		g: parseInt( hex.slice( 2 , 4 ) , 16 ) || 0 ,
+		b: parseInt( hex.slice( 4 , 6 ) , 16 ) || 0 ,
+		a: hex.length > 6 ? parseInt( hex.slice( 6 , 8 ) , 16 ) || 0 : 255
+	} ;
+} ;
+
+
+
+colorUtilities.hexToRgb = hex => {
+	// Strip the # if necessary
+	if ( hex[ 0 ] === '#' ) { hex = hex.slice( 1 ) ; }
+
+	if ( hex.length === 3 ) {
+		hex = hex[ 0 ] + hex[ 0 ] + hex[ 1 ] + hex[ 1 ] + hex[ 2 ] + hex[ 2 ] ;
+	}
+
+	return {
+		r: parseInt( hex.slice( 0 , 2 ) , 16 ) || 0 ,
+		g: parseInt( hex.slice( 2 , 4 ) , 16 ) || 0 ,
+		b: parseInt( hex.slice( 4 , 6 ) , 16 ) || 0
+	} ;
+} ;
+
+
+
+function to2HexDigits( n ) {
+	if ( ! n || n < 0 ) { return '00' ; }
+	if ( n < 16 ) { return '0' + n.toString( 16 ) ; }
+	if ( n > 255 ) { return 'ff' ; }
+	return n.toString( 16 ) ;
+}
+
+
+
+colorUtilities.rgbToHex =
+colorUtilities.rgbaToHex = ( r , g , b , a = null ) => {
+	if ( r && typeof r === 'object' ) {
+		return typeof r.a !== 'number' ? '#' + to2HexDigits( r.r ) + to2HexDigits( r.g ) + to2HexDigits( r.b ) :
+			'#' + to2HexDigits( r.r ) + to2HexDigits( r.g ) + to2HexDigits( r.b ) + to2HexDigits( r.a ) ;
+	}
+
+	return a === null ? '#' + to2HexDigits( r ) + to2HexDigits( g ) + to2HexDigits( b ) :
+		'#' + to2HexDigits( r ) + to2HexDigits( g ) + to2HexDigits( b ) + to2HexDigits( a ) ;
+} ;
+
+
+
+colorUtilities.getContrastColorCode = ( colorStr , rate = 0.5 ) => {
+	var color = colorUtilities.hexToRgb( colorStr ) ;
+
+	if ( color.r + color.g + color.b >= 192 ) {
+		// This is a light color, we will contrast it with a darker color
+		color.r = Math.round( color.r * rate ) ;
+		color.g = Math.round( color.g * rate ) ;
+		color.b = Math.round( color.b * rate ) ;
+	}
+	else {
+		// This is a dark color, we will contrast it with a lighter color
+		color.r = Math.round( 255 - ( ( 255 - color.r ) * rate ) ) ;
+		color.g = Math.round( 255 - ( ( 255 - color.g ) * rate ) ) ;
+		color.b = Math.round( 255 - ( ( 255 - color.b ) * rate ) ) ;
+	}
+
+	return colorUtilities.rgbToHex( color ) ;
+} ;
+
+
+},{"palette-shade":39}],95:[function(require,module,exports){
+(function (process){(function (){
+/*
+	SVG Kit
+
+	Copyright (c) 2017 - 2023 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+const fs = require( 'fs' ).promises ;
+const domKit = require( 'dom-kit' ) ;
+const escape = require( 'string-kit/lib/escape.js' ) ;
+
+
+
+const core = {} ;
+module.exports = core ;
+
+
+
+/*
+	load( url , [options] )
+
+	* url: the URL of the .svg file
+	* options: (optional) object of options, transmitted to .inject() and .patch()
+
+	Return a promise resolving to the SVG DOM document.
+*/
+core.load = async function( url , options = {} ) {
+	var content , $doc , $svg ;
+
+	if ( ! process.browser ) {
+		// Use Node.js 'fs' module
+		if ( url.substring( 0 , 7 ) === 'file://' ) { url = url.slice( 7 ) ; }
+		content = await fs.readFile( url , 'utf8' ) ;
+		$doc = domKit.fromXml( content ) ;
+	}
+	else {
+		// Use an AJAX HTTP Request
+		$doc = await core.ajax( url ) ;
+	}
+
+	if ( options.removeComments ) {
+		domKit.removeComments( $doc ) ;
+		delete options.removeComments ;
+	}
+
+	$svg = $doc.documentElement ;
+	core.inject( $svg , options ) ;
+	return $svg ;
+} ;
+
+
+
+core.loadFromString = function( content , options = {} ) {
+	var $doc = domKit.fromXml( content ) ;
+
+	if ( options.removeComments ) {
+		domKit.removeComments( $doc ) ;
+		delete options.removeComments ;
+	}
+
+	var $svg = $doc.documentElement ;
+	core.inject( $svg , options ) ;
+	return $svg ;
+} ;
+
+
+
+core.ajax = function( url ) {
+	return new Promise( ( resolve , reject ) => {
+		var xhr = new XMLHttpRequest() ;
+
+		xhr.responseType = 'document' ;
+
+		xhr.onreadystatechange = () => {
+			// From MDN: In the event of a communication error (such as the webserver going down),
+			// an exception will be thrown when attempting to access the 'status' property.
+
+			try {
+				if ( xhr.readyState === 4 ) {
+					if ( xhr.status === 200 ) {
+						resolve( xhr.responseXML ) ;
+					}
+					else if ( xhr.status === 0 && xhr.responseXML ) {	// Yay, loading with file:// does not provide any status...
+						resolve( xhr.responseXML ) ;
+					}
+					else if ( xhr.status ) { reject( xhr.status ) ; }
+					else { reject( new Error( "[svg-kit] ajaxStatus(): Error with falsy status" ) ) ; }
+				}
+			}
+			catch ( error ) {
+				reject( error ) ;
+			}
+		} ;
+
+		xhr.open( 'GET' , url ) ;
+		xhr.send() ;
+	} ) ;
+} ;
+
+
+
+/*
+	Fix few <svg> things in order to inject it in the dom
+
+	* $svg: the svg element
+	* options: options object, where:
+		* into: `DOMElement` an element where the .svg file should be loaded into
+		* as: `DOMElement` a <svg> element where the .svg file should replace, almost like the "into" option,
+		  useful when a <svg> tag should be created synchronously to start doing stuffs on it,
+		  and let the asynchronous loading works in the background
+		* all other options are passed to .patch()
+*/
+core.inject = function( $svg , options ) {
+	core.patch( $svg , options ) ;
+
+	if ( options.into ) { options.into.appendChild( $svg ) ; }
+
+	// Better to avoid to check the tag name:
+	// it's too defensive and it prevents from loading inside a <g> tag
+	if ( options.as ) { //&& options.as.tagName.toLowerCase() === 'svg' )
+		domKit.moveAttributes( $svg , options.as ) ;
+		domKit.moveChildrenInto( $svg , options.as ) ;
+	}
+} ;
+
+
+
+/*
+	Fix few <svg> things.
+
+	* $svg: the svg element
+	* options: options object, where:
+		* id: `string` the id attribute of the <svg> tag (recommanded)
+		* removeIds: `boolean` remove all 'id' attributes
+		* prefixIds: `string` prefix all IDs and patch url #ref
+		* hidden: `boolean` turn the svg hidden (useful to apply modification before the show)
+		* class: `string` or `object` (key=class, value=true/false) to add/remove on the <svg> tag
+		* removeSize: `boolean` remove the width and height attribute and style from the <svg> tag
+		* removeSvgStyle: `boolean` remove the top-level style attribute of the <svg> tag
+		* removeDefaultStyles: `boolean` used to removed meaningless style pollution
+		* css: `object` a css object to apply on the <svg> tag
+		* colorClass: `boolean` a very specialized option. It moves all stroke and fill color inline styles to attribute
+		  on all drawing elements and add the "primary" class to those that are class-less.
+		  Since CSS has a greater priority than attributes (but lesser than inline styles), this allows us to controle
+		  color using CSS.
+		* removeComments: `boolean` remove all comment nodes
+		* removeWhiteSpaces: `boolean` remove all white-space
+		* removeWhiteLines: `boolean` remove all empty lines
+		* removeExoticNamespaces: `boolean` remove all tag and attributes that have a namespace different than svg,
+		  the svg namespace is stripped
+*/
+core.patch = function( $svg , options ) {
+	var viewBox , width , height ;
+
+	core.lightCleanup( $svg ) ;
+
+	// Fix id, if necessary
+	if ( options.id !== undefined ) {
+		if ( typeof options.id === 'string' ) { $svg.setAttribute( 'id' , options.id ) ; }
+		else if ( ! options.id ) { $svg.removeAttribute( 'id' ) ; }
+	}
+
+	if ( options.class ) {
+		if ( typeof options.class === 'string' ) { $svg.classList.add( options.class ) ; }
+		else if ( typeof options.class === 'object' ) { domKit.class( $svg , options.class ) ; }
+	}
+
+	if ( options.hidden ) { $svg.style.visibility = 'hidden' ; }
+
+	if ( options.prefixIds ) { domKit.prefixIds( $svg , options.prefixIds ) ; }
+	if ( options.removeIds ) { domKit.removeAllAttributes( $svg , 'id' ) ; }
+
+	if ( options.removeSvgStyle ) { $svg.removeAttribute( 'style' ) ; }
+	if ( options.removeDefaultStyles ) { core.removeDefaultStyles( $svg ) ; }
+	if ( options.removeComments ) { domKit.removeComments( $svg ) ; }
+
+	if ( options.removeExoticNamespaces ) {
+		domKit.filterByNamespace( $svg , { primary: 'svg' , whitelist: [] } ) ;
+	}
+
+	if ( options.removeSize ) {
+		// Save and remove the width and height attribute
+		width = $svg.getAttribute( 'width' ) || $svg.style.width ;
+		height = $svg.getAttribute( 'height' ) || $svg.style.height ;
+
+		$svg.removeAttribute( 'height' ) ;
+		$svg.removeAttribute( 'width' ) ;
+		$svg.style.width = null ;
+		$svg.style.height = null ;
+
+		// if the $svg don't have a viewBox attribute, set it now from the width and height (it works most of time)
+		if ( ! $svg.getAttribute( 'viewBox' ) && width && height ) {
+			viewBox = '0 0 ' + width + ' ' + height ;
+			$svg.setAttribute( 'viewBox' , viewBox ) ;
+		}
+	}
+
+	if ( options.css ) { domKit.css( $svg , options.css ) ; }
+
+	if ( options.colorClass ) { core.colorClass( $svg ) ; }
+
+	if ( options.removeWhiteSpaces ) { domKit.removeWhiteSpaces( $svg ) ; }
+	else if ( options.removeWhiteLines ) { domKit.removeWhiteSpaces( $svg , true ) ; }
+} ;
+
+
+
+core.patchDocument = function( $doc , options ) {
+	var removeWhiteSpaces = options.removeWhiteSpaces ,
+		removeWhiteLines = options.removeWhiteLines ,
+		removeComments = options.removeComments ;
+
+	delete options.removeWhiteSpaces ;
+	delete options.removeWhiteLines ;
+	delete options.removeComments ;
+
+	if ( removeComments ) { domKit.removeComments( $doc ) ; }
+
+	core.patch( $doc.documentElement , options ) ;
+
+	if ( removeWhiteSpaces ) { domKit.removeWhiteSpaces( $doc ) ; }
+	else if ( removeWhiteLines ) { domKit.removeWhiteSpaces( $doc , true ) ; }
+} ;
+
+
+
+core.lightCleanup = function( $svg ) {
+	domKit.removeAllTags( $svg , 'metadata' ) ;
+	domKit.removeAllTags( $svg , 'script' ) ;
+	domKit.removeAllTags( $svg , 'defs' , true ) ;	// all empty defs
+} ;
+
+
+
+// List of svg tags that actually display things
+const drawingTags = [
+	'path' ,
+	'circle' ,
+	'ellipse' ,
+	'line' ,
+	'rect' ,
+	'polyline' ,
+	'polygone' ,
+	'text' ,
+	'textPath'
+] ;
+
+
+
+const defaultStyles = [
+	[ 'font-style' , 'normal' ] ,
+	[ 'font-weight' , 'normal' ] ,
+	[ 'font-variant' , 'normal' ] ,
+	[ 'font-stretch' , 'normal' ] ,
+	[ 'font-size' , 'medium' ] ,
+	[ 'line-height' , 'normal' ] ,
+	[ 'font-variant-ligatures' , 'normal' ] ,
+	//[ 'font-family' , 'sans-serif' ] ,
+	[ 'font-variant-position' , 'normal' ] ,
+	[ 'font-variant-caps' , 'normal' ] ,
+	[ 'font-variant-numeric' , 'normal' ] ,
+	[ 'font-variant-alternates' , 'normal' ] ,
+	[ 'font-variant-east-asian' , 'normal' ] ,
+	[ 'font-feature-settings' , 'normal' ] ,
+	[ 'text-indent' , '0' ] ,
+	[ 'text-align' , 'start' ] ,
+	[ 'text-decoration' , 'none' ] ,
+	[ 'text-decoration-line' , 'none' ] ,
+	[ 'text-decoration-style' , 'solid' ] ,
+	[ 'text-decoration-color' , '#000000' ] ,
+	[ 'letter-spacing' , 'normal' ] ,
+	[ 'word-spacing' , 'normal' ] ,
+	[ 'text-transform' , 'none' ] ,
+	[ 'writing-mode' , 'lr-tb' ] ,
+	[ 'direction' , 'ltr' ] ,
+	[ 'text-orientation' , 'mixed' ] ,
+	[ 'dominant-baseline' , 'auto' ] ,
+	[ 'baseline-shift' , 'baseline' ] ,
+	[ 'text-anchor' , 'start' ] ,
+	[ 'white-space' , 'normal' ] ,
+	[ 'shape-padding' , '0' ] ,
+	[ 'display' , 'inline' ] ,
+	[ 'visibility' , 'visible' ] ,
+	[ 'overflow' , 'visible' ] ,
+	[ 'opacity' , '1' ] ,
+	[ 'isolation' , 'auto' ] ,
+	[ 'mix-blend-mode' , 'normal' ] ,
+	[ 'color-interpolation' , 'sRGB' ] ,
+	[ 'color-interpolation-filters' , 'linearRGB' ] ,
+	[ 'solid-color' , '#000000' ] ,
+	[ 'solid-opacity' , '1' ] ,
+	[ 'vector-effect' , 'none' ] ,
+	[ 'fill-rule' , 'nonzero' ] ,
+	[ 'clip-rule' , 'nonzero' ] ,
+	[ 'color-rendering' , 'auto' ] ,
+	[ 'image-rendering' , 'auto' ] ,
+	[ 'shape-rendering' , 'auto' ] ,
+	[ 'text-rendering' , 'auto' ] ,
+	[ 'enable-background' , 'accumulate' ] ,
+	[ 'stroke-dasharray' , 'none' ] ,
+	[ 'stroke-dashoffset' , '0' ] ,
+	[ 'paint-order' , 'normal' ] ,
+	[ 'paint-order' , 'fill stroke markers' ]
+] ;
+
+
+
+core.colorClass = function( $svg ) {
+	drawingTags.forEach( ( tagName ) => {
+		Array.from( $svg.getElementsByTagName( tagName ) ).forEach( ( $element ) => {
+			// Beware, $element.className does not work as expected for SVG
+			if ( ! $element.getAttribute( 'class' ) ) {
+				$element.classList.add( 'primary' ) ;
+			}
+
+			// move style to attribute if they are not 'none'
+			domKit.styleToAttribute( $element , 'fill' , [ 'none' ] ) ;
+			domKit.styleToAttribute( $element , 'stroke' , [ 'none' ] ) ;
+		} ) ;
+	} ) ;
+} ;
+
+
+
+// Remove styles set to a default/unused value
+core.removeDefaultStyles = function( $svg ) {
+	drawingTags.forEach( ( tagName ) => {
+		Array.from( $svg.getElementsByTagName( tagName ) ).forEach( ( $element ) => {
+			var styles = $element.getAttribute( 'style' ) ;
+
+			defaultStyles.forEach( array => {
+				var k = array[ 0 ] ;
+				var v = array[ 1 ] ;
+
+				styles = styles.replace(
+					new RegExp( '(^|;) *' + escape.regExp( k ) + ' *: *' + escape.regExp( v ) + ' *(?:;|$)' ) ,
+					( full , pre ) => pre
+				) ;
+			} ) ;
+
+			$element.setAttribute( 'style' , styles ) ;
+		} ) ;
+	} ) ;
+} ;
+
+
+
+// Should remove all tags and attributes that have non-registered namespace,
+// e.g.: sodipodi, inkscape, etc...
+//core.heavyCleanup = function( svgElement ) {} ;
+
+
+
+core.getViewBox = function( $svg ) {
+	var raw = $svg.getAttribute( 'viewBox' ) ;
+
+	if ( ! raw ) { return null ; }
+
+	var array = raw.split( / +/ ) ;
+
+	return {
+		x: parseFloat( array[ 0 ] , 10 ) ,
+		y: parseFloat( array[ 1 ] , 10 ) ,
+		width: parseFloat( array[ 2 ] , 10 ) ,
+		height: parseFloat( array[ 3 ] , 10 )
+	} ;
+} ;
+
+
+
+core.setViewBox = function( $svg , viewBox ) {
+	$svg.setAttribute( 'viewBox' , viewBox.x + ' ' + viewBox.y + ' ' + viewBox.width + ' ' + viewBox.height ) ;
+} ;
+
+
+
+core.toAreaArray = function( object ) {
+	if ( object.min && object.max ) {
+		// Math Kit BoundingBox2D
+		return [
+			object.min.x ,
+			object.min.y ,
+			object.max.x - object.min.x ,
+			object.max.y - object.min.y
+		] ;
+	}
+	else if ( object.xmin !== undefined && object.xmax !== undefined && object.ymin !== undefined && object.ymax !== undefined ) {
+		return [
+			object.xmin ,
+			object.ymin ,
+			object.xmax - object.xmin ,
+			object.ymax - object.ymin
+		] ;
+	}
+	else if ( object.x !== undefined && object.y !== undefined && object.width !== undefined && object.height !== undefined ) {
+		return [
+			object.x ,
+			object.y ,
+			object.width ,
+			object.height
+		] ;
+	}
+
+	return [ 0 , 0 , 100 , 100 ] ;
+} ;
+
+
+
+core.standalone = function( content , viewBox ) {
+	var output = '<?xml version="1.0" encoding="UTF-8"?>\n' ;
+
+	if ( ! Array.isArray( viewBox ) ) { viewBox = core.toAreaArray( viewBox ) ; }
+
+	output += '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + viewBox.join( ' ' ) + '">\n' ;
+
+	// ?
+	// width="500"
+	// height="500"
+
+	output += content ;
+	output += '\n</svg>\n' ;
+
+	return output ;
+} ;
+
+
+}).call(this)}).call(this,require('_process'))
+},{"_process":113,"dom-kit":31,"fs":107,"string-kit/lib/escape.js":103}],96:[function(require,module,exports){
 (function (process,__dirname){(function (){
 /*
 	SVG Kit
@@ -41428,7 +42130,7 @@ else {
 
 
 }).call(this)}).call(this,require('_process'),"/node_modules/svg-kit/lib")
-},{"_process":110,"fs":104,"opentype.js":35,"path":109}],93:[function(require,module,exports){
+},{"_process":113,"fs":107,"opentype.js":35,"path":112}],97:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -41868,7 +42570,7 @@ exports.fade = ( params ) => {
 
 
 
-},{"../VGFlowingText/TextAttribute.js":79,"./mathFn.js":94}],94:[function(require,module,exports){
+},{"../VGFlowingText/TextAttribute.js":80,"./mathFn.js":98}],98:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -41979,7 +42681,7 @@ easing.sine = t => 0.5 + Math.sin( - PI_OVER_2 + t * PI ) / 2 ;
 
 
 
-},{}],95:[function(require,module,exports){
+},{}],99:[function(require,module,exports){
 (function (process){(function (){
 /*
 	SVG Kit
@@ -42037,7 +42739,7 @@ else {
 
 
 }).call(this)}).call(this,require('_process'))
-},{"_process":110,"image-size":104}],96:[function(require,module,exports){
+},{"_process":113,"image-size":107}],100:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -42068,155 +42770,18 @@ else {
 
 
 
-const Color = require( 'palette-shade' ).Color ;
+const degToRad = deg => deg * Math.PI / 180 ;
+const radToDeg = rad => rad * 180 / Math.PI ;
 
 
 
-const misc = {} ;
-module.exports = misc ;
+const pathUtilities = {} ;
+module.exports = pathUtilities ;
 
 
 
-const FALLBACK_COLOR = '#f0f' ;
-
-misc.colorToString = ( color , palette = null ) => {
-	if ( ! color ) { return FALLBACK_COLOR ; }
-
-	if ( typeof color === 'string' ) {
-		if ( color[ 0 ] === '%' ) {
-			if ( ! palette ) { return FALLBACK_COLOR ; }
-			let colorObject = Color.parse( color.slice( 1 ) ) ;
-			return palette.getHex( Color.parse( color.slice( 1 ) ) ) ;
-		}
-
-		return color ;
-	}
-
-	if ( typeof color === 'object' ) {
-		if ( ! palette ) { return FALLBACK_COLOR ; }
-		return palette.getHex( color ) ;
-	}
-
-	return FALLBACK_COLOR ;
-} ;
-
-
-
-// From Terminal-kit's misc.hexToRgba()
-misc.hexToRgba = hex => {
-	// Strip the # if necessary
-	if ( hex[ 0 ] === '#' ) { hex = hex.slice( 1 ) ; }
-
-	if ( hex.length === 3 ) {
-		hex = hex[ 0 ] + hex[ 0 ] + hex[ 1 ] + hex[ 1 ] + hex[ 2 ] + hex[ 2 ] ;
-	}
-
-	return {
-		r: parseInt( hex.slice( 0 , 2 ) , 16 ) || 0 ,
-		g: parseInt( hex.slice( 2 , 4 ) , 16 ) || 0 ,
-		b: parseInt( hex.slice( 4 , 6 ) , 16 ) || 0 ,
-		a: hex.length > 6 ? parseInt( hex.slice( 6 , 8 ) , 16 ) || 0 : 255
-	} ;
-} ;
-
-
-
-misc.hexToRgb = hex => {
-	// Strip the # if necessary
-	if ( hex[ 0 ] === '#' ) { hex = hex.slice( 1 ) ; }
-
-	if ( hex.length === 3 ) {
-		hex = hex[ 0 ] + hex[ 0 ] + hex[ 1 ] + hex[ 1 ] + hex[ 2 ] + hex[ 2 ] ;
-	}
-
-	return {
-		r: parseInt( hex.slice( 0 , 2 ) , 16 ) || 0 ,
-		g: parseInt( hex.slice( 2 , 4 ) , 16 ) || 0 ,
-		b: parseInt( hex.slice( 4 , 6 ) , 16 ) || 0
-	} ;
-} ;
-
-
-
-function to2HexDigits( n ) {
-	if ( ! n || n < 0 ) { return '00' ; }
-	if ( n < 16 ) { return '0' + n.toString( 16 ) ; }
-	if ( n > 255 ) { return 'ff' ; }
-	return n.toString( 16 ) ;
-}
-
-
-
-misc.rgbToHex =
-misc.rgbaToHex = ( r , g , b , a = null ) => {
-	if ( r && typeof r === 'object' ) {
-		return typeof r.a !== 'number' ? '#' + to2HexDigits( r.r ) + to2HexDigits( r.g ) + to2HexDigits( r.b ) :
-			'#' + to2HexDigits( r.r ) + to2HexDigits( r.g ) + to2HexDigits( r.b ) + to2HexDigits( r.a ) ;
-	}
-
-	return a === null ? '#' + to2HexDigits( r ) + to2HexDigits( g ) + to2HexDigits( b ) :
-		'#' + to2HexDigits( r ) + to2HexDigits( g ) + to2HexDigits( b ) + to2HexDigits( a ) ;
-} ;
-
-
-
-misc.getContrastColorCode = ( colorStr , rate = 0.5 ) => {
-	var color = misc.hexToRgb( colorStr ) ;
-
-	if ( color.r + color.g + color.b >= 192 ) {
-		// This is a light color, we will contrast it with a darker color
-		color.r = Math.round( color.r * rate ) ;
-		color.g = Math.round( color.g * rate ) ;
-		color.b = Math.round( color.b * rate ) ;
-	}
-	else {
-		// This is a dark color, we will contrast it with a lighter color
-		color.r = Math.round( 255 - ( ( 255 - color.r ) * rate ) ) ;
-		color.g = Math.round( 255 - ( ( 255 - color.g ) * rate ) ) ;
-		color.b = Math.round( 255 - ( ( 255 - color.b ) * rate ) ) ;
-	}
-
-	return misc.rgbToHex( color ) ;
-} ;
-
-
-},{"palette-shade":39}],97:[function(require,module,exports){
-/*
-	SVG Kit
-
-	Copyright (c) 2017 - 2023 Cédric Ronvel
-
-	The MIT License (MIT)
-
-	Permission is hereby granted, free of charge, to any person obtaining a copy
-	of this software and associated documentation files (the "Software"), to deal
-	in the Software without restriction, including without limitation the rights
-	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-	copies of the Software, and to permit persons to whom the Software is
-	furnished to do so, subject to the following conditions:
-
-	The above copyright notice and this permission notice shall be included in all
-	copies or substantial portions of the Software.
-
-	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-	SOFTWARE.
-*/
-
-"use strict" ;
-
-
-
-const path = {} ;
-module.exports = path ;
-
-
-
-path.dFromPoints = ( points , invertY ) => {
+// Create lines from an array of points (object with .x and .y)
+pathUtilities.linePointsToD = ( points , invertY = false ) => {
 	var yMul = invertY ? - 1 : 1 ,
 		str = 'M' ;
 
@@ -42227,9 +42792,263 @@ path.dFromPoints = ( points , invertY ) => {
 	return str ;
 } ;
 
+pathUtilities.polygonPointsToD = ( points , invertY = false ) => pathUtilities.linePointsToD( points , invertY ) + ' z' ;
 
-},{}],98:[function(require,module,exports){
-(function (process){(function (){
+
+
+/*
+	This part is used to build the SVG 'd' attribute from the SVG Kit's command format.
+*/
+
+pathUtilities.commandsToD = ( commands , invertY = false ) => {
+	var build = {
+		invertY ,
+		d: '' ,
+		pu: false ,	// Pen Up, when true, turtle-like commands move without tracing anything
+		cx: 0 ,		// cursor position x
+		cy: 0 ,		// cursor position y
+		ca: invertY ? - Math.PI / 2 : Math.PI / 2		// cursor angle, default to positive Y-axis
+	} ;
+
+	commands.forEach( ( command , index ) => {
+		if ( index ) { build.d += ' ' ; }
+		builders[ command.type ]( command , build ) ;
+	} ) ;
+
+	return build.d ;
+} ;
+
+
+
+const builders = pathUtilities.builders = {} ;
+
+builders.close = ( command , build ) => {
+	build.d += 'z' ;
+} ;
+
+builders.move = ( command , build ) => {
+	var y = build.invertY ? - command.y : command.y ;
+
+	if ( command.rel ) {
+		build.d += 'm ' + command.x + ' ' + y ;
+		build.cx += command.x ;
+		build.cy += y ;
+	}
+	else {
+		build.d += 'M ' + command.x + ' ' + y ;
+		build.cx = command.x ;
+		build.cy = y ;
+	}
+} ;
+
+builders.line = ( command , build ) => {
+	var y = build.invertY ? - command.y : command.y ;
+
+	if ( command.rel ) {
+		build.d += 'l ' + command.x + ' ' + y ;
+		build.cx += command.x ;
+		build.cy += y ;
+	}
+	else {
+		build.d += 'L ' + command.x + ' ' + y ;
+		build.cx = command.x ;
+		build.cy = y ;
+	}
+} ;
+
+builders.curve = ( command , build ) => {
+	var cy1 = build.invertY ? - command.cy1 : command.cy1 ,
+		cy2 = build.invertY ? - command.cy2 : command.cy2 ,
+		y = build.invertY ? - command.y : command.y ;
+
+	if ( command.rel ) {
+		build.d += 'c ' + command.cx1 + ' ' + cy1 + ' ' + command.cx2 + ' ' + cy2 + ' '  + command.x + ' ' + y ;
+		build.cx += command.x ;
+		build.cy += y ;
+	}
+	else {
+		build.d += 'C ' + command.cx1 + ' ' + cy1 + ' ' + command.cx2 + ' ' + cy2 + ' '  + command.x + ' ' + y ;
+		build.cx = command.x ;
+		build.cy = y ;
+	}
+} ;
+
+builders.smoothCurve = ( command , build ) => {
+	var cy = build.invertY ? - command.cy : command.cy ,
+		y = build.invertY ? - command.y : command.y ;
+
+	if ( command.rel ) {
+		build.d += 's ' + command.cx + ' ' + cy + ' ' + command.x + ' ' + y ;
+		build.cx += command.x ;
+		build.cy += y ;
+	}
+	else {
+		build.d += 'S ' + command.cx + ' ' + cy + ' ' + command.x + ' ' + y ;
+		build.cx = command.x ;
+		build.cy = y ;
+	}
+} ;
+
+builders.qCurve = ( command , build ) => {
+	var cy = build.invertY ? - command.cy : command.cy ,
+		y = build.invertY ? - command.y : command.y ;
+
+	if ( command.rel ) {
+		build.d += 'q ' + command.cx + ' ' + cy + ' ' + command.x + ' ' + y ;
+		build.cx += command.x ;
+		build.cy += y ;
+	}
+	else {
+		build.d += 'Q ' + command.cx + ' ' + cy + ' ' + command.x + ' ' + y ;
+		build.cx = command.x ;
+		build.cy = y ;
+	}
+} ;
+
+builders.smoothQCurve = ( command , build ) => {
+	var y = build.invertY ? - command.y : command.y ;
+
+	if ( command.rel ) {
+		build.d += 't ' + command.x + ' ' + y ;
+		build.cx += command.x ;
+		build.cy += y ;
+	}
+	else {
+		build.d += 'T ' + command.x + ' ' + y ;
+		build.cx = command.x ;
+		build.cy = y ;
+	}
+} ;
+
+builders.arc = ( command , build ) => {
+	var ra = build.invertY ? - command.ra : command.ra ,
+		pr = build.invertY ? ! command.pr : command.pr ,
+		y = build.invertY ? - command.y : command.y ;
+
+	if ( command.rel ) {
+		build.d += 'a ' + command.rx + ' ' + command.ry + ' ' + ra + ' ' + ( + command.la ) + ' '  + ( + pr ) + ' ' + command.x + ' ' + y ;
+		build.cx += command.x ;
+		build.cy += y ;
+	}
+	else {
+		build.d += 'A ' + command.rx + ' ' + command.ry + ' ' + ra + ' ' + ( + command.la ) + ' '  + ( + pr ) + ' ' + command.x + ' ' + y ;
+		build.cx = command.x ;
+		build.cy = y ;
+	}
+} ;
+
+// VG-specific
+
+/*
+	Approximation of circles using cubic bezier curves.
+
+	Controle point distance/radius ratio for quarter of circle: 0.55228475 or 4/3 (sqrt(2)-1)
+	For half of a circle: 4/3
+
+	From: https://www.tinaja.com/glib/bezcirc2.pdf
+	The arc is bissected by the X-axis.
+	x0 = cos( / 2)			y0 = sin( / 2)
+	x3 = x1					y3 = - y0
+	x1 = (4 - x0) / 3		y1 = (1 - x0)(3 - x0) / 3 y0
+	x2 = x1					y2 = -y1
+
+	This distance ensure that the mid-time point is exactly on the arc.
+	It works very well for angle ranging from 0-90°, can be good enough for 90-180°,
+	but it's bad for greater than 180°.
+	In fact it's not possible to approximate a 270° arc with a single cubic bezier curve.
+*/
+function controleDistance( angle ) {
+	if ( ! angle ) { return 0 ; }
+	var angleRad = degToRad( angle ) ;
+	var x0 = Math.cos( angleRad / 2 ) ,
+		y0 = Math.sin( angleRad / 2 ) ,
+		x1 = ( 4 - x0 ) / 3 ,
+		y1 = ( 1 - x0 ) * ( 3 - x0 ) / ( 3 * y0 ) ;
+	return Math.sqrt( ( x0 - x1 ) ** 2 + ( y0 - y1 ) ** 2 ) ;
+}
+
+builders.centerArc = ( command , build ) => {
+
+	// ---------------------------------------------------------------------------------- NOT CODED ----------------------------------------------------------------
+
+	// It's supposed to ease circle creation inside path, converting them to SVG curves...
+
+	var { x , y , cx , cy } = command ;
+
+	if ( command.rel ) {
+		x += build.cx ;
+		y += build.cy ;
+		cx += build.cx ;
+		cy += build.cy ;
+	}
+
+	var startAngle = Math.atan2( build.cy - cy , build.cx - cx ) ,
+		endAngle = Math.atan2( y - cy , x - cx ) ;
+
+	build.cx = x ;
+	build.cy = y ;
+} ;
+
+// Turtle-like
+
+builders.pen = ( command , build ) => {
+	build.pu = command.u ;
+} ;
+
+builders.forward = ( command , build ) => {
+	var dx = command.l * Math.cos( build.ca ) ,
+		dy = command.l * Math.sin( build.ca ) ;
+
+	if ( build.pu ) { build.d += 'm ' + dx + ' ' + dy ; }
+	else { build.d += 'l ' + dx + ' ' + dy ; }
+
+	build.cx += dx ;
+	build.cy += dy ;
+} ;
+
+builders.turn = ( command , build ) => {
+	var a = build.invertY ? - command.a : command.a ;
+
+	if ( command.rel ) {
+		build.ca += degToRad( a ) ;
+	}
+	else {
+		build.ca = degToRad( a ) ;
+	}
+} ;
+
+builders.forwardTurn = ( command , build ) => {
+	var a = build.invertY ? - command.a : command.a ;
+
+	/*
+		We will first transpose to a circle of center 0,0 and we are starting at x=radius,y=0 and moving positively
+	*/
+	var angleRad = degToRad( a ) ,
+		angleSign = angleRad >= 0 ? 1 : - 1 ,
+		alpha = Math.abs( angleRad ) ,
+		radius = command.l / alpha ,
+		trX = radius * Math.cos( alpha ) ,
+		trY = radius * Math.sin( alpha ) ,
+		dist = Math.sqrt( ( radius - trX ) ** 2 + trY ** 2 ) ,
+		beta = Math.atan2( radius - trX , trY ) ;	// beta is the deviation
+
+	var dx = dist * Math.cos( build.ca + angleSign * beta ) ,
+		dy = dist * Math.sin( build.ca + angleSign * beta ) ;
+
+	if ( build.pu ) {
+		build.d += 'm ' + dx + ' ' + dy ;
+	}
+	else {
+		build.d += 'a ' + radius + ' ' + radius + ' 0 ' + ( alpha > Math.PI ? 1 : 0 ) + ' '  + ( angleRad >= 0 ? 1 : 0 ) + ' ' + dx + ' ' + dy ;
+	}
+
+	build.cx += dx ;
+	build.cy += dy ;
+	build.ca += angleRad ;
+} ;
+
+
+},{}],101:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -42260,18 +43079,16 @@ path.dFromPoints = ( points , invertY ) => {
 
 
 
-const fs = require( 'fs' ).promises ;
-const domKit = require( 'dom-kit' ) ;
-const escape = require( 'string-kit/lib/escape.js' ) ;
-
-
-
 const svgKit = {} ;
 module.exports = svgKit ;
 
-Object.assign( svgKit , require( './misc.js' ) ) ;
-svgKit.path = require( './path.js' ) ;
-svgKit.canvas = require( './canvas.js' ) ;
+Object.assign( svgKit , require( './core-utilities.js' ) ) ;
+Object.assign( svgKit , require( './color-utilities.js' ) ) ;
+svgKit.path = require( './path-utilities.js' ) ;
+svgKit.canvas = require( './canvas-utilities.js' ) ;
+
+svgKit.BoundingBox = require( './BoundingBox.js' ) ;
+svgKit.Polygon = require( './Polygon.js' ) ;
 
 svgKit.VG = require( './VG.js' ) ;
 svgKit.VGEntity = require( './VGEntity.js' ) ;
@@ -42279,6 +43096,7 @@ svgKit.VGContainer = require( './VGContainer.js' ) ;
 svgKit.VGGroup = require( './VGGroup.js' ) ;
 svgKit.VGClip = require( './VGClip.js' ) ;
 svgKit.VGRect = require( './VGRect.js' ) ;
+svgKit.VGPolygon = require( './VGPolygon.js' ) ;
 svgKit.VGEllipse = require( './VGEllipse.js' ) ;
 svgKit.VGPath = require( './VGPath.js' ) ;
 svgKit.VGText = require( './VGText.js' ) ;
@@ -42290,427 +43108,18 @@ svgKit.StructuredTextLine = require( './VGFlowingText/StructuredTextLine.js' ) ;
 svgKit.StructuredTextPart = require( './VGFlowingText/StructuredTextPart.js' ) ;
 svgKit.TextAttribute = require( './VGFlowingText/TextAttribute.js' ) ;
 svgKit.TextMetrics = require( './VGFlowingText/TextMetrics.js' ) ;
-svgKit.BoundingBox = require( './BoundingBox.js' ) ;
 
 svgKit.DynamicArea = require( './DynamicArea.js' ) ;
 svgKit.DynamicManager = require( './DynamicManager.js' ) ;
 
 svgKit.fx = require( './fx/fx.js' ) ;
 
-svgKit.domKit = domKit ;
+svgKit.domKit = require( 'dom-kit' ) ;
 svgKit.opentype = require( 'opentype.js' ) ;
 
 
 
-/*
-	load( url , [options] )
-
-	* url: the URL of the .svg file
-	* options: (optional) object of options, transmitted to .inject() and .patch()
-
-	Return a promise resolving to the SVG DOM document.
-*/
-svgKit.load = async function( url , options = {} ) {
-	var content , $doc , $svg ;
-
-	if ( ! process.browser ) {
-		// Use Node.js 'fs' module
-		if ( url.substring( 0 , 7 ) === 'file://' ) { url = url.slice( 7 ) ; }
-		content = await fs.readFile( url , 'utf8' ) ;
-		$doc = domKit.fromXml( content ) ;
-	}
-	else {
-		// Use an AJAX HTTP Request
-		$doc = await svgKit.ajax( url ) ;
-	}
-
-	if ( options.removeComments ) {
-		domKit.removeComments( $doc ) ;
-		delete options.removeComments ;
-	}
-
-	$svg = $doc.documentElement ;
-	svgKit.inject( $svg , options ) ;
-	return $svg ;
-} ;
-
-
-
-svgKit.loadFromString = function( content , options = {} ) {
-	var $doc = domKit.fromXml( content ) ;
-
-	if ( options.removeComments ) {
-		domKit.removeComments( $doc ) ;
-		delete options.removeComments ;
-	}
-
-	var $svg = $doc.documentElement ;
-	svgKit.inject( $svg , options ) ;
-	return $svg ;
-} ;
-
-
-
-svgKit.ajax = function( url ) {
-	return new Promise( ( resolve , reject ) => {
-		var xhr = new XMLHttpRequest() ;
-
-		xhr.responseType = 'document' ;
-
-		xhr.onreadystatechange = () => {
-			// From MDN: In the event of a communication error (such as the webserver going down),
-			// an exception will be thrown when attempting to access the 'status' property.
-
-			try {
-				if ( xhr.readyState === 4 ) {
-					if ( xhr.status === 200 ) {
-						resolve( xhr.responseXML ) ;
-					}
-					else if ( xhr.status === 0 && xhr.responseXML ) {	// Yay, loading with file:// does not provide any status...
-						resolve( xhr.responseXML ) ;
-					}
-					else if ( xhr.status ) { reject( xhr.status ) ; }
-					else { reject( new Error( "[svg-kit] ajaxStatus(): Error with falsy status" ) ) ; }
-				}
-			}
-			catch ( error ) {
-				reject( error ) ;
-			}
-		} ;
-
-		xhr.open( 'GET' , url ) ;
-		xhr.send() ;
-	} ) ;
-} ;
-
-
-
-/*
-	Fix few <svg> things in order to inject it in the dom
-
-	* $svg: the svg element
-	* options: options object, where:
-		* into: `DOMElement` an element where the .svg file should be loaded into
-		* as: `DOMElement` a <svg> element where the .svg file should replace, almost like the "into" option,
-		  useful when a <svg> tag should be created synchronously to start doing stuffs on it,
-		  and let the asynchronous loading works in the background
-		* all other options are passed to .patch()
-*/
-svgKit.inject = function( $svg , options ) {
-	svgKit.patch( $svg , options ) ;
-
-	if ( options.into ) { options.into.appendChild( $svg ) ; }
-
-	// Better to avoid to check the tag name:
-	// it's too defensive and it prevents from loading inside a <g> tag
-	if ( options.as ) { //&& options.as.tagName.toLowerCase() === 'svg' )
-		domKit.moveAttributes( $svg , options.as ) ;
-		domKit.moveChildrenInto( $svg , options.as ) ;
-	}
-} ;
-
-
-
-/*
-	Fix few <svg> things.
-
-	* $svg: the svg element
-	* options: options object, where:
-		* id: `string` the id attribute of the <svg> tag (recommanded)
-		* removeIds: `boolean` remove all 'id' attributes
-		* prefixIds: `string` prefix all IDs and patch url #ref
-		* hidden: `boolean` turn the svg hidden (useful to apply modification before the show)
-		* class: `string` or `object` (key=class, value=true/false) to add/remove on the <svg> tag
-		* removeSize: `boolean` remove the width and height attribute and style from the <svg> tag
-		* removeSvgStyle: `boolean` remove the top-level style attribute of the <svg> tag
-		* removeDefaultStyles: `boolean` used to removed meaningless style pollution
-		* css: `object` a css object to apply on the <svg> tag
-		* colorClass: `boolean` a very specialized option. It moves all stroke and fill color inline styles to attribute
-		  on all drawing elements and add the "primary" class to those that are class-less.
-		  Since CSS has a greater priority than attributes (but lesser than inline styles), this allows us to controle
-		  color using CSS.
-		* removeComments: `boolean` remove all comment nodes
-		* removeWhiteSpaces: `boolean` remove all white-space
-		* removeWhiteLines: `boolean` remove all empty lines
-		* removeExoticNamespaces: `boolean` remove all tag and attributes that have a namespace different than svg,
-		  the svg namespace is stripped
-*/
-svgKit.patch = function( $svg , options ) {
-	var viewBox , width , height ;
-
-	svgKit.lightCleanup( $svg ) ;
-
-	// Fix id, if necessary
-	if ( options.id !== undefined ) {
-		if ( typeof options.id === 'string' ) { $svg.setAttribute( 'id' , options.id ) ; }
-		else if ( ! options.id ) { $svg.removeAttribute( 'id' ) ; }
-	}
-
-	if ( options.class ) {
-		if ( typeof options.class === 'string' ) { $svg.classList.add( options.class ) ; }
-		else if ( typeof options.class === 'object' ) { domKit.class( $svg , options.class ) ; }
-	}
-
-	if ( options.hidden ) { $svg.style.visibility = 'hidden' ; }
-
-	if ( options.prefixIds ) { domKit.prefixIds( $svg , options.prefixIds ) ; }
-	if ( options.removeIds ) { domKit.removeAllAttributes( $svg , 'id' ) ; }
-
-	if ( options.removeSvgStyle ) { $svg.removeAttribute( 'style' ) ; }
-	if ( options.removeDefaultStyles ) { svgKit.removeDefaultStyles( $svg ) ; }
-	if ( options.removeComments ) { domKit.removeComments( $svg ) ; }
-
-	if ( options.removeExoticNamespaces ) {
-		domKit.filterByNamespace( $svg , { primary: 'svg' , whitelist: [] } ) ;
-	}
-
-	if ( options.removeSize ) {
-		// Save and remove the width and height attribute
-		width = $svg.getAttribute( 'width' ) || $svg.style.width ;
-		height = $svg.getAttribute( 'height' ) || $svg.style.height ;
-
-		$svg.removeAttribute( 'height' ) ;
-		$svg.removeAttribute( 'width' ) ;
-		$svg.style.width = null ;
-		$svg.style.height = null ;
-
-		// if the $svg don't have a viewBox attribute, set it now from the width and height (it works most of time)
-		if ( ! $svg.getAttribute( 'viewBox' ) && width && height ) {
-			viewBox = '0 0 ' + width + ' ' + height ;
-			$svg.setAttribute( 'viewBox' , viewBox ) ;
-		}
-	}
-
-	if ( options.css ) { domKit.css( $svg , options.css ) ; }
-
-	if ( options.colorClass ) { svgKit.colorClass( $svg ) ; }
-
-	if ( options.removeWhiteSpaces ) { domKit.removeWhiteSpaces( $svg ) ; }
-	else if ( options.removeWhiteLines ) { domKit.removeWhiteSpaces( $svg , true ) ; }
-} ;
-
-
-
-svgKit.patchDocument = function( $doc , options ) {
-	var removeWhiteSpaces = options.removeWhiteSpaces ,
-		removeWhiteLines = options.removeWhiteLines ,
-		removeComments = options.removeComments ;
-
-	delete options.removeWhiteSpaces ;
-	delete options.removeWhiteLines ;
-	delete options.removeComments ;
-
-	if ( removeComments ) { domKit.removeComments( $doc ) ; }
-
-	svgKit.patch( $doc.documentElement , options ) ;
-
-	if ( removeWhiteSpaces ) { domKit.removeWhiteSpaces( $doc ) ; }
-	else if ( removeWhiteLines ) { domKit.removeWhiteSpaces( $doc , true ) ; }
-} ;
-
-
-
-svgKit.lightCleanup = function( $svg ) {
-	domKit.removeAllTags( $svg , 'metadata' ) ;
-	domKit.removeAllTags( $svg , 'script' ) ;
-	domKit.removeAllTags( $svg , 'defs' , true ) ;	// all empty defs
-} ;
-
-
-
-// List of svg tags that actually display things
-const drawingTags = [
-	'path' ,
-	'circle' ,
-	'ellipse' ,
-	'line' ,
-	'rect' ,
-	'polyline' ,
-	'polygone' ,
-	'text' ,
-	'textPath'
-] ;
-
-
-
-const defaultStyles = [
-	[ 'font-style' , 'normal' ] ,
-	[ 'font-weight' , 'normal' ] ,
-	[ 'font-variant' , 'normal' ] ,
-	[ 'font-stretch' , 'normal' ] ,
-	[ 'font-size' , 'medium' ] ,
-	[ 'line-height' , 'normal' ] ,
-	[ 'font-variant-ligatures' , 'normal' ] ,
-	//[ 'font-family' , 'sans-serif' ] ,
-	[ 'font-variant-position' , 'normal' ] ,
-	[ 'font-variant-caps' , 'normal' ] ,
-	[ 'font-variant-numeric' , 'normal' ] ,
-	[ 'font-variant-alternates' , 'normal' ] ,
-	[ 'font-variant-east-asian' , 'normal' ] ,
-	[ 'font-feature-settings' , 'normal' ] ,
-	[ 'text-indent' , '0' ] ,
-	[ 'text-align' , 'start' ] ,
-	[ 'text-decoration' , 'none' ] ,
-	[ 'text-decoration-line' , 'none' ] ,
-	[ 'text-decoration-style' , 'solid' ] ,
-	[ 'text-decoration-color' , '#000000' ] ,
-	[ 'letter-spacing' , 'normal' ] ,
-	[ 'word-spacing' , 'normal' ] ,
-	[ 'text-transform' , 'none' ] ,
-	[ 'writing-mode' , 'lr-tb' ] ,
-	[ 'direction' , 'ltr' ] ,
-	[ 'text-orientation' , 'mixed' ] ,
-	[ 'dominant-baseline' , 'auto' ] ,
-	[ 'baseline-shift' , 'baseline' ] ,
-	[ 'text-anchor' , 'start' ] ,
-	[ 'white-space' , 'normal' ] ,
-	[ 'shape-padding' , '0' ] ,
-	[ 'display' , 'inline' ] ,
-	[ 'visibility' , 'visible' ] ,
-	[ 'overflow' , 'visible' ] ,
-	[ 'opacity' , '1' ] ,
-	[ 'isolation' , 'auto' ] ,
-	[ 'mix-blend-mode' , 'normal' ] ,
-	[ 'color-interpolation' , 'sRGB' ] ,
-	[ 'color-interpolation-filters' , 'linearRGB' ] ,
-	[ 'solid-color' , '#000000' ] ,
-	[ 'solid-opacity' , '1' ] ,
-	[ 'vector-effect' , 'none' ] ,
-	[ 'fill-rule' , 'nonzero' ] ,
-	[ 'clip-rule' , 'nonzero' ] ,
-	[ 'color-rendering' , 'auto' ] ,
-	[ 'image-rendering' , 'auto' ] ,
-	[ 'shape-rendering' , 'auto' ] ,
-	[ 'text-rendering' , 'auto' ] ,
-	[ 'enable-background' , 'accumulate' ] ,
-	[ 'stroke-dasharray' , 'none' ] ,
-	[ 'stroke-dashoffset' , '0' ] ,
-	[ 'paint-order' , 'normal' ] ,
-	[ 'paint-order' , 'fill stroke markers' ]
-] ;
-
-
-
-svgKit.colorClass = function( $svg ) {
-	drawingTags.forEach( ( tagName ) => {
-		Array.from( $svg.getElementsByTagName( tagName ) ).forEach( ( $element ) => {
-			// Beware, $element.className does not work as expected for SVG
-			if ( ! $element.getAttribute( 'class' ) ) {
-				$element.classList.add( 'primary' ) ;
-			}
-
-			// move style to attribute if they are not 'none'
-			domKit.styleToAttribute( $element , 'fill' , [ 'none' ] ) ;
-			domKit.styleToAttribute( $element , 'stroke' , [ 'none' ] ) ;
-		} ) ;
-	} ) ;
-} ;
-
-
-
-// Remove styles set to a default/unused value
-svgKit.removeDefaultStyles = function( $svg ) {
-	drawingTags.forEach( ( tagName ) => {
-		Array.from( $svg.getElementsByTagName( tagName ) ).forEach( ( $element ) => {
-			var styles = $element.getAttribute( 'style' ) ;
-
-			defaultStyles.forEach( array => {
-				var k = array[ 0 ] ;
-				var v = array[ 1 ] ;
-
-				styles = styles.replace(
-					new RegExp( '(^|;) *' + escape.regExp( k ) + ' *: *' + escape.regExp( v ) + ' *(?:;|$)' ) ,
-					( full , pre ) => pre
-				) ;
-			} ) ;
-
-			$element.setAttribute( 'style' , styles ) ;
-		} ) ;
-	} ) ;
-} ;
-
-
-
-// Should remove all tags and attributes that have non-registered namespace,
-// e.g.: sodipodi, inkscape, etc...
-//svgKit.heavyCleanup = function( svgElement ) {} ;
-
-
-
-svgKit.getViewBox = function( $svg ) {
-	var raw = $svg.getAttribute( 'viewBox' ) ;
-
-	if ( ! raw ) { return null ; }
-
-	var array = raw.split( / +/ ) ;
-
-	return {
-		x: parseFloat( array[ 0 ] , 10 ) ,
-		y: parseFloat( array[ 1 ] , 10 ) ,
-		width: parseFloat( array[ 2 ] , 10 ) ,
-		height: parseFloat( array[ 3 ] , 10 )
-	} ;
-} ;
-
-
-
-svgKit.setViewBox = function( $svg , viewBox ) {
-	$svg.setAttribute( 'viewBox' , viewBox.x + ' ' + viewBox.y + ' ' + viewBox.width + ' ' + viewBox.height ) ;
-} ;
-
-
-
-svgKit.toAreaArray = function( object ) {
-	if ( object.min && object.max ) {
-		// Math Kit BoundingBox2D
-		return [
-			object.min.x ,
-			object.min.y ,
-			object.max.x - object.min.x ,
-			object.max.y - object.min.y
-		] ;
-	}
-	else if ( object.xmin !== undefined && object.xmax !== undefined && object.ymin !== undefined && object.ymax !== undefined ) {
-		return [
-			object.xmin ,
-			object.ymin ,
-			object.xmax - object.xmin ,
-			object.ymax - object.ymin
-		] ;
-	}
-	else if ( object.x !== undefined && object.y !== undefined && object.width !== undefined && object.height !== undefined ) {
-		return [
-			object.x ,
-			object.y ,
-			object.width ,
-			object.height
-		] ;
-	}
-
-	return [ 0 , 0 , 100 , 100 ] ;
-} ;
-
-
-
-svgKit.standalone = function( content , viewBox ) {
-	var output = '<?xml version="1.0" encoding="UTF-8"?>\n' ;
-
-	if ( ! Array.isArray( viewBox ) ) { viewBox = svgKit.toAreaArray( viewBox ) ; }
-
-	output += '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + viewBox.join( ' ' ) + '">\n' ;
-
-	// ?
-	// width="500"
-	// height="500"
-
-	output += content ;
-	output += '\n</svg>\n' ;
-
-	return output ;
-} ;
-
-
-
+// Best to *NOT* move to core-utilities.js, because it depends on the whole svgKit lib (would produce a bad dependency graph)
 svgKit.unserializeVG = str => svgKit.objectToVG( JSON.parse( str ) ) ;
 
 svgKit.objectToVG = function( object , clone = false ) {
@@ -42730,14 +43139,13 @@ svgKit.objectToVG = function( object , clone = false ) {
 } ;
 
 
-}).call(this)}).call(this,require('_process'))
-},{"./BoundingBox.js":67,"./DynamicArea.js":68,"./DynamicManager.js":69,"./VG.js":71,"./VGClip.js":72,"./VGContainer.js":73,"./VGEllipse.js":74,"./VGEntity.js":75,"./VGFlowingText/StructuredTextLine.js":76,"./VGFlowingText/StructuredTextPart.js":77,"./VGFlowingText/TextAttribute.js":79,"./VGFlowingText/TextMetrics.js":80,"./VGFlowingText/VGFlowingText.js":81,"./VGGroup.js":84,"./VGImage.js":85,"./VGPath.js":86,"./VGRect.js":89,"./VGText.js":90,"./canvas.js":91,"./fontLib.js":92,"./fx/fx.js":93,"./misc.js":96,"./path.js":97,"_process":110,"dom-kit":31,"fs":104,"opentype.js":35,"string-kit/lib/escape.js":100}],99:[function(require,module,exports){
+},{"./BoundingBox.js":67,"./DynamicArea.js":68,"./DynamicManager.js":69,"./Polygon.js":71,"./VG.js":72,"./VGClip.js":73,"./VGContainer.js":74,"./VGEllipse.js":75,"./VGEntity.js":76,"./VGFlowingText/StructuredTextLine.js":77,"./VGFlowingText/StructuredTextPart.js":78,"./VGFlowingText/TextAttribute.js":80,"./VGFlowingText/TextMetrics.js":81,"./VGFlowingText/VGFlowingText.js":82,"./VGGroup.js":85,"./VGImage.js":86,"./VGPath.js":87,"./VGPolygon.js":88,"./VGRect.js":91,"./VGText.js":92,"./canvas-utilities.js":93,"./color-utilities.js":94,"./core-utilities.js":95,"./fontLib.js":96,"./fx/fx.js":97,"./path-utilities.js":100,"dom-kit":31,"opentype.js":35}],102:[function(require,module,exports){
 arguments[4][52][0].apply(exports,arguments)
-},{"dup":52}],100:[function(require,module,exports){
+},{"dup":52}],103:[function(require,module,exports){
 arguments[4][53][0].apply(exports,arguments)
-},{"dup":53}],101:[function(require,module,exports){
+},{"dup":53}],104:[function(require,module,exports){
 arguments[4][64][0].apply(exports,arguments)
-},{"dup":64}],102:[function(require,module,exports){
+},{"dup":64}],105:[function(require,module,exports){
 /*
 	String Kit
 
@@ -43099,10 +43507,10 @@ unicode.isEmojiModifierCodePoint = code =>
 	code === 0xfe0f ;	// VARIATION SELECTOR-16 [VS16] {emoji variation selector}
 
 
-},{"./json-data/unicode-emoji-width-ranges.json":101}],103:[function(require,module,exports){
+},{"./json-data/unicode-emoji-width-ranges.json":104}],106:[function(require,module,exports){
 module.exports={
   "name": "svg-kit",
-  "version": "0.6.7",
+  "version": "0.7.1",
   "description": "A SVG toolkit, with its own Vector Graphics structure, multiple renderers (svg text, DOM svg, canvas), and featuring Flowing Text.",
   "main": "lib/svg-kit.js",
   "directories": {
@@ -43152,9 +43560,9 @@ module.exports={
   }
 }
 
-},{}],104:[function(require,module,exports){
+},{}],107:[function(require,module,exports){
 
-},{}],105:[function(require,module,exports){
+},{}],108:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -43306,7 +43714,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],106:[function(require,module,exports){
+},{}],109:[function(require,module,exports){
 (function (Buffer){(function (){
 /*!
  * The buffer module from node.js, for the browser.
@@ -45087,7 +45495,7 @@ function numberIsNaN (obj) {
 }
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"base64-js":105,"buffer":106,"ieee754":107}],107:[function(require,module,exports){
+},{"base64-js":108,"buffer":109,"ieee754":110}],110:[function(require,module,exports){
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
@@ -45174,7 +45582,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],108:[function(require,module,exports){
+},{}],111:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -45197,7 +45605,7 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],109:[function(require,module,exports){
+},{}],112:[function(require,module,exports){
 (function (process){(function (){
 // 'path' module extracted from Node.js v8.11.1 (only the posix part)
 // transplited with Babel
@@ -45730,7 +46138,7 @@ posix.posix = posix;
 module.exports = posix;
 
 }).call(this)}).call(this,require('_process'))
-},{"_process":110}],110:[function(require,module,exports){
+},{"_process":113}],113:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -45916,7 +46324,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],111:[function(require,module,exports){
+},{}],114:[function(require,module,exports){
 (function (setImmediate,clearImmediate){(function (){
 var nextTick = require('process/browser.js').nextTick;
 var apply = Function.prototype.apply;
@@ -45995,5 +46403,5 @@ exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate :
   delete immediateIds[id];
 };
 }).call(this)}).call(this,require("timers").setImmediate,require("timers").clearImmediate)
-},{"process/browser.js":110,"timers":111}]},{},[7])(7)
+},{"process/browser.js":113,"timers":114}]},{},[7])(7)
 });

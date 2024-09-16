@@ -7,150 +7,32 @@ var svgKit = GAMEGUI.svgKit ;
 
 
 
-function createTileVg_( id = null ) {
-	let x = 0 ,
-		y = 0 ,
-		width = 250 ,
-		height = 400 ,
-		padding = 20 ,
-		topRect = {
-			x: padding ,
-			y: padding ,
-			width: width - padding * 2 ,
-			height: 0.5 * height - padding * 1.5
-		} ,
-		bottomRect = {
-			x: padding ,
-			y: topRect.height + 2 * padding ,
-			width: width - 2 * padding ,
-			height: 0.5 * height - 1.5 * padding
-		} ;
-
-	var vg = new svgKit.VG( {
-		viewBox: { x , y , width , height }
-		//invertY: true
-	} ) ;
-
-	var tile3dFrame = new svgKit.VGRect( {
-		x , y , width , height ,
-		rx: 10 ,
-		ry: 10 ,
-		style: {
-			fill: '#7ac' ,
-			stroke: '#777'
-		}
-	} ) ;
-	vg.addEntity( tile3dFrame ) ;
-
-	var image = new svgKit.VGImage( {
-		x: topRect.x ,
-		y: topRect.y ,
-		width: topRect.width ,
-		height: topRect.height ,
-		url: './dragon.webp'
-	} ) ;
-	vg.addEntity( image ) ;
-
-	var textRect = new svgKit.VGRect( {
-		x: bottomRect.x ,
-		y: bottomRect.y ,
-		width: bottomRect.width ,
-		height: bottomRect.height ,
-		rx: 5 ,
-		ry: 5 ,
-		style: {
-			fill: '#eee'
-		}
-	} ) ;
-	vg.addEntity( textRect ) ;
-
-	var tile3dRule = new svgKit.VGFlowingText( {
-		x: bottomRect.x + 0.5 * padding ,
-		y: bottomRect.y + 0.5 * padding ,
-		width: bottomRect.width - padding ,
-		height: bottomRect.height - padding ,
-		//clip: false ,
-		//debugContainer: true ,
-		//textWrapping: 'ellipsis' ,
-		textWrapping: 'wordWrap' ,
-		attr: {
-			fontSize: 22 ,
-			color: '#444' ,
-			outline: true
-		} ,
-		markupText: "A fierce dragon breathing fire..."
-	} ) ;
-	vg.addEntity( tile3dRule ) ;
-
-	var tile3dName = new svgKit.VGFlowingText( {
-		x: 0.5 * padding ,
-		y: 0.25 * padding ,
-		width: width - padding ,
-		height: 2 * padding ,
-		//clip: false ,
-		//debugContainer: true ,
-		//textWrapping: 'ellipsis' ,
-		textWrapping: 'wordWrap' ,
-		attr: {
-			fontSize: 30 ,
-			color: '#444' ,
-			outline: true ,
-			outlineWidth: 2
-		} ,
-		markupText: "Black Dragon" + ( id !== null ? ' #' + id : '' )
-	} ) ;
-	vg.addEntity( tile3dName ) ;
-
-	return vg ;
-}
-
-
-
 function createTileVg( id = null ) {
 	let padding = 10 ,
-		radius = 100 ,
-		rCos60 = 0.5 * radius ,
-		rSin60 = Math.sin( Math.PI / 3 ) * radius ,
-		offsetX = rSin60 + padding ,
-		offsetY = radius + padding ,
-		northX = offsetX , northY = offsetY - radius ,
-		southX = offsetX , southY = offsetY + radius ,
-		northWestX = offsetX - rSin60 , northWestY = offsetY - rCos60 ,
-		northEastX = offsetX + rSin60 , northEastY = offsetY - rCos60 ,
-		southWestX = offsetX - rSin60 , southWestY = offsetY + rCos60 ,
-		southEastX = offsetX + rSin60 , southEastY = offsetY + rCos60 ;
-
-	console.warn( "coords:" , { 
-		padding,radius,rCos60,rSin60,offsetX,offsetY,coords: {
-			northX,northY,southX,southY,northWestX,northWestY,northEastX,northEastY,southWestX,southWestY,southEastX,southEastY
-		}
-	} ) ;
+		radius = 100 ;
 
 	var vg = new svgKit.VG( {
-		viewBox: { x: 0 , y: 0 , width: 2 * offsetX , height: 2 * offsetY }
+		viewBox: { x: 0 , y: 0 , width: 2 * radius , height: 2 * radius }
 		//invertY: true
 	} ) ;
-	
 
-	var hexFrame = new svgKit.VGPath( {
+	var hexTile = new svgKit.VGPolygon( {
 		style: {
 			fill: '#7ac' ,
 			stroke: '#777'
+		} ,
+		build: {
+			x: radius ,
+			y: radius ,
+			radius ,
+			sides: 6
 		}
 	} ) ;
-	hexFrame.moveTo( { x: northX , y: northY } )
-		.lineTo( { x: northEastX , y: northEastY } )
-		.lineTo( { x: southEastX , y: southEastY } )
-		.lineTo( { x: southX , y: southY } )
-		.lineTo( { x: southWestX , y: southWestY } )
-		.lineTo( { x: northWestX , y: northWestY } )
-		.lineTo( { x: northX , y: northY } )
-		.close() ;
-	vg.addEntity( hexFrame ) ;
+	vg.addEntity( hexTile ) ;
 
 	var tileName = new svgKit.VGFlowingText( {
-		x: offsetX - 0.5 * radius ,
-		y: offsetY + 0.25 * radius ,
+		x: 0.5 * radius ,
+		y: 0.25 * radius ,
 		width: 1.5 * radius ,
 		height: radius ,
 		//clip: false ,
@@ -167,22 +49,73 @@ function createTileVg( id = null ) {
 	} ) ;
 	vg.addEntity( tileName ) ;
 
+	vg.set( { data: { extrusionShape: hexTile.points } } ) ;
+
 	return vg ;
 }
 
 
 
 function createTile( id = null ) {
-	var tile3dVg = createTileVg( id ) ;
+	var tileVg = createTileVg( id ) ;
 
-	var tile3d = new BABYLON.GUI.VG( 'tile3d' + ( id !== null ? '#' + id : '' ) , tile3dVg ) ;
+	var tile = new BABYLON.GUI.VG( 'tile3d' + ( id !== null ? '#' + id : '' ) , tileVg ) ;
 
-	tile3d.width = "300px" ;
-	tile3d.height = "350px" ;
+	tile.width = "300px" ;
+	tile.height = "300px" ;
 	//tile3d.stretch = BABYLON.GUI.VG.STRETCH_UNIFORM ;
-	tile3d.stretch = BABYLON.GUI.VG.STRETCH_EXTEND ;
+	tile.stretch = BABYLON.GUI.VG.STRETCH_EXTEND ;
 
-	return tile3d ;
+	return tile ;
+}
+
+
+
+function createTile3d( scene , id = null ) {
+	var shapeScale = 0.02 ,
+		thickness = 1 ;
+
+	var tileVg = createTileVg( id ) ;
+
+	//Shape profile in XY plane
+	const shape = tileVg.data.extrusionShape.map( point => new BABYLON.Vector3( point.x * shapeScale , point.y * shapeScale , 0 ) ) ;
+
+	const extrusionPath = [
+		new BABYLON.Vector3( 0 , 0 , 0 ) ,
+		new BABYLON.Vector3( 0 , 0 , thickness )
+	];
+
+	const faceUV = [];
+	faceUV[0] =	new BABYLON.Vector4(0, 0, 0, 0);
+    faceUV[1] =	new BABYLON.Vector4(1, 0, 0.25, 1); // x, z swapped to flip image
+    faceUV[2] = new BABYLON.Vector4(0, 0, 0.24, 1);
+    
+    const faceColors = [ ];
+    faceColors[0] = new BABYLON.Color4(0.22, 0.77, 0.06)
+	
+	var tile = BABYLON.MeshBuilder.ExtrudeShape(
+		"tile3d" ,
+		{
+			shape ,
+			closeShape: true ,
+			path: extrusionPath ,
+			cap: BABYLON.Mesh.CAP_ALL ,
+			sideOrientation: BABYLON.Mesh.DOUBLESIDE ,
+			faceColors ,
+			faceUV ,
+		} ,
+		scene
+	) ;
+	
+	tile.rotation.x = - Math.PI / 2 ;
+
+	const material = new BABYLON.StandardMaterial("material", scene);
+	material.diffuseTexture = new BABYLON.Texture("https://assets.babylonjs.com/environments/logo_label.jpg");
+	tile.material = material;
+	
+	console.warn( "Tile" , tile ) ;
+	
+	return tile ;
 }
 
 
@@ -219,10 +152,14 @@ async function createScene() {
 	//await svgKit.fontLib.preloadFontFamily( 'serif' ) ;
 
 
+	let tile3d = createTile3d( scene , 0 ) ;
+
+	/*
 	for ( let i = 0 ; i < 1 ; i ++ ) {
-		let tile3d = createTile( i ) ;
-		advancedTexture.addControl( tile3d ) ;
+		let tile = createTile( i ) ;
+		advancedTexture.addControl( tile ) ;
 	}
+	*/
 
 	//advancedTexture.addControl( tile3d ) ;
 	
