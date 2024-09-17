@@ -108,7 +108,7 @@ async function createTile3d( scene , id = null ) {
 	var dynamicTexture = new BABYLON.DynamicTexture("vgTexture", { width: tileVg.viewBox.width , height: tileVg.viewBox.height } , scene ) ;
 	//var dynamicTexture = new BABYLON.DynamicTexture("vgTexture", 256, scene ) ;
 	var ctx = dynamicTexture.getContext();
-	await tileVg.renderCanvas( ctx ) ;
+	await tileVg.renderCanvas( ctx , { stretch: true } ) ;
 	dynamicTexture.update() ;
 
 
