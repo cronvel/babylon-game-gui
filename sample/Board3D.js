@@ -8,11 +8,10 @@ var svgKit = GAMEGUI.svgKit ;
 
 
 function createTileVg( id = null ) {
-	let padding = 10 ,
-		radius = 100 ;
+	let radius = 100 ;
 
 	var vg = new svgKit.VG( {
-		viewBox: { x: 0 , y: 0 , width: 2 * radius , height: 2 * radius }
+		//viewBox: { x: 0 , y: 0 , width: 2 * radius , height: 2 * radius }
 		//invertY: true
 	} ) ;
 
@@ -29,6 +28,8 @@ function createTileVg( id = null ) {
 		}
 	} ) ;
 	vg.addEntity( hexTile ) ;
+	vg.viewBox.set( hexTile.getBoundingBox() ) ;
+	console.warn( vg ) ;
 
 	var tileName = new svgKit.VGFlowingText( {
 		x: 0.5 * radius ,
@@ -71,7 +72,7 @@ function createTile( id = null ) {
 
 
 
-function createTile3d( scene , id = null ) {
+async function createTile3d( scene , id = null ) {
 	var shapeScale = 0.02 ,
 		thickness = 1 ;
 
@@ -83,7 +84,7 @@ function createTile3d( scene , id = null ) {
 	var faceUV = [] ,
 		faceCount = shapeXZ.length + 2 ;
 
-	for ( let i = 0 ; i < faceCount ; i ++ ) { faceUV[ i ] = new BABYLON.Vector4(0, 0, 2, 2); }
+	for ( let i = 0 ; i < faceCount ; i ++ ) { faceUV[ i ] = new BABYLON.Vector4(0, 0, 1, 1); }
 
 	var tile = BABYLON.MeshBuilder.ExtrudePolygon(
 		"tile3d" ,
@@ -102,7 +103,17 @@ function createTile3d( scene , id = null ) {
 	tile.position.y = 0.5 ;
 
 	var material = new BABYLON.StandardMaterial("material", scene);
+	
+	//var dynamicTexture = new BABYLON.DynamicTexture("vgTexture", tileVg.viewBox, scene ) ;
+	var dynamicTexture = new BABYLON.DynamicTexture("vgTexture", { width: tileVg.viewBox.width , height: tileVg.viewBox.height } , scene ) ;
+	//var dynamicTexture = new BABYLON.DynamicTexture("vgTexture", 256, scene ) ;
+	var ctx = dynamicTexture.getContext();
+	await tileVg.renderCanvas( ctx ) ;
+	dynamicTexture.update() ;
+
+
 	material.diffuseTexture = new BABYLON.Texture("/sample/uv-white.png");
+	material.diffuseTexture = dynamicTexture;
 	material.ambientColor = new BABYLON.Color3(1, 1, 1);
 	tile.material = material;
 
@@ -115,17 +126,17 @@ function createTile3d( scene , id = null ) {
 
 function displayWireframe( scene ) {
 	// Modify mesh's geometry to prepare for TRIANGLES mode in plugin
-	for (const mesh of scene.meshes) {
-		BABYLON.MeshDebugPluginMaterial.PrepareMeshForTrianglesAndVerticesMode(mesh);
+	for ( let mesh of scene.meshes ) {
+		BABYLON.MeshDebugPluginMaterial.PrepareMeshForTrianglesAndVerticesMode( mesh ) ;
 	}
 
 	// Add plugin to all materials
-	for (const material of scene.materials) {
-		const plugin = new BABYLON.MeshDebugPluginMaterial(material, {
-			mode: BABYLON.MeshDebugMode.TRIANGLES,
-			wireframeTrianglesColor: new BABYLON.Color3(1, 0, 1),
-			wireframeThickness: 1,
-		});
+	for ( let material of scene.materials ) {
+		let plugin = new BABYLON.MeshDebugPluginMaterial( material , {
+			mode: BABYLON.MeshDebugMode.TRIANGLES ,
+			wireframeTrianglesColor: new BABYLON.Color3(1, 0, 1) ,
+			wireframeThickness: 1
+		} ) ;
 	}
 };
 
@@ -169,7 +180,7 @@ async function createScene() {
 	//await svgKit.fontLib.preloadFontFamily( 'serif' ) ;
 
 
-	let tile3d = createTile3d( scene , 0 ) ;
+	let tile3d = await createTile3d( scene , 0 ) ;
 
 	/*
 	for ( let i = 0 ; i < 1 ; i ++ ) {
