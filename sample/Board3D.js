@@ -77,46 +77,57 @@ function createTile3d( scene , id = null ) {
 
 	var tileVg = createTileVg( id ) ;
 
-	//Shape profile in XY plane
-	const shape = tileVg.data.extrusionShape.map( point => new BABYLON.Vector3( point.x * shapeScale , point.y * shapeScale , 0 ) ) ;
+	// Shape profile in XZ plane
+	var shapeXZ = tileVg.data.extrusionShape.map( point => new BABYLON.Vector3( point.x * shapeScale , 0 , point.y * shapeScale ) ) ;
 
-	const extrusionPath = [
-		new BABYLON.Vector3( 0 , 0 , 0 ) ,
-		new BABYLON.Vector3( 0 , 0 , thickness )
-	];
+	var faceUV = [] ,
+		faceCount = shapeXZ.length + 2 ;
 
-	const faceUV = [];
-	faceUV[0] =	new BABYLON.Vector4(0, 0, 0, 0);
-    faceUV[1] =	new BABYLON.Vector4(1, 0, 0.25, 1); // x, z swapped to flip image
-    faceUV[2] = new BABYLON.Vector4(0, 0, 0.24, 1);
-    
-    const faceColors = [ ];
-    faceColors[0] = new BABYLON.Color4(0.22, 0.77, 0.06)
-	
-	var tile = BABYLON.MeshBuilder.ExtrudeShape(
+	for ( let i = 0 ; i < faceCount ; i ++ ) { faceUV[ i ] = new BABYLON.Vector4(0, 0, 2, 2); }
+
+	var tile = BABYLON.MeshBuilder.ExtrudePolygon(
 		"tile3d" ,
 		{
-			shape ,
+			shape: shapeXZ ,
+			// shape: [ new BABYLON.Vector3( -1 , 0 , -1 ) , new BABYLON.Vector3( -1 , 0 , 1 ) , new BABYLON.Vector3( 1 , 0 , 1 ) , new BABYLON.Vector3( 1 , 0 , -1 ) ] ,
 			closeShape: true ,
-			path: extrusionPath ,
-			cap: BABYLON.Mesh.CAP_ALL ,
-			sideOrientation: BABYLON.Mesh.DOUBLESIDE ,
-			faceColors ,
+			depth: 1 ,
+			//sideOrientation: BABYLON.Mesh.DOUBLESIDE ,
 			faceUV ,
 		} ,
 		scene
 	) ;
-	
-	tile.rotation.x = - Math.PI / 2 ;
 
-	const material = new BABYLON.StandardMaterial("material", scene);
-	material.diffuseTexture = new BABYLON.Texture("https://assets.babylonjs.com/environments/logo_label.jpg");
+	//tile.rotation.x = - Math.PI / 2 ;
+	tile.position.y = 0.5 ;
+
+	var material = new BABYLON.StandardMaterial("material", scene);
+	material.diffuseTexture = new BABYLON.Texture("/sample/uv-white.png");
+	material.ambientColor = new BABYLON.Color3(1, 1, 1);
 	tile.material = material;
-	
+
 	console.warn( "Tile" , tile ) ;
-	
+
 	return tile ;
 }
+
+
+
+function displayWireframe( scene ) {
+	// Modify mesh's geometry to prepare for TRIANGLES mode in plugin
+	for (const mesh of scene.meshes) {
+		BABYLON.MeshDebugPluginMaterial.PrepareMeshForTrianglesAndVerticesMode(mesh);
+	}
+
+	// Add plugin to all materials
+	for (const material of scene.materials) {
+		const plugin = new BABYLON.MeshDebugPluginMaterial(material, {
+			mode: BABYLON.MeshDebugMode.TRIANGLES,
+			wireframeTrianglesColor: new BABYLON.Color3(1, 0, 1),
+			wireframeThickness: 1,
+		});
+	}
+};
 
 
 
@@ -133,6 +144,8 @@ async function createScene() {
 	// This attaches the camera to the canvas
 	camera.attachControl( canvas , true ) ;
 
+	scene.ambientColor = new BABYLON.Color3(0.1, 0.1, 0.1);
+
 	// This creates a light, aiming 0,1,0 - to the sky (non-mesh)
 	var light = new BABYLON.HemisphericLight( "light" , new BABYLON.Vector3( 0 , 1 , 0 ) , scene ) ;
 
@@ -141,6 +154,10 @@ async function createScene() {
 
 	// Our built-in 'ground' shape.
 	var ground = BABYLON.MeshBuilder.CreateGround( "ground" , { width: 6 , height: 6 } , scene ) ;
+	var material = new BABYLON.StandardMaterial("material", scene);
+	material.diffuseTexture = new BABYLON.Texture("/sample/uv-white.png");
+	material.ambientColor = new BABYLON.Color3(1, 1, 1);
+	ground.material = material;
 
 	// GUI
 	var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI( 'UI' ) ;
@@ -162,6 +179,8 @@ async function createScene() {
 	*/
 
 	//advancedTexture.addControl( tile3d ) ;
+
+	displayWireframe( scene ) ;
 	
 	return scene ;
 }
