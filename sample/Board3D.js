@@ -15,10 +15,11 @@ function createTileVg( id = null ) {
 		//invertY: true
 	} ) ;
 
-	var hexTile = new svgKit.VGPolygon( {
+	var hexTile = new svgKit.VGConvexPolygon( {
 		style: {
 			fill: '#7ac' ,
-			stroke: '#777'
+			stroke: '#f7d' ,
+			strokeWidth: 4
 		} ,
 		build: {
 			x: radius ,
@@ -28,7 +29,11 @@ function createTileVg( id = null ) {
 		}
 	} ) ;
 	vg.addEntity( hexTile ) ;
-	vg.viewBox.set( hexTile.getBoundingBox() ) ;
+
+	// We will set the VG viewbox to the polygon bounding box
+	let boundingBox = hexTile.getBoundingBox() ;
+	boundingBox.shrink( 2 , 1 ) ;	// We have to shrink the boundingBox by 2 pixels each side to avoid aliasing on the boundary of the shape (1 pixel is not enough)
+	vg.viewBox.set( boundingBox ) ;
 	console.warn( vg ) ;
 
 	var tileName = new svgKit.VGFlowingText( {
