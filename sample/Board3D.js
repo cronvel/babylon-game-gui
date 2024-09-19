@@ -62,6 +62,35 @@ function createTileVg( id = null ) {
 
 
 
+function createTileSideVg() {
+	var vg = new svgKit.VG( {
+		//viewBox: { x: 0 , y: 0 , width: 2 * radius , height: 2 * radius }
+		//invertY: true
+	} ) ;
+
+	var side = new svgKit.VGRect( {
+		x: 0 ,
+		y: 0 ,
+		width: 50 ,
+		height: 50 ,
+		style: {
+			fill: '#5c7' ,
+			stroke: '#0f0' ,
+			strokeWidth: 4
+		}
+	} ) ;
+	vg.addEntity( side ) ;
+
+	// We will set the VG viewbox to the polygon bounding box
+	let boundingBox = side.getBoundingBox() ;
+	boundingBox.shrink( 1 , 1 ) ;
+	vg.viewBox.set( boundingBox ) ;
+
+	return vg ;
+}
+
+
+
 function createTile( id = null ) {
 	var tileVg = createTileVg( id ) ;
 
@@ -82,14 +111,58 @@ async function createTile3d( scene , id = null ) {
 		thickness = 1 ;
 
 	var tileVg = createTileVg( id ) ;
+	var tileSideVg = createTileSideVg() ;
 
 	// Shape profile in XZ plane
 	var shapeXZ = tileVg.data.extrusionShape.map( point => new BABYLON.Vector3( point.x * shapeScale , 0 , point.y * shapeScale ) ) ;
 
+	
+	// It is not possible to have multiple material/texture for the same mesh,
+	// so we have to construct one single texture out of multiple VG and compute the UV mapping.
 	var faceUV = [] ,
-		faceCount = shapeXZ.length + 2 ;
+		faceCount = shapeXZ.length + 2 ,
+		spacing = 1 ,
+		textureWidth = tileVg.viewBox.width + tileSideVg.viewBox.width + spacing ,
+		textureHeight = Math.max( tileVg.viewBox.height , tileSideVg.viewBox.height ) ;
 
-	for ( let i = 0 ; i < faceCount ; i ++ ) { faceUV[ i ] = new BABYLON.Vector4(0, 0, 1, 1); }
+	// BE CAREFUL, VG coordinates has Y-down, while UV has Y-up, so it is more complicated...
+	
+	// Top face
+	faceUV[ 0 ] = new BABYLON.Vector4(
+		0 ,
+		1 - ( tileVg.viewBox.height / textureHeight ) ,
+		tileVg.viewBox.width / textureWidth ,
+		1
+	) ;
+
+	// There is only 1 UV for all side face, it cannot be customized -_-'
+	faceUV[ 1 ] = new BABYLON.Vector4(
+		( tileVg.viewBox.width + spacing ) / textureWidth ,
+		1 - ( tileSideVg.viewBox.height / textureHeight ) ,
+		1 ,
+		1
+	) ;
+
+	// Bottom face, for instance we will use the top-face UV, it is flipped for both U and V so it is symetrical to the top face
+	faceUV[ 2 ] = new BABYLON.Vector4(
+		tileVg.viewBox.width / textureWidth ,
+		1 ,
+		0 ,
+		1 - ( tileVg.viewBox.height / textureHeight ) ,
+	) ;
+
+	var dynamicTexture = new BABYLON.DynamicTexture("vgTexture", { width: textureWidth , height: textureHeight } , scene ) ;
+	//var dynamicTexture = new BABYLON.DynamicTexture("vgTexture", 256, scene ) ;
+	var ctx = dynamicTexture.getContext();
+	await tileVg.renderCanvas( ctx , { stretch: true , viewport: { width: tileVg.viewBox.width , height: tileVg.viewBox.height } } ) ;
+	await tileSideVg.renderCanvas( ctx , { stretch: true , viewport: { x: tileVg.viewBox.width + spacing , width: tileSideVg.viewBox.width , height: tileSideVg.viewBox.height } } ) ;
+	dynamicTexture.update() ;
+
+	var material = new BABYLON.StandardMaterial("material", scene);
+	material.diffuseTexture = new BABYLON.Texture("/sample/uv-white.png");
+	material.diffuseTexture = dynamicTexture;
+	material.ambientColor = new BABYLON.Color3(1, 1, 1);
+
 
 	var tile = BABYLON.MeshBuilder.ExtrudePolygon(
 		"tile3d" ,
@@ -106,20 +179,6 @@ async function createTile3d( scene , id = null ) {
 
 	//tile.rotation.x = - Math.PI / 2 ;
 	tile.position.y = 0.5 ;
-
-	var material = new BABYLON.StandardMaterial("material", scene);
-	
-	//var dynamicTexture = new BABYLON.DynamicTexture("vgTexture", tileVg.viewBox, scene ) ;
-	var dynamicTexture = new BABYLON.DynamicTexture("vgTexture", { width: tileVg.viewBox.width , height: tileVg.viewBox.height } , scene ) ;
-	//var dynamicTexture = new BABYLON.DynamicTexture("vgTexture", 256, scene ) ;
-	var ctx = dynamicTexture.getContext();
-	await tileVg.renderCanvas( ctx , { stretch: true } ) ;
-	dynamicTexture.update() ;
-
-
-	material.diffuseTexture = new BABYLON.Texture("/sample/uv-white.png");
-	material.diffuseTexture = dynamicTexture;
-	material.ambientColor = new BABYLON.Color3(1, 1, 1);
 	tile.material = material;
 
 	console.warn( "Tile" , tile ) ;
@@ -152,10 +211,11 @@ async function createScene() {
 	var scene = new BABYLON.Scene( engine ) ;
 
 	// This creates and positions a free camera (non-mesh)
-	var camera = new BABYLON.FreeCamera( "camera1" , new BABYLON.Vector3( 0 , 5 , - 10 ) , scene ) ;
+	//var camera = new BABYLON.FreeCamera( "camera1" , new BABYLON.Vector3( 0 , 5 , - 10 ) , scene ) ;
+	var camera = new BABYLON.ArcRotateCamera("Camera", 3 * Math.PI / 2, Math.PI / 3, 10, BABYLON.Vector3.Zero());
 
 	// This targets the camera to scene origin
-	camera.setTarget( BABYLON.Vector3.Zero() ) ;
+	//camera.setTarget( BABYLON.Vector3.Zero() ) ;
 
 	// This attaches the camera to the canvas
 	camera.attachControl( canvas , true ) ;

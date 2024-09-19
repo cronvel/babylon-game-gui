@@ -7633,23 +7633,45 @@ VGEntity.prototype.renderCanvas = async function( canvasCtx , options , isRedraw
 	}
 
 	var promise = this.renderCanvasPromise = new Promise() ,
-		hasTransform = false ,
+		shouldRestore = false ,
 		shouldRender = true ;
 
 	// Manage position, rotation and scale using canvas' transformation methods
 	if ( master === this ) {
-		let translateX = options.x || 0 ,
+		let viewport = {
+				x: 0 , y: 0 , width: canvasCtx.canvas.width , height: canvasCtx.canvas.height
+			} ,
+			translateX = options.x || 0 ,
 			translateY = options.y || 0 ,
 			rotation = options.rotation || 0 ,
 			scale = options.scale || 1 ,
 			scaleX = options.scaleX || scale ,
 			scaleY = options.scaleY || scale ;
 
+		if ( options.viewport ) {
+			viewport.x = options.viewport.x ?? 0 ;
+			viewport.y = options.viewport.y ?? 0 ;
+			viewport.width = options.viewport.width ?? canvasCtx.canvas.width ;
+			viewport.height = options.viewport.height ?? canvasCtx.canvas.width ;
+
+			translateX += viewport.x ;
+			translateY += viewport.y ;
+
+			if ( ! shouldRestore ) {
+				canvasCtx.save() ;
+				shouldRestore = true ;
+			}
+
+			canvasCtx.beginPath() ;
+			canvasCtx.rect( viewport.x , viewport.y , viewport.width , viewport.height ) ;
+			canvasCtx.clip() ;
+		}
+
 		if ( options.stretch && this.viewBox ) {
-			translateX = - this.viewBox.x ;
-			translateY = - this.viewBox.y ;
-			scaleX = canvasCtx.canvas.width / this.viewBox.width ;
-			scaleY = canvasCtx.canvas.height / this.viewBox.height ;
+			translateX = - this.viewBox.x + viewport.x ;
+			translateY = - this.viewBox.y + viewport.y ;
+			scaleX = viewport.width / this.viewBox.width ;
+			scaleY = viewport.height / this.viewBox.height ;
 
 			switch ( options.stretch ) {
 				case true :
@@ -7665,8 +7687,10 @@ VGEntity.prototype.renderCanvas = async function( canvasCtx , options , isRedraw
 		}
 
 		if ( translateX || translateY || rotation || scaleX !== 1 || scaleY !== 1 ) {
-			hasTransform = true ;
-			canvasCtx.save() ;
+			if ( ! shouldRestore ) {
+				canvasCtx.save() ;
+				shouldRestore = true ;
+			}
 
 			if ( scaleX !== 1 || scaleY !== 1 ) { canvasCtx.scale( scaleX , scaleY ) ; }
 			if ( translateX || translateY ) { canvasCtx.translate( translateX , translateY ) ; }
@@ -7750,7 +7774,7 @@ VGEntity.prototype.renderCanvas = async function( canvasCtx , options , isRedraw
 	}
 
 	// Restore, removing transformations
-	if ( hasTransform ) { canvasCtx.restore() ; }
+	if ( shouldRestore ) { canvasCtx.restore() ; }
 
 	//if ( this.root === this ) { console.warn( "<<< root renderCanvas()" , isRedraw ? 'redraw' : 'draw' ) ; }
 	this.needFullDraw = false ;
@@ -43850,7 +43874,7 @@ unicode.isEmojiModifierCodePoint = code =>
 },{"./json-data/unicode-emoji-width-ranges.json":114}],117:[function(require,module,exports){
 module.exports={
   "name": "svg-kit",
-  "version": "0.8.0",
+  "version": "0.8.2",
   "description": "A SVG toolkit, with its own Vector Graphics structure, multiple renderers (svg text, DOM svg, canvas), and featuring Flowing Text.",
   "main": "lib/svg-kit.js",
   "directories": {
