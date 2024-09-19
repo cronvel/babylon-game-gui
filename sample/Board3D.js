@@ -25,6 +25,7 @@ function createTileVg( id = null ) {
 			x: radius ,
 			y: radius ,
 			radius ,
+			angleDeg: 90 ,
 			sides: 6
 		}
 	} ) ;
@@ -36,9 +37,32 @@ function createTileVg( id = null ) {
 	vg.viewBox.set( boundingBox ) ;
 	console.warn( vg ) ;
 
+	var hexClippedImage = new svgKit.VGClip() ;
+	vg.addEntity( hexClippedImage ) ;
+	
+	var hexClip = new svgKit.VGConvexPolygon( {
+		build: {
+			x: radius ,
+			y: radius ,
+			radius: radius * 0.95 ,
+			angleDeg: 90 ,
+			sides: 6
+		}
+	} ) ;
+	hexClippedImage.addClippingEntity( hexClip ) ;
+
+	var image = new svgKit.VGImage( {
+		x: 0 ,
+		y: 0 ,
+		width: radius * 2 ,
+		height: radius * 2 ,
+		url: './marble.webp'
+	} ) ;
+	hexClippedImage.addEntity( image ) ;
+
 	var tileName = new svgKit.VGFlowingText( {
 		x: 0.5 * radius ,
-		y: 0.25 * radius ,
+		y: 0.35 * radius ,
 		width: 1.5 * radius ,
 		height: radius ,
 		//clip: false ,
@@ -46,7 +70,7 @@ function createTileVg( id = null ) {
 		//textWrapping: 'ellipsis' ,
 		textWrapping: 'wordWrap' ,
 		attr: {
-			fontSize: 0.3 * radius ,
+			fontSize: 0.2 * radius ,
 			color: '#444' ,
 			outline: true ,
 			outlineWidth: 2
@@ -55,7 +79,12 @@ function createTileVg( id = null ) {
 	} ) ;
 	vg.addEntity( tileName ) ;
 
-	vg.set( { data: { extrusionShape: hexTile.points } } ) ;
+	vg.set( {
+		data: {
+			// set the correct origin for the future tile
+			extrusionShape: hexTile.points.map( point => ( { x: point.x - radius , y: point.y - radius } ) )
+		}
+	} ) ;
 
 	return vg ;
 }
@@ -188,6 +217,45 @@ async function createTile3d( scene , id = null ) {
 
 
 
+function turnToButton( scene , mesh ) {
+	mesh.actionManager = new BABYLON.ActionManager(scene);
+	mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, mesh.material, "wireframe", true))
+		.then(new BABYLON.SetValueAction(BABYLON.ActionManager.NothingTrigger, mesh.material, "wireframe", false));
+
+	mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOutTrigger, mesh.material, "emissiveColor", mesh.material.emissiveColor));
+	mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOverTrigger, mesh.material, "emissiveColor", BABYLON.Color3.White()));
+	mesh.actionManager.registerAction(new BABYLON.InterpolateValueAction(BABYLON.ActionManager.OnPointerOutTrigger, mesh, "scaling", new BABYLON.Vector3(1, 1, 1), 150));
+	mesh.actionManager.registerAction(new BABYLON.InterpolateValueAction(BABYLON.ActionManager.OnPointerOverTrigger, mesh, "scaling", new BABYLON.Vector3(1.1, 1.1, 1.1), 150));
+}
+
+
+
+async function createBoard3d( scene ) {
+	var sqrt3 = Math.sqrt( 3 ) ,
+		sqrt3_2 = sqrt3 * 0.5 ,
+		tiles = [] ,
+		delta = 2 * sqrt3_2 * 1.075 ,
+		startingX = - 10 ,
+		startingZ = - 6 ;
+
+	for ( let j = 0 ; j < 5 ; j ++ ) {
+		let z = startingZ + delta * sqrt3 * j ;
+
+		for ( let i = 0 ; i < 5 ; i ++ ) {
+			let x = startingX + delta * ( 2 * i + ( j % 2 ? 2 : 1 ) ) ;
+			let tile3d = await createTile3d( scene , i + '-' + j ) ;
+			tile3d.position.x = x ;
+			tile3d.position.z = z ;
+			turnToButton( scene , tile3d ) ;
+			tiles.push( tile3d ) ;
+		}
+	}
+	
+	return tiles ;
+}
+
+
+
 function displayWireframe( scene ) {
 	// Modify mesh's geometry to prepare for TRIANGLES mode in plugin
 	for ( let mesh of scene.meshes ) {
@@ -212,7 +280,7 @@ async function createScene() {
 
 	// This creates and positions a free camera (non-mesh)
 	//var camera = new BABYLON.FreeCamera( "camera1" , new BABYLON.Vector3( 0 , 5 , - 10 ) , scene ) ;
-	var camera = new BABYLON.ArcRotateCamera("Camera", 3 * Math.PI / 2, Math.PI / 3, 10, BABYLON.Vector3.Zero());
+	var camera = new BABYLON.ArcRotateCamera("Camera", 3 * Math.PI / 2, Math.PI / 4, 20, BABYLON.Vector3.Zero());
 
 	// This targets the camera to scene origin
 	//camera.setTarget( BABYLON.Vector3.Zero() ) ;
@@ -229,11 +297,13 @@ async function createScene() {
 	light.intensity = 0.7 ;
 
 	// Our built-in 'ground' shape.
+	/*
 	var ground = BABYLON.MeshBuilder.CreateGround( "ground" , { width: 6 , height: 6 } , scene ) ;
 	var material = new BABYLON.StandardMaterial("material", scene);
 	material.diffuseTexture = new BABYLON.Texture("/sample/uv-white.png");
 	material.ambientColor = new BABYLON.Color3(1, 1, 1);
 	ground.material = material;
+	//*/
 
 	// GUI
 	var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI( 'UI' ) ;
@@ -245,7 +315,10 @@ async function createScene() {
 	//await svgKit.fontLib.preloadFontFamily( 'serif' ) ;
 
 
-	let tile3d = await createTile3d( scene , 0 ) ;
+
+	let board3d = await createBoard3d( scene ) ;
+
+	//let tile3d = await createTile3d( scene , 0 ) ;
 
 	/*
 	for ( let i = 0 ; i < 1 ; i ++ ) {
@@ -256,7 +329,7 @@ async function createScene() {
 
 	//advancedTexture.addControl( tile3d ) ;
 
-	displayWireframe( scene ) ;
+	//displayWireframe( scene ) ;
 	
 	return scene ;
 }
