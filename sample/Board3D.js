@@ -39,7 +39,7 @@ function createTileVg( id = null ) {
 
 	var hexClippedImage = new svgKit.VGClip() ;
 	vg.addEntity( hexClippedImage ) ;
-	
+
 	var hexClip = new svgKit.VGConvexPolygon( {
 		build: {
 			x: radius ,
@@ -145,7 +145,7 @@ async function createTile3d( scene , id = null ) {
 	// Shape profile in XZ plane
 	var shapeXZ = tileVg.data.extrusionShape.map( point => new BABYLON.Vector3( point.x * shapeScale , 0 , point.y * shapeScale ) ) ;
 
-	
+
 	// It is not possible to have multiple material/texture for the same mesh,
 	// so we have to construct one single texture out of multiple VG and compute the UV mapping.
 	var faceUV = [] ,
@@ -155,7 +155,7 @@ async function createTile3d( scene , id = null ) {
 		textureHeight = Math.max( tileVg.viewBox.height , tileSideVg.viewBox.height ) ;
 
 	// BE CAREFUL, VG coordinates has Y-down, while UV has Y-up, so it is more complicated...
-	
+
 	// Top face
 	faceUV[ 0 ] = new BABYLON.Vector4(
 		0 ,
@@ -177,38 +177,38 @@ async function createTile3d( scene , id = null ) {
 		tileVg.viewBox.width / textureWidth ,
 		1 ,
 		0 ,
-		1 - ( tileVg.viewBox.height / textureHeight ) ,
+		1 - ( tileVg.viewBox.height / textureHeight )
 	) ;
 
-	var dynamicTexture = new BABYLON.DynamicTexture("vgTexture", { width: textureWidth , height: textureHeight } , scene ) ;
+	var dynamicTexture = new BABYLON.DynamicTexture( "vgTexture" , { width: textureWidth , height: textureHeight } , scene ) ;
 	//var dynamicTexture = new BABYLON.DynamicTexture("vgTexture", 256, scene ) ;
-	var ctx = dynamicTexture.getContext();
+	var ctx = dynamicTexture.getContext() ;
 	await tileVg.renderCanvas( ctx , { stretch: true , viewport: { width: tileVg.viewBox.width , height: tileVg.viewBox.height } } ) ;
 	await tileSideVg.renderCanvas( ctx , { stretch: true , viewport: { x: tileVg.viewBox.width + spacing , width: tileSideVg.viewBox.width , height: tileSideVg.viewBox.height } } ) ;
 	dynamicTexture.update() ;
 
-	var material = new BABYLON.StandardMaterial("material", scene);
-	material.diffuseTexture = new BABYLON.Texture("/sample/uv-white.png");
-	material.diffuseTexture = dynamicTexture;
-	material.ambientColor = new BABYLON.Color3(1, 1, 1);
+	var material = new BABYLON.StandardMaterial( "material" , scene ) ;
+	material.diffuseTexture = new BABYLON.Texture( "/sample/uv-white.png" ) ;
+	material.diffuseTexture = dynamicTexture ;
+	material.ambientColor = new BABYLON.Color3( 1 , 1 , 1 ) ;
 
 
 	var tile = BABYLON.MeshBuilder.ExtrudePolygon(
-		"tile3d" ,
+		"tile3d#" + id ,
 		{
 			shape: shapeXZ ,
 			// shape: [ new BABYLON.Vector3( -1 , 0 , -1 ) , new BABYLON.Vector3( -1 , 0 , 1 ) , new BABYLON.Vector3( 1 , 0 , 1 ) , new BABYLON.Vector3( 1 , 0 , -1 ) ] ,
 			closeShape: true ,
 			depth: 1 ,
 			//sideOrientation: BABYLON.Mesh.DOUBLESIDE ,
-			faceUV ,
+			faceUV
 		} ,
 		scene
 	) ;
 
 	//tile.rotation.x = - Math.PI / 2 ;
 	tile.position.y = 0.5 ;
-	tile.material = material;
+	tile.material = material ;
 
 	console.warn( "Tile" , tile ) ;
 
@@ -218,14 +218,20 @@ async function createTile3d( scene , id = null ) {
 
 
 function turnToButton( scene , mesh ) {
-	mesh.actionManager = new BABYLON.ActionManager(scene);
-	mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPickTrigger, mesh.material, "wireframe", true))
-		.then(new BABYLON.SetValueAction(BABYLON.ActionManager.NothingTrigger, mesh.material, "wireframe", false));
+	const ActionManager = BABYLON.ActionManager ;
 
-	mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOutTrigger, mesh.material, "emissiveColor", mesh.material.emissiveColor));
-	mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOverTrigger, mesh.material, "emissiveColor", BABYLON.Color3.White()));
-	mesh.actionManager.registerAction(new BABYLON.InterpolateValueAction(BABYLON.ActionManager.OnPointerOutTrigger, mesh, "scaling", new BABYLON.Vector3(1, 1, 1), 150));
-	mesh.actionManager.registerAction(new BABYLON.InterpolateValueAction(BABYLON.ActionManager.OnPointerOverTrigger, mesh, "scaling", new BABYLON.Vector3(1.1, 1.1, 1.1), 150));
+	mesh.actionManager = new ActionManager( scene ) ;
+	
+	//mesh.actionManager.registerAction( new BABYLON.SetValueAction( ActionManager.OnPickTrigger , mesh.material , "wireframe" , true ) )
+	//	.then( new BABYLON.SetValueAction( ActionManager.NothingTrigger , mesh.material , "wireframe" , false ) ) ;
+
+	//mesh.actionManager.registerAction( new BABYLON.ExecuteCodeAction( ActionManager.OnPickTrigger , () => alert( "Mesh: " + mesh.name ) ) ) ;
+	mesh.actionManager.registerAction( new BABYLON.ExecuteCodeAction( ActionManager.OnPickTrigger , () => console.log( "Mesh: " + mesh.name ) ) ) ;
+
+	mesh.actionManager.registerAction( new BABYLON.SetValueAction( ActionManager.OnPointerOutTrigger , mesh.material , "emissiveColor" , mesh.material.emissiveColor ) ) ;
+	mesh.actionManager.registerAction( new BABYLON.SetValueAction( ActionManager.OnPointerOverTrigger , mesh.material , "emissiveColor" , BABYLON.Color3.White() ) ) ;
+	mesh.actionManager.registerAction( new BABYLON.InterpolateValueAction( ActionManager.OnPointerOutTrigger , mesh , "scaling" , new BABYLON.Vector3( 1 , 1 , 1 ) , 150 ) ) ;
+	mesh.actionManager.registerAction( new BABYLON.InterpolateValueAction( ActionManager.OnPointerOverTrigger , mesh , "scaling" , new BABYLON.Vector3( 1.1 , 1.1 , 1.1 ) , 150 ) ) ;
 }
 
 
@@ -250,7 +256,7 @@ async function createBoard3d( scene ) {
 			tiles.push( tile3d ) ;
 		}
 	}
-	
+
 	return tiles ;
 }
 
@@ -266,11 +272,11 @@ function displayWireframe( scene ) {
 	for ( let material of scene.materials ) {
 		let plugin = new BABYLON.MeshDebugPluginMaterial( material , {
 			mode: BABYLON.MeshDebugMode.TRIANGLES ,
-			wireframeTrianglesColor: new BABYLON.Color3(1, 0, 1) ,
+			wireframeTrianglesColor: new BABYLON.Color3( 1 , 0 , 1 ) ,
 			wireframeThickness: 1
 		} ) ;
 	}
-};
+}
 
 
 
@@ -280,7 +286,7 @@ async function createScene() {
 
 	// This creates and positions a free camera (non-mesh)
 	//var camera = new BABYLON.FreeCamera( "camera1" , new BABYLON.Vector3( 0 , 5 , - 10 ) , scene ) ;
-	var camera = new BABYLON.ArcRotateCamera("Camera", 3 * Math.PI / 2, Math.PI / 4, 20, BABYLON.Vector3.Zero());
+	var camera = new BABYLON.ArcRotateCamera( "Camera" , 3 * Math.PI / 2 , Math.PI / 4 , 20 , BABYLON.Vector3.Zero() ) ;
 
 	// This targets the camera to scene origin
 	//camera.setTarget( BABYLON.Vector3.Zero() ) ;
@@ -288,7 +294,7 @@ async function createScene() {
 	// This attaches the camera to the canvas
 	camera.attachControl( canvas , true ) ;
 
-	scene.ambientColor = new BABYLON.Color3(0.1, 0.1, 0.1);
+	scene.ambientColor = new BABYLON.Color3( 0.1 , 0.1 , 0.1 ) ;
 
 	// This creates a light, aiming 0,1,0 - to the sky (non-mesh)
 	var light = new BABYLON.HemisphericLight( "light" , new BABYLON.Vector3( 0 , 1 , 0 ) , scene ) ;
@@ -330,7 +336,7 @@ async function createScene() {
 	//advancedTexture.addControl( tile3d ) ;
 
 	//displayWireframe( scene ) ;
-	
+
 	return scene ;
 }
 
