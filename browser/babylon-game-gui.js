@@ -64,7 +64,7 @@ BABYLON.GUI.Card = Card ;
 BABYLON.RegisterClass( 'BABYLON.GUI.Card' , Card ) ;
 
 
-},{"./VG.js":6,"seventh":17,"svg-kit":54}],2:[function(require,module,exports){
+},{"./VG.js":6,"seventh":17,"svg-kit":65}],2:[function(require,module,exports){
 /*
 	Babylon Game GUI
 
@@ -1126,7 +1126,7 @@ BABYLON.GUI.FlowingText = FlowingText ;
 BABYLON.RegisterClass( 'BABYLON.GUI.FlowingText' , FlowingText ) ;
 
 
-},{"./VG.js":6,"seventh":17,"svg-kit":54}],5:[function(require,module,exports){
+},{"./VG.js":6,"seventh":17,"svg-kit":65}],5:[function(require,module,exports){
 /*
 	Babylon Game GUI
 
@@ -1691,7 +1691,7 @@ BABYLON.GUI.VG = VG ;
 BABYLON.RegisterClass( 'BABYLON.GUI.VG' , VG ) ;
 
 
-},{"seventh":17,"svg-kit":54}],7:[function(require,module,exports){
+},{"seventh":17,"svg-kit":65}],7:[function(require,module,exports){
 /*
 	Babylon Game GUI
 
@@ -1735,7 +1735,7 @@ exports.HandPanel = require( './HandPanel.js' ) ;
 exports.setFontUrl = ( ... args ) => svgKit.fontLib.setFontUrl( ... args ) ;
 
 
-},{"./Card.js":1,"./DecoratedContainer.js":2,"./Dialog.js":3,"./FlowingText.js":4,"./HandPanel.js":5,"./VG.js":6,"./helpers.js":8,"svg-kit":54}],8:[function(require,module,exports){
+},{"./Card.js":1,"./DecoratedContainer.js":2,"./Dialog.js":3,"./FlowingText.js":4,"./HandPanel.js":5,"./VG.js":6,"./helpers.js":8,"svg-kit":65}],8:[function(require,module,exports){
 /*
 	Babylon Game GUI
 
@@ -2077,7 +2077,7 @@ helpers.areControlsOverlaping = ( control1 , control2 ) => {
 }(typeof self === "undefined" ? typeof global === "undefined" ? this : global : self));
 
 }).call(this)}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"_process":124}],10:[function(require,module,exports){
+},{"_process":135}],10:[function(require,module,exports){
 /*
 	Seventh
 
@@ -3785,7 +3785,7 @@ if ( process.browser ) {
 
 
 }).call(this)}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("timers").setImmediate)
-},{"_process":124,"setimmediate":9,"timers":125}],14:[function(require,module,exports){
+},{"_process":135,"setimmediate":9,"timers":136}],14:[function(require,module,exports){
 /*
 	Seventh
 
@@ -4587,7 +4587,7 @@ Promise.resolveSafeTimeout = function( timeout , value ) {
 
 
 }).call(this)}).call(this,require('_process'))
-},{"./seventh.js":17,"_process":124}],16:[function(require,module,exports){
+},{"./seventh.js":17,"_process":135}],16:[function(require,module,exports){
 /*
 	Seventh
 
@@ -4852,7 +4852,7 @@ Promise.onceEventAllOrError = ( emitter , eventName , excludeEvents ) => {
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -4879,7 +4879,7 @@ Promise.onceEventAllOrError = ( emitter , eventName , excludeEvents ) => {
 
 
 
-function BoundingBox( xmin = 0 , ymin = 0 , xmax = 0 , ymax = 0 ) {
+function BoundingBox( xmin = 0 , ymin = 0 , xmax = xmin , ymax = ymin ) {
 	this.xmin = 0 ;
 	this.ymin = 0 ;
 	this.xmax = 0 ;
@@ -4887,6 +4887,12 @@ function BoundingBox( xmin = 0 , ymin = 0 , xmax = 0 , ymax = 0 ) {
 
 	if ( xmin && typeof xmin === 'object' ) {
 		this.set( xmin ) ;
+	}
+	else if ( xmin === null ) {
+		this.xmin = Infinity ;
+		this.xmax = - Infinity ;
+		this.ymin = Infinity ;
+		this.ymax = - Infinity ;
 	}
 	else {
 		this.xmin = xmin ;
@@ -4917,6 +4923,32 @@ BoundingBox.prototype.set = function( params ) {
 	if ( params.y !== undefined ) { this.y = params.y ; }
 	if ( params.width !== undefined ) { this.width = params.width ; }
 	if ( params.height !== undefined ) { this.height = params.height ; }
+} ;
+
+
+
+// Shorter update lines
+BoundingBox.prototype.setMinMax = function( xmin = 0 , ymin = 0 , xmax = xmin , ymax = ymin ) {
+	this.xmin = xmin ;
+	this.ymin = ymin ;
+	this.xmax = xmax ;
+	this.ymax = ymax ;
+} ;
+
+
+
+// Prepare a bounding box for a sequence of .merge()/.ensurePoint(), making it invert-infinitely large
+BoundingBox.prototype.nullify = function() {
+    this.xmin = Infinity ;
+    this.xmax = - Infinity ;
+    this.ymin = Infinity ;
+    this.ymax = - Infinity ;
+} ;
+
+
+
+BoundingBox.prototype.isNull = function() {
+	return this.xmin === Infinity && this.xmax === - Infinity && this.ymin === Infinity && this.ymax === - Infinity ;
 } ;
 
 
@@ -4969,11 +5001,44 @@ BoundingBox.prototype.clone = function() {
 
 
 
+// Merge two bounding box
 BoundingBox.prototype.merge = function( bbox ) {
 	this.xmin = Math.min( this.xmin , bbox.xmin ) ;
 	this.ymin = Math.min( this.ymin , bbox.ymin ) ;
 	this.xmax = Math.max( this.xmax , bbox.xmax ) ;
 	this.ymax = Math.max( this.ymax , bbox.ymax ) ;
+} ;
+
+
+
+BoundingBox.prototype.mergeArray = function( bboxList ) {
+	for ( let bbox of bboxList ) {
+		this.xmin = Math.min( this.xmin , bbox.xmin ) ;
+		this.ymin = Math.min( this.ymin , bbox.ymin ) ;
+		this.xmax = Math.max( this.xmax , bbox.xmax ) ;
+		this.ymax = Math.max( this.ymax , bbox.ymax ) ;
+	}
+} ;
+
+
+
+// Ensure that the bounding box includes a point, like .merge() but for singularity
+BoundingBox.prototype.ensurePoint = function( point ) {
+	this.xmin = Math.min( this.xmin , point.x ) ;
+	this.ymin = Math.min( this.ymin , point.y ) ;
+	this.xmax = Math.max( this.xmax , point.x ) ;
+	this.ymax = Math.max( this.ymax , point.y ) ;
+} ;
+
+
+
+BoundingBox.prototype.ensurePointArray = function( pointList ) {
+	for ( let point of pointList ) {
+		this.xmin = Math.min( this.xmin , point.x ) ;
+		this.ymin = Math.min( this.ymin , point.y ) ;
+		this.xmax = Math.max( this.xmax , point.x ) ;
+		this.ymax = Math.max( this.ymax , point.y ) ;
+	}
 } ;
 
 
@@ -5047,7 +5112,7 @@ BoundingBox.prototype.shrink = function( value , min = 0 ) {
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -5074,14 +5139,15 @@ BoundingBox.prototype.shrink = function( value , min = 0 ) {
 
 
 
-const pathUtilities = require( './path-utilities.js' ) ;
+const Polygon = require( './Polygon.js' ) ;
+const BoundingBox = require( './BoundingBox.js' ) ;
 
 
 
 function ConvexPolygon( params ) {
-	// Note: all properties should be copied to VGConvexPolygon as well
 	this.points = [] ;
 	this.sides = [] ;
+	this.boundingBox = new BoundingBox( null ) ;
 	this.clockwise = true ;
 	this.autofix = false ;
 	this.badConvexPolygon = false ;
@@ -5091,85 +5157,23 @@ function ConvexPolygon( params ) {
 
 module.exports = ConvexPolygon ;
 
+ConvexPolygon.prototype = Object.create( Polygon.prototype ) ;
+ConvexPolygon.prototype.constructor = ConvexPolygon ;
+ConvexPolygon.prototype.__prototypeUID__ = 'svg-kit/ConvexPolygon' ;
+ConvexPolygon.prototype.__prototypeVersion__ = require( '../package.json' ).version ;
+
 
 
 ConvexPolygon.prototype.set = function( params ) {
-	if ( params.points ) { this.setPoints( params.points ) ; }
+	Polygon.prototype.set.call( this , params ) ;
 	if ( typeof params.clockwise === 'boolean' ) { this.clockwise = params.clockwise ; }
 } ;
 
 
 
 ConvexPolygon.prototype.setPoints = function( points ) {
-	this.points.length = 0 ;
-	this.sides.length = 0 ;
-
-	if ( ! Array.isArray( points ) ) { return ; }
-	for ( let point of points ) { this.addPoint( point , true ) ; }
-	this.addClosingSide() ;
-
+	Polygon.prototype.setPoints.call( this , points ) ;
 	if ( this.autofix ) { this.fixConvexPolygon() ; }
-} ;
-
-
-
-ConvexPolygon.prototype.addPoint = function( point , noClosingSide = false ) {
-	if ( ! point || typeof point !== 'object' ) { return ; }
-
-	this.points.push( {
-		x: + point.x || 0 ,
-		y: + point.y || 0
-	} ) ;
-
-	this.addLastSide() ;
-	if ( ! noClosingSide ) { this.addClosingSide() ; }
-} ;
-
-
-
-ConvexPolygon.prototype.addLastSide = function() {
-	var count = this.points.length ;
-	if ( count <= 1 ) { return ; }
-	this.sides[ count - 2 ] = this.getParametricLineParameters( this.points[ count - 2 ] , this.points[ count - 1 ] ) ;
-} ;
-
-
-
-ConvexPolygon.prototype.addClosingSide = function() {
-	var count = this.points.length ;
-	if ( count < 3 ) { return ; }
-	this.sides[ count - 1 ] = this.getParametricLineParameters( this.points[ count - 1 ] , this.points[ 0 ] ) ;
-} ;
-
-
-
-ConvexPolygon.prototype.export = function( data = {} ) {
-	data.points = this.points.map( p => ( { x: p.x , y: p.y } ) ) ;
-	return data ;
-} ;
-
-
-
-ConvexPolygon.prototype.toD = function( invertY = false ) {
-	return pathUtilities.polygonPointsToD( this.points , invertY ) ;
-} ;
-
-
-
-/*
-	Get the parametric line equation's parameters.
-	The equation is:   ax + by + c
-	The result is =0 on the line, >0 on the left (point 1 toward point 2), <0 on the right.
-*/
-ConvexPolygon.prototype.getParametricLineParameters = function( point1 , point2 ) {
-	var dx = point2.x - point1.x ,
-		dy = point2.y - point1.y ;
-
-	return {
-		a: - dy ,
-		b: dx ,
-		c: - dx * point1.y + dy * point1.x
-	} ;
 } ;
 
 
@@ -5178,14 +5182,14 @@ ConvexPolygon.prototype.isInside = function( coords ) {
 	if ( ! this.sides.length ) { return false ; }
 
 	return this.clockwise ?
-		this.sides.every( side => ConvexPolygon.sideTest( side , coords ) <= 0 ) :
-		this.sides.every( side => ConvexPolygon.sideTest( side , coords ) >= 0 ) ;
+		this.sides.every( side => Polygon.testSideLineEquation( side , coords ) <= 0 ) :
+		this.sides.every( side => Polygon.testSideLineEquation( side , coords ) >= 0 ) ;
 } ;
 
 
 
 // Find out if the points are really clowkwise or anti-clockwise
-ConvexPolygon.prototype.fixConvexPolygon = function( coords ) {
+ConvexPolygon.prototype.fixConvexPolygon = function() {
 	if ( ! this.sides.length ) { return ; }
 
 	var clockwiseOk = true ,
@@ -5204,8 +5208,8 @@ ConvexPolygon.prototype.fixConvexPolygon = function( coords ) {
 
 			let point = this.points[ j ] ;
 
-			if ( clockwiseOk && ConvexPolygon.sideTest( side , point ) > 0 ) { clockwiseOk = false ; }
-			if ( antiClockwiseOk && ConvexPolygon.sideTest( side , point ) < 0 ) { antiClockwiseOk = false ; }
+			if ( clockwiseOk && Polygon.testSideLineEquation( side , point ) > 0 ) { clockwiseOk = false ; }
+			if ( antiClockwiseOk && Polygon.testSideLineEquation( side , point ) < 0 ) { antiClockwiseOk = false ; }
 
 			if ( ! clockwiseOk && ! antiClockwiseOk ) {
 				console.warn( "Bad convex polygon, probably not simple/convex" ) ;
@@ -5230,17 +5234,11 @@ ConvexPolygon.prototype.fixConvexPolygon = function( coords ) {
 } ;
 
 
-
-ConvexPolygon.sideTest = function( side , coords ) {
-	return side.a * coords.x + side.b * coords.y + side.c ;
-} ;
-
-
-},{"./path-utilities.js":53}],21:[function(require,module,exports){
+},{"../package.json":128,"./BoundingBox.js":19,"./Polygon.js":32}],21:[function(require,module,exports){
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -5487,11 +5485,11 @@ DynamicArea.prototype.restore = function( canvasCtx ) {
 } ;
 
 
-},{"../package.json":117,"./BoundingBox.js":19}],22:[function(require,module,exports){
+},{"../package.json":128,"./BoundingBox.js":19}],22:[function(require,module,exports){
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -5878,11 +5876,11 @@ DynamicManager.prototype.getAllBabylonControlEmittableEvents = function( eventNa
 } ;
 
 
-},{"../package.json":117,"./canvas-utilities.js":46,"nextgen-events/lib/LeanEvents.js":89,"seventh":105}],23:[function(require,module,exports){
+},{"../package.json":128,"./canvas-utilities.js":58,"nextgen-events/lib/LeanEvents.js":100,"seventh":116}],23:[function(require,module,exports){
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -5999,7 +5997,2488 @@ Metric.isEqual = function( a , b ) {
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+/*
+	Mostly derived from svg-path-properties by RogerVecianaAbzu:
+	https://github.com/rveciana/svg-path-properties/blob/master/src/bezier.ts
+*/
+
+
+
+const BoundingBox = require( '../BoundingBox.js' ) ;
+
+
+
+function Arc( startPoint , radius , xAxisRotate , largeArcFlag , sweepFlag , endPoint ) {
+	this.startPoint = startPoint ;
+	this.radius = radius ;
+	this.xAxisRotate = xAxisRotate ;
+	this.largeArcFlag = largeArcFlag ;
+	this.sweepFlag = sweepFlag ;
+	this.endPoint = endPoint ;
+
+	this.boundingBox = new BoundingBox( null ) ;
+	this.length = this.getLength( true ) ;	// <-- this will update the BBox
+}
+
+module.exports = Arc ;
+
+
+
+Arc.prototype.getLength = function( updateBBox ) {
+	if ( updateBBox ) { this.boundingBox.nullify() ; }
+
+	const lengthProperties = this.approximateArcLengthOfCurve(
+		300 ,
+		t => this.pointOnEllipticalArc(
+			this.startPoint ,
+			this.radius ,
+			this.xAxisRotate ,
+			this.largeArcFlag ,
+			this.sweepFlag ,
+			this.endPoint ,
+			t
+		) ,
+		updateBBox ? this.boundingBox : null
+	) ;
+
+	return lengthProperties.arcLength ;
+} ;
+
+
+
+Arc.prototype.getPointAtLength = function( length ) {
+	if ( length === 0 ) { return { x: this.startPoint.x , y: this.startPoint.y } ; }
+	if ( length === this.length ) { return { x: this.endPoint.x , y: this.endPoint.y } ; }
+
+	const position = this.pointOnEllipticalArc(
+		this.startPoint ,
+		this.radius ,
+		this.xAxisRotate ,
+		this.largeArcFlag ,
+		this.sweepFlag ,
+		this.endPoint ,
+		length / this.length
+	) ;
+
+	return { x: position.x , y: position.y } ;
+} ;
+
+
+
+Arc.prototype.getTangentAtLength = function( length ) {
+	const delta = 0.001 * ( Math.min( this.radius.x , this.radius.y ) || this.length ) ; // should manage degenerate case
+	const p1 = this.getPointAtLength( length - delta ) ;
+	const p2 = this.getPointAtLength( length + delta ) ;
+	const dx = p2.x - p1.x ;
+	const dy = p2.y - p1.y ;
+	const dist = Math.sqrt( dx * dx + dy * dy ) ;
+
+	return {
+		x: dx / dist ,
+		y: dy / dist ,
+		angle: Math.atan2( dy , dx )
+	} ;
+} ;
+
+
+
+// Position + Tangent + Angle (radians)
+Arc.prototype.getPropertiesAtLength = function( length ) {
+	const point = this.getPointAtLength( length ) ;
+	const tangent = this.getTangentAtLength( length ) ;
+
+	return {
+		x: point.x ,
+		y: point.y ,
+		dx: tangent.x ,
+		dy: tangent.y ,
+		angle: tangent.angle
+	} ;
+} ;
+
+
+
+
+Arc.pointOnEllipticalArc =
+Arc.prototype.pointOnEllipticalArc = function( p0 , radius , xAxisRotation , largeArcFlag , sweepFlag , p1 , t ) {
+	// In accordance to: http://www.w3.org/TR/SVG/implnote.html#ArcOutOfRangeParameters
+	let rx = Math.abs( radius.x ) ,
+		ry = Math.abs( radius.y ) ,
+		xAxisRotationRadians = toRadians( mod( xAxisRotation , 360 ) ) ;
+
+	// If the endpoints are identical, then this is equivalent to omitting the elliptical arc segment entirely.
+	if ( p0.x === p1.x && p0.y === p1.y ) {
+		return { x: p0.x , y: p0.y , ellipticalArcAngle: 0 } ; // Check if angle is correct
+	}
+
+	// If rx = 0 or ry = 0 then this arc is treated as a straight line segment joining the endpoints.
+	if ( rx === 0 || ry === 0 ) {
+		//return this.pointOnLine(p0, p1, t);
+		return { x: 0 , y: 0 , ellipticalArcAngle: 0 } ; // Check if angle is correct
+	}
+
+	// Following "Conversion from endpoint to center parameterization"
+	// http://www.w3.org/TR/SVG/implnote.html#ArcConversionEndpointToCenter
+
+	// Step #1: Compute transformedPoint
+	const dx = ( p0.x - p1.x ) / 2 ;
+	const dy = ( p0.y - p1.y ) / 2 ;
+	const transformedPoint = {
+		x: Math.cos( xAxisRotationRadians ) * dx + Math.sin( xAxisRotationRadians ) * dy ,
+		y: - Math.sin( xAxisRotationRadians ) * dx + Math.cos( xAxisRotationRadians ) * dy
+	} ;
+	// Ensure radii are large enough
+	const radiiCheck =
+    Math.pow( transformedPoint.x , 2 ) / Math.pow( rx , 2 ) +
+    Math.pow( transformedPoint.y , 2 ) / Math.pow( ry , 2 ) ;
+	if ( radiiCheck > 1 ) {
+		rx = Math.sqrt( radiiCheck ) * rx ;
+		ry = Math.sqrt( radiiCheck ) * ry ;
+	}
+
+	// Step #2: Compute transformedCenter
+	const cSquareNumerator =
+    Math.pow( rx , 2 ) * Math.pow( ry , 2 ) -
+    Math.pow( rx , 2 ) * Math.pow( transformedPoint.y , 2 ) -
+    Math.pow( ry , 2 ) * Math.pow( transformedPoint.x , 2 ) ;
+	const cSquareRootDenom =
+    Math.pow( rx , 2 ) * Math.pow( transformedPoint.y , 2 ) +
+    Math.pow( ry , 2 ) * Math.pow( transformedPoint.x , 2 ) ;
+	let cRadicand = cSquareNumerator / cSquareRootDenom ;
+	// Make sure this never drops below zero because of precision
+	cRadicand = cRadicand < 0 ? 0 : cRadicand ;
+	const cCoef = ( largeArcFlag !== sweepFlag ? 1 : - 1 ) * Math.sqrt( cRadicand ) ;
+	const transformedCenter = {
+		x: cCoef * ( ( rx * transformedPoint.y ) / ry ) ,
+		y: cCoef * ( - ( ry * transformedPoint.x ) / rx )
+	} ;
+
+	// Step #3: Compute center
+	const center = {
+		x:
+      Math.cos( xAxisRotationRadians ) * transformedCenter.x -
+      Math.sin( xAxisRotationRadians ) * transformedCenter.y +
+      ( p0.x + p1.x ) / 2 ,
+		y:
+      Math.sin( xAxisRotationRadians ) * transformedCenter.x +
+      Math.cos( xAxisRotationRadians ) * transformedCenter.y +
+      ( p0.y + p1.y ) / 2
+	} ;
+
+	// Step #4: Compute start/sweep angles
+	// Start angle of the elliptical arc prior to the stretch and rotate operations.
+	// Difference between the start and end angles
+	const startVector = {
+		x: ( transformedPoint.x - transformedCenter.x ) / rx ,
+		y: ( transformedPoint.y - transformedCenter.y ) / ry
+	} ;
+	const startAngle = angleBetween(
+		{
+			x: 1 ,
+			y: 0
+		} ,
+		startVector
+	) ;
+
+	const endVector = {
+		x: ( - transformedPoint.x - transformedCenter.x ) / rx ,
+		y: ( - transformedPoint.y - transformedCenter.y ) / ry
+	} ;
+	let sweepAngle = angleBetween( startVector , endVector ) ;
+
+	if ( ! sweepFlag && sweepAngle > 0 ) {
+		sweepAngle -= 2 * Math.PI ;
+	}
+	else if ( sweepFlag && sweepAngle < 0 ) {
+		sweepAngle += 2 * Math.PI ;
+	}
+	// We use % instead of `mod(..)` because we want it to be -360deg to 360deg(but actually in radians)
+	sweepAngle %= 2 * Math.PI ;
+
+	// From http://www.w3.org/TR/SVG/implnote.html#ArcParameterizationAlternatives
+	const angle = startAngle + sweepAngle * t ;
+	const ellipseComponentX = rx * Math.cos( angle ) ;
+	const ellipseComponentY = ry * Math.sin( angle ) ;
+
+	const point = {
+		x:
+      Math.cos( xAxisRotationRadians ) * ellipseComponentX -
+      Math.sin( xAxisRotationRadians ) * ellipseComponentY +
+      center.x ,
+		y:
+      Math.sin( xAxisRotationRadians ) * ellipseComponentX +
+      Math.cos( xAxisRotationRadians ) * ellipseComponentY +
+      center.y ,
+		ellipticalArcStartAngle: startAngle ,
+		ellipticalArcEndAngle: startAngle + sweepAngle ,
+		ellipticalArcAngle: angle ,
+		ellipticalArcCenter: center ,
+		resultantRx: rx ,
+		resultantRy: ry
+	} ;
+
+	return point ;
+} ;
+
+
+
+Arc.approximateArcLengthOfCurve =
+Arc.prototype.approximateArcLengthOfCurve = function( resolution , pointOnCurveFunc , boundingBox = null )  {
+	// Resolution is the number of segments we use
+	resolution = resolution ? resolution : 500 ;
+
+	let resultantArcLength = 0 ;
+	const arcLengthMap = [] ;
+	const approximationLines = [] ;
+
+	let nextPoint ,
+		prevPoint = pointOnCurveFunc( 0 ) ;
+
+	if ( boundingBox ) { boundingBox.ensurePoint( prevPoint ) ; }
+
+	for ( let i = 0 ; i < resolution ; i ++ ) {
+		const t = clamp( i * ( 1 / resolution ) , 0 , 1 ) ;
+		nextPoint = pointOnCurveFunc( t ) ;
+		if ( boundingBox ) { boundingBox.ensurePoint( nextPoint ) ; }
+		resultantArcLength += distance( prevPoint , nextPoint ) ;
+		approximationLines.push( [ prevPoint , nextPoint ] ) ;
+
+		arcLengthMap.push( {
+			t: t ,
+			arcLength: resultantArcLength
+		} ) ;
+
+		prevPoint = nextPoint ;
+	}
+
+	// Last stretch to the endpoint
+	nextPoint = pointOnCurveFunc( 1 ) ;
+	if ( boundingBox ) { boundingBox.ensurePoint( nextPoint ) ; }
+	approximationLines.push( [ prevPoint , nextPoint ] ) ;
+	resultantArcLength += distance( prevPoint , nextPoint ) ;
+	arcLengthMap.push( {
+		t: 1 ,
+		arcLength: resultantArcLength
+	} ) ;
+
+	return {
+		arcLength: resultantArcLength ,
+		arcLengthMap: arcLengthMap ,
+		approximationLines: approximationLines
+	} ;
+} ;
+
+
+
+const mod = ( x , m ) => {
+	return ( ( x % m ) + m ) % m ;
+} ;
+
+const toRadians = ( angle ) => {
+	return angle * ( Math.PI / 180 ) ;
+} ;
+
+const distance = ( p0 , p1 ) => {
+	return Math.sqrt( Math.pow( p1.x - p0.x , 2 ) + Math.pow( p1.y - p0.y , 2 ) ) ;
+} ;
+
+const clamp = ( val , min , max ) => {
+	return Math.min( Math.max( val , min ) , max ) ;
+} ;
+
+const angleBetween = ( v0 , v1 ) => {
+	const p = v0.x * v1.x + v0.y * v1.y ;
+	const n = Math.sqrt(
+		( Math.pow( v0.x , 2 ) + Math.pow( v0.y , 2 ) ) * ( Math.pow( v1.x , 2 ) + Math.pow( v1.y , 2 ) )
+	) ;
+	const sign = v0.x * v1.y - v0.y * v1.x < 0 ? - 1 : 1 ;
+	const angle = sign * Math.acos( p / n ) ;
+
+	return angle ;
+} ;
+
+
+},{"../BoundingBox.js":19}],25:[function(require,module,exports){
+/*
+	SVG Kit
+
+	Copyright (c) 2017 - 2024 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+/*
+	Mostly derived from svg-path-properties by RogerVecianaAbzu:
+	https://github.com/rveciana/svg-path-properties/blob/master/src/bezier.ts
+*/
+
+
+
+function Bezier( ... args ) {
+	// Cache those values for faster execution
+	this.xs = args.map( v => v.x ) ;
+	this.ys = args.map( v => v.y ) ;
+	this.length = this.getLength( this.xs , this.ys , 1 ) ;
+	this.boundingBox = this.getBoundingBox( this.xs , this.ys ) ;
+}
+
+module.exports = Bezier ;
+
+
+
+Bezier.prototype.getPointAtLength = function( length ) {
+	if ( length === 0 ) { return { x: this.startPoint.x , y: this.startPoint.y } ; }
+	if ( length === this.length ) { return { x: this.endPoint.x , y: this.endPoint.y } ; }
+
+	const t = this.getT( this.xs , this.ys , length ) ;
+	return this.getPoint( this.xs , this.ys , t ) ;
+} ;
+
+
+
+Bezier.prototype.getTangentAtLength = function( length ) {
+	const t = this.getT( this.xs , this.ys , length ) ;
+
+	const derivative = this.getDerivative( this.xs , this.ys , t ) ;
+	const mdl = Math.sqrt( derivative.x * derivative.x + derivative.y * derivative.y ) ;
+
+	let tangent ;
+
+	if ( mdl > 0 ) {
+		tangent = { x: derivative.x / mdl , y: derivative.y / mdl } ;
+	}
+	else {
+		tangent = { x: 0 , y: 0 } ;
+	}
+
+	tangent.angle = Math.atan2( tangent.y , tangent.x ) ;
+
+	return tangent ;
+} ;
+
+
+
+// Position + Tangent + Angle (radians)
+Bezier.prototype.getPropertiesAtLength = function( length ) {
+	const t = this.getT( this.xs , this.ys , length ) ;
+
+	let point , tangent ;
+
+	if ( length === 0 ) { point = { x: this.startPoint.x , y: this.startPoint.y } ; }
+	else if ( length === this.length ) { point = { x: this.endPoint.x , y: this.endPoint.y } ; }
+	else { point = this.getPoint( this.xs , this.ys , t ) ; }
+
+	const derivative = this.getDerivative( this.xs , this.ys , t ) ;
+	const mdl = Math.sqrt( derivative.x * derivative.x + derivative.y * derivative.y ) ;
+	
+	if ( mdl > 0 ) {
+		tangent = { x: derivative.x / mdl , y: derivative.y / mdl } ;
+	}
+	else {
+		tangent = { x: 0 , y: 0 } ;
+	}
+	
+	return {
+		x: point.x ,
+		y: point.y ,
+		dx: tangent.x ,
+		dy: tangent.y ,
+		angle: Math.atan2( tangent.y , tangent.x )
+	} ;
+} ;
+
+
+
+// Get the t value for a given length
+Bezier.prototype.getT = function( xs , ys , length ) {
+	let error = 1 ;
+	let t = length / this.length ;
+	let step = ( length - this.getLength( xs , ys , t ) ) / this.length ;
+
+	let numIterations = 0 ;
+	
+	while ( error > 0.001 ) {
+		const increasedTLength = this.getLength( xs , ys , t + step ) ;
+		const increasedTError = Math.abs( length - increasedTLength ) / this.length ;
+		if ( increasedTError < error ) {
+			error = increasedTError ;
+			t += step ;
+		}
+		else {
+			const decreasedTLength = this.getLength( xs , ys , t - step ) ;
+			const decreasedTError = Math.abs( length - decreasedTLength ) / this.length ;
+			if ( decreasedTError < error ) {
+				error = decreasedTError ;
+				t -= step ;
+			}
+			else {
+				step /= 2 ;
+			}
+		}
+
+		numIterations ++ ;
+		if ( numIterations > 500 ) {
+			break ;
+		}
+	}
+
+	return t ;
+} ;
+
+
+},{}],26:[function(require,module,exports){
+/*
+	SVG Kit
+
+	Copyright (c) 2017 - 2024 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+/*
+	Mostly derived from svg-path-properties by RogerVecianaAbzu:
+	https://github.com/rveciana/svg-path-properties/blob/master/src/bezier.ts
+*/
+
+
+
+const Bezier = require( './Bezier.js' ) ;
+const QuadraticBezier = require( './QuadraticBezier.js' ) ;
+const BoundingBox = require( '../BoundingBox.js' ) ;
+const { tValues , cValues , binomialCoefficients } = require( './bezier-values.json' ) ;
+
+
+
+function CubicBezier( startPoint , startControl , endControl , endPoint ) {
+	this.startPoint = startPoint ;
+	this.startControl = startControl ;
+	this.endControl = endControl ;
+	this.endPoint = endPoint ;
+	Bezier.call( this , startPoint , startControl , endControl , endPoint ) ;
+}
+
+module.exports = CubicBezier ;
+
+CubicBezier.prototype = Object.create( Bezier.prototype ) ;
+CubicBezier.prototype.constructor = CubicBezier ;
+
+
+
+// The parametric formula for a given axis
+function parametric( ps , t ) {
+	const mt = 1 - t ;
+	return ( mt * mt * mt * ps[0] ) + ( 3 * mt * mt * t * ps[1] ) + ( 3 * mt * t * t * ps[2] ) + ( t * t * t * ps[3] ) ;
+}
+
+
+
+CubicBezier.getPoint =
+CubicBezier.prototype.getPoint = ( xs , ys , t ) => {
+	return {
+		x: parametric( xs , t ) ,
+		y: parametric( ys , t )
+	} ;
+} ;
+
+
+
+CubicBezier.getDerivative =
+CubicBezier.prototype.getDerivative = ( xs , ys , t ) => {
+	const derivative = QuadraticBezier.getPoint(
+		[ 3 * ( xs[1] - xs[0] ) , 3 * ( xs[2] - xs[1] ) , 3 * ( xs[3] - xs[2] ) ] ,
+		[ 3 * ( ys[1] - ys[0] ) , 3 * ( ys[2] - ys[1] ) , 3 * ( ys[3] - ys[2] ) ] ,
+		t
+	) ;
+	return derivative ;
+} ;
+
+
+
+CubicBezier.getLength =
+CubicBezier.prototype.getLength = ( xs , ys , t = 1 ) => {
+	let z ;
+	let sum ;
+	let correctedT ;
+
+	/*if (xs.length >= tValues.length) {
+        throw new Error('too high n bezier');
+      }*/
+
+	const n = 20 ;
+
+	z = t / 2 ;
+	sum = 0 ;
+	for ( let i = 0 ; i < n ; i ++ ) {
+		correctedT = z * tValues[n][i] + z ;
+		sum += cValues[n][i] * cubicIteration( xs , ys , correctedT ) ;
+	}
+	return z * sum ;
+} ;
+
+
+
+function cubicIteration( xs , ys , t ) {
+	const xbase = getCurveDerivative( 1 , t , xs ) ;
+	const ybase = getCurveDerivative( 1 , t , ys ) ;
+	const combined = xbase * xbase + ybase * ybase ;
+	return Math.sqrt( combined ) ;
+}
+
+
+
+// Compute the curve derivative (hodograph) at t.
+function getCurveDerivative( derivative , t , vs ) {
+	// the derivative of any 't'-less function is zero.
+	const n = vs.length - 1 ;
+	let _vs ;
+	let value ;
+
+	if ( n === 0 ) {
+		return 0 ;
+	}
+
+	// direct values? compute!
+	if ( derivative === 0 ) {
+		value = 0 ;
+		for ( let k = 0 ; k <= n ; k ++ ) {
+			value +=
+        binomialCoefficients[n][k] *
+        Math.pow( 1 - t , n - k ) *
+        Math.pow( t , k ) *
+        vs[k] ;
+		}
+		return value ;
+	}
+	// Still some derivative? go down one order, then try
+	// for the lower order curve's.
+	_vs = new Array( n ) ;
+	for ( let k = 0 ; k < n ; k ++ ) {
+		_vs[k] = n * ( vs[k + 1] - vs[k] ) ;
+	}
+
+	return getCurveDerivative( derivative - 1 , t , _vs ) ;
+}
+
+
+
+// Derived from:For cubic bezier.
+// https://stackoverflow.com/questions/24809978/calculating-the-bounding-box-of-cubic-bezier-curve
+CubicBezier.getBoundingBox =
+CubicBezier.prototype.getBoundingBox = function( xs , ys ) {
+	let tExtrema = [] ,
+		xExtrema = [ xs[0] , xs[3] ] ,
+		yExtrema = [ ys[0] , ys[3] ] ;
+
+	getTExtrema( xs , tExtrema ) ;
+	getTExtrema( ys , tExtrema ) ;
+
+	for ( let t of tExtrema ) {
+		xExtrema.push( parametric( xs , t ) ) ;
+		yExtrema.push( parametric( ys , t ) ) ;
+	}
+
+	return new BoundingBox(
+		Math.min( ... xExtrema ) ,
+		Math.min( ... yExtrema ) ,
+		Math.max( ... xExtrema ) ,
+		Math.max( ... yExtrema )
+	) ;
+} ;
+
+/* eslint-disable camelcase */
+function getTExtrema( ps , tExtrema ) {
+	let b = 6 * ps[0] - 12 * ps[1] + 6 * ps[2] ,
+		a = - 3 * ps[0] + 9 * ps[1] - 9 * ps[2] + 3 * ps[3] ,
+		c = 3 * ps[1] - 3 * ps[0] ;
+
+	if ( Math.abs( a ) < 1e-12 ) {
+		if ( Math.abs( b ) < 1e-12 ) { return ; }
+		let t = - c / b ;
+		if ( 0 < t && t < 1 ) { tExtrema.push( t ) ; }
+		return ;
+	}
+
+	let b2ac = b * b - 4 * c * a ;
+
+	if ( b2ac < 0 ) {
+		if ( Math.abs( b2ac ) < 1e-12 ) {
+			let t = - b / ( 2 * a ) ;
+			if ( 0 < t && t < 1 ) { tExtrema.push( t ) ; }
+		}
+		return ;
+	}
+
+	let sqrt_b2ac = Math.sqrt( b2ac ) ;
+	let t1 = ( - b + sqrt_b2ac ) / ( 2 * a ) ;
+	if ( 0 < t1 && t1 < 1 ) { tExtrema.push( t1 ) ; }
+
+	let t2 = ( - b - sqrt_b2ac ) / ( 2 * a ) ;
+	if ( 0 < t2 && t2 < 1 ) { tExtrema.push( t2 ) ; }
+}
+
+
+},{"../BoundingBox.js":19,"./Bezier.js":25,"./QuadraticBezier.js":30,"./bezier-values.json":31}],27:[function(require,module,exports){
+/*
+	SVG Kit
+
+	Copyright (c) 2017 - 2024 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+const BoundingBox = require( '../BoundingBox.js' ) ;
+
+
+
+function Line( startPoint , endPoint ) {
+	this.startPoint = startPoint ;
+	this.endPoint = endPoint ;
+	this.length = this.getLength() ;
+
+	this.boundingBox = new BoundingBox( null ) ;
+	this.boundingBox.ensurePoint( startPoint ) ;
+	this.boundingBox.ensurePoint( endPoint ) ;
+}
+
+module.exports = Line ;
+
+
+
+Line.prototype.getLength = function( t = 1 ) {
+	let dx = this.endPoint.x - this.startPoint.x ,
+		dy = this.endPoint.y - this.startPoint.y ;
+
+	return t * Math.sqrt( dx * dx + dy * dy ) ;
+} ;
+
+
+
+Line.prototype.getPointAtLength = function( length ) {
+	if ( length === 0 ) { return { x: this.startPoint.x , y: this.startPoint.y } ; }
+	if ( length === this.length ) { return { x: this.endPoint.x , y: this.endPoint.y } ; }
+	
+	let dx = this.endPoint.x - this.startPoint.x ,
+		dy = this.endPoint.y - this.startPoint.y ,
+		t = length / this.length || 0 ;
+
+	return {
+		x: this.startPoint.x + t * dx ,
+		y: this.startPoint.y + t * dy
+	} ;
+} ;
+
+
+
+// No argument, it does not depend on the length, it's always the same
+Line.prototype.getTangentAtLength = function() {
+	let dx = this.endPoint.x - this.startPoint.x ,
+		dy = this.endPoint.y - this.startPoint.y ;
+
+	return {
+		x: dx / this.length || 0 ,
+		y: dy / this.length || 0 ,
+		angle: Math.atan2( dy , dx )
+	} ;
+} ;
+
+
+
+// Position + Tangent + Angle (radians)
+Line.prototype.getPropertiesAtLength = function( length ) {
+	var point = this.getPointAtLength( length ) ;
+	var tangent = this.getTangentAtLength() ;
+
+	return {
+		x: point.x ,
+		y: point.y ,
+		dx: tangent.x ,
+		dy: tangent.y ,
+		angle: tangent.angle
+	} ;
+} ;
+
+
+},{"../BoundingBox.js":19}],28:[function(require,module,exports){
+/*
+	SVG Kit
+
+	Copyright (c) 2017 - 2024 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+// Dummy class, only for interface
+
+// common null bounding box?
+//const BoundingBox = require( '../BoundingBox.js' ) ;
+//const BOUNDING_BOX = new BoundingBox( null ) ;
+
+function Move( endPoint ) {
+	this.endPoint = endPoint ;
+	this.length = 0 ;
+	//this.boundingBox = BOUNDING_BOX ;
+}
+
+module.exports = Move ;
+
+Move.prototype.getLength = function() { return 0 ; } ;
+
+Move.prototype.getPointAtLength = function() {
+	return {
+		x: this.endPoint.x ,
+		y: this.endPoint.y
+	} ;
+} ;
+
+Move.prototype.getTangentAtLength = function() {
+	return {
+		x: 0 ,
+		y: 0 ,
+		angle: 0
+	} ;
+} ;
+
+Move.prototype.getPropertiesAtLength = function() {
+	return {
+		x: this.endPoint.x ,
+		y: this.endPoint.y ,
+		dx: 0 ,
+		dy: 0 ,
+		angle: 0
+	} ;
+} ;
+
+
+},{}],29:[function(require,module,exports){
+/*
+	SVG Kit
+
+	Copyright (c) 2017 - 2024 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+const Move = require( './Move.js' ) ;
+const Line = require( './Line.js' ) ;
+const CubicBezier = require( './CubicBezier.js' ) ;
+const QuadraticBezier = require( './QuadraticBezier.js' ) ;
+const Arc = require( './Arc.js' ) ;
+const BoundingBox = require( '../BoundingBox.js' ) ;
+
+const degToRad = deg => deg * Math.PI / 180 ;
+const radToDeg = rad => rad * 180 / Math.PI ;
+const radToRoundedDeg = rad => Math.round( rad * 180 / Math.PI ) ;
+
+
+
+function Path( commands , invertY = false ) {
+	this.commands = [] ;
+	this.invertY = invertY ;
+
+	// Computed
+	this.computeCurvesBuild = null ;
+	this.curves = [] ;
+	this.totalLength = 0 ;
+	this.polygonHull = null ;
+	this.polylineHull = null ;
+	this.boundingBox = new BoundingBox( null ) ;
+
+	if ( commands ) { this.set( commands ) ; }
+}
+
+module.exports = Path ;
+
+Path.prototype.__prototypeUID__ = 'svg-kit/Path' ;
+Path.prototype.__prototypeVersion__ = require( '../../package.json' ).version ;
+
+// Circular...
+const Polygon = require( '../Polygon.js' ) ;
+const Polyline = require( '../Polyline.js' ) ;
+
+
+
+Path.prototype.set = function( commands ) {
+	if ( ! Array.isArray( commands ) ) { return ; }
+
+	this.boundingBox.nullify() ;
+	this.polygonHull = this.polylineHull = null ;
+
+	for ( let command of commands ) {
+		if ( Path.commands[ command.type ].add ) {
+			Path.commands[ command.type ].add( this.commands , command ) ;
+		}
+	}
+} ;
+
+
+
+Path.prototype.export = function( data = {} ) {
+	if ( this.commands.length ) { data.commands = this.commands.map( command => Object.assign( {} , command ) ) ; }
+	return data ;
+} ;
+
+
+
+// Changing invertY parameter can change commands based on chirality (turtle-based commands)
+Path.prototype.setInvertY = function( invertY ) {
+	invertY = !! invertY ;
+	if ( this.invertY === invertY ) { return ; }
+	this.invertY = invertY ;
+	this.clearComputed() ;
+	this.computeCurves() ;
+} ;
+
+
+
+Path.prototype.clearComputed = function() {
+	this.computeCurvesBuild = null ;
+	this.curves.length = 0 ;
+	this.totalLength = 0 ;
+	this.polygonHull = this.polylineHull = null ;
+	this.boundingBox.nullify() ;
+} ;
+
+
+
+/*
+	This method is used to build the SVG 'd' attribute from the SVG Kit's command format.
+*/
+
+Path.prototype.toD = function() {
+	return Path.commandsToD( this.commands , this.invertY )  ;
+} ;
+
+
+
+// TODO - for an existing parser, see here:
+// https://github.com/fontello/svgpath/blob/master/lib/path_parse.js
+Path.parse = function() {} ;
+
+
+
+Path.commandsToD = ( commands , invertY = false ) => {
+	var build = {
+		invertY ,
+		d: '' ,
+		pu: false ,	// Pen Up, when true, turtle-like commands move without tracing anything
+		cx: 0 ,		// cursor position x
+		cy: 0 ,		// cursor position y
+		ca: invertY ? - Math.PI / 2 : Math.PI / 2		// cursor angle, default to positive Y-axis
+	} ;
+
+	commands.forEach( ( command , index ) => {
+		if ( ! Path.commands[ command.type ].toD ) { return ; }
+		if ( index ) { build.d += ' ' ; }
+		Path.commands[ command.type ].toD( command , build ) ;
+	} ) ;
+
+	return build.d ;
+} ;
+
+
+
+Path.prototype.computeCurves = function() {
+	if ( this.computeCurvesBuild && this.computeCurvesBuild.next >= this.commands.length ) { return ; }
+
+	if ( ! this.computeCurvesBuild ) {
+		this.computeCurvesBuild = {
+			next: 0 ,
+			invertY: this.invertY ,
+			lastCurve: null ,
+			openPoint: { x: 0 , y: 0 } ,	// The point the .close() command close to
+			pu: false ,	// Pen Up, when true, turtle-like commands move without tracing anything
+			ca: this.invertY ? - Math.PI / 2 : Math.PI / 2		// cursor angle, default to positive Y-axis
+		} ;
+	}
+
+	for ( ; this.computeCurvesBuild.next < this.commands.length ; this.computeCurvesBuild.next ++ ) {
+		let command = this.commands[ this.computeCurvesBuild.next ] ;
+
+		if ( Path.commands[ command.type ].toCurve ) {
+			let curve = Path.commands[ command.type ].toCurve( command , this.computeCurvesBuild ) ;
+
+			if ( curve ) {
+				if ( curve instanceof Move ) {
+					this.computeCurvesBuild.openPoint = { x: curve.endPoint.x , y: curve.endPoint.y } ;
+				}
+				else {
+					this.totalLength += curve.length ;
+					this.boundingBox.merge( curve.boundingBox ) ;
+				}
+
+				this.computeCurvesBuild.lastCurve = curve ;
+				this.curves.push( curve ) ;
+			}
+		}
+	}
+} ;
+
+
+
+Path.prototype.getLength = function() {
+	this.computeCurves() ;
+	return this.totalLength ;
+} ;
+
+
+
+Path.prototype.getPointAtLength = function( length , extraData = false ) {
+	this.computeCurves() ;
+
+	if ( length < 0 ) { length = 0 ; }
+	else if ( length > this.totalLength ) { length = this.totalLength ; }
+
+	var lastCurve = null ,
+		remainingLength = length ;
+
+	for ( let curve of this.curves ) {
+		if ( curve ) {
+			if ( ! ( curve instanceof Move ) ) {
+				if ( remainingLength <= curve.length ) {
+					return extraData ? curve.getPropertiesAtLength( remainingLength ) : curve.getPointAtLength( remainingLength ) ;
+				}
+
+				remainingLength -= curve.length ;
+			}
+
+			lastCurve = curve ;
+		}
+	}
+
+	// Nothing found? Return the endPoint of the last curve
+	if ( ! lastCurve ) {
+		return extraData ? { x: 0 , y: 0 , dx: 0 , dy: 0 } : { x: 0 , y: 0 } ;	// eslint-disable-line object-curly-newline
+	}
+
+	if ( lastCurve instanceof Move ) {
+		return extraData ? { x: lastCurve.endPoint.x , y: lastCurve.endPoint.y , dx: 0 , dy: 0 } : { x: lastCurve.endPoint.x , y: lastCurve.endPoint.y } ;	// eslint-disable-line object-curly-newline
+	}
+
+	// Due to floating point error, it is possible that length = totalLength  overflow
+	// This will prevent this
+	return extraData ? lastCurve.getPropertiesAtLength( lastCurve.length ) : lastCurve.getPointAtLength( lastCurve.length ) ;
+} ;
+
+
+
+const isPointEqual = ( point1 , point2 ) => point1.x === point2.x && point1.y === point2.y ;
+
+// Split on Move curve, grouping by shapes (closed or not)
+// noOpenShape: remove group that DOES NOT close to itself (that are not polygons)
+// noClosedShape: remove group that DOES close to itself (that are not polylines)
+Path.prototype.groupCurvesByShape = function( noOpenShape = false , noClosedShape = false ) {
+	var group = [] ,
+		groupList = [] ,
+		closed ;
+
+	for ( let curve of this.curves ) {
+		if ( curve instanceof Move ) {
+			if ( group.length ) {
+				closed = isPointEqual( group[ 0 ].startPoint , group[ group.length - 1 ].endPoint ) ;
+				if ( closed ? ! noClosedShape : ! noOpenShape ) {
+					groupList.push( group ) ;
+				}
+
+				group = [] ;
+			}
+		}
+		else {
+			group.push( curve ) ;
+		}
+	}
+
+	closed = isPointEqual( group[ 0 ].startPoint , group[ group.length - 1 ].endPoint ) ;
+	if ( group.length && ( closed ? ! noClosedShape : ! noOpenShape ) ) {
+		groupList.push( group ) ;
+	}
+
+	return groupList ;
+} ;
+
+
+
+/*
+	Options:
+		step: get a point every step value length
+		forceKeyPoints: boolean (default: false), if true: always add points at the begining and at the end of a path's part (aka 'cusp')
+		angleThreshold: if set, only add the point if its tangent angle has moved more than this threshold (in radian)
+		angleThresholdDeg: the same than angleThreshold, but angle is in degree
+		groupShape: boolean (default: false), if true: points are grouped by shape, if false: the produced array is flatten
+		noOpenShape: internal, used by .toPolygon(), remove points of open shape
+		noClosedShape: internal, used by .toPolyline(), remove points of closed shaped
+*/
+Path.prototype.getPoints = function( options = {} ) {
+	var step = options.step || 1 ,
+		forceKeyPoints = !! options.forceKeyPoints ,
+		angleThreshold = options.angleThresholdDeg !== undefined ? degToRad( + options.angleThresholdDeg || 0 ) : + options.angleThreshold || 0 ,
+		simplifyLines = !! angleThreshold ,
+		pointsGroups = [] ;
+
+	this.computeCurves() ;
+	
+	var length = 0 ,
+		lengthRemainder = 0 ;
+
+	for ( let group of this.groupCurvesByShape( options.noOpenShape , options.noClosedShape ) ) {
+		let data = this.getPointsOfShape( group , step , forceKeyPoints , length , lengthRemainder , simplifyLines ) ;
+		pointsGroups.push( data.points ) ;
+		length = data.endingLength ;
+		lengthRemainder = data.lengthRemainder ;
+	}
+	
+	if ( angleThreshold ) {
+		for ( let points of pointsGroups ) {
+			this.simplifyShape( points , angleThreshold ) ;
+		}
+	}
+	
+	console.warn( "getPoints():" , pointsGroups.flat() ) ;
+	return options.groupShape ? pointsGroups : pointsGroups.flat() ;
+} ;
+
+
+
+Path.prototype.getPointsOfShape = function( curveList , step , forceKeyPoints , startingLength , lengthRemainder , simplifyLines ) {
+	var pointList = [] ,
+		lastPoint = null ,
+		lengthUpToLastCurve = startingLength ,
+		lastCurveRemainder = lengthRemainder ;
+
+	for ( let curve of curveList ) {
+		let startPoint = curve.getPropertiesAtLength( 0 ) ;
+
+		if ( ! lastPoint ) {
+			startPoint.atLength = lengthUpToLastCurve ;
+			startPoint.startShape = true ;
+			if ( forceKeyPoints ) { startPoint.keyPoint = true ; }
+			pointList.push( startPoint ) ;
+			lastPoint = startPoint ;
+		}
+		else {
+			lastPoint.nextAngle = startPoint.angle ;
+		}
+
+		if ( forceKeyPoints ) {
+			let point ,
+				lengthInCurve = step ,
+				subdivision = Math.round( curve.length / step ) || 1 ,
+				everyCurveLength = curve.length / subdivision ;
+
+			if ( ! simplifyLines || ! ( curve instanceof Line ) ) {
+				for ( let i = 1 ; i < subdivision ; i ++ , lengthInCurve += everyCurveLength ) {
+					point = curve.getPropertiesAtLength( lengthInCurve ) ;
+					point.atLength = lengthUpToLastCurve + lengthInCurve ;
+					pointList.push( point ) ;
+					lastPoint = point ;
+				}
+			}
+
+			// Special case for the end of the curve, we want to avoid floating point errors
+			point = curve.getPropertiesAtLength( curve.length ) ;
+			point.atLength = lengthUpToLastCurve + curve.length ;
+			point.keyPoint = true ;
+			pointList.push( point ) ;
+			lastPoint = point ;
+			lengthUpToLastCurve += curve.length ;
+		}
+		else {
+			let lastLengthInCurve ,
+				lengthInCurve = step - lastCurveRemainder ;
+
+			for ( ; lengthInCurve <= curve.length ; lengthInCurve += step ) {
+				let point = curve.getPropertiesAtLength( lengthInCurve ) ;
+				point.atLength = lengthUpToLastCurve + lengthInCurve ;
+				lastLengthInCurve = lengthInCurve ;
+				pointList.push( point ) ;
+				lastPoint = point ;
+			}
+
+			lengthUpToLastCurve += curve.length ;
+			lastCurveRemainder = curve.length - lastLengthInCurve ;
+		}
+	}
+	
+	lastPoint.endShape = true ;
+	
+	return {
+		points: pointList ,
+		endingLength: lengthUpToLastCurve ,
+		lengthRemainder: lastCurveRemainder
+	} ;
+} ;
+
+
+
+function threePointsAngle( pointList , previousIndex , index , nextIndex ) {
+	let angle ,
+		previousPoint = pointList[ previousIndex ] ,
+		point = pointList[ index ] ,
+		nextPoint = pointList[ nextIndex ] ,
+		previousDirection = Math.atan2( point.x - previousPoint.x , point.y - previousPoint.y ) ,
+		nextDirection = Math.atan2( nextPoint.x - point.x , nextPoint.y - point.y ) ;
+	
+	// Absolute value of the angle
+	angle = Math.abs( ( previousDirection - nextDirection ) % ( 2 * Math.PI ) ) ;
+	angle = angle <= Math.PI ? angle : 2 * Math.PI - angle ;
+	return angle ;
+}
+
+Path.prototype.simplifyShape = function( pointList , angleThreshold ) {
+	var simplified = true ;
+
+	// We need a multi-pass approch here, doing it in one-shot will produce multiple consecutive points stripped
+	// and 2 consecutive points non-stripped, and so on... The previous lines eat all the “angle capital”.
+	// The removal is badly distributed.
+	// That's why a single pass should not remove consecutive points.
+	while ( simplified ) {
+		simplified = false ;
+
+		for ( let index = 1 ; index <= pointList.length - 2 ; index ++ ) {
+			// Do not remove key-points
+			if ( ! pointList[ index ].keyPoint ) {
+				let angle = threePointsAngle( pointList , index - 1 , index , index + 1 ) ;
+				//console.warn( "Angle:" , radToRoundedDeg( angle ) ) ;
+
+				if ( angle < angleThreshold ) {
+					// Now we will remove this point ONLY if the angle before and after are not
+					let angleBefore = index >= 2 ? threePointsAngle( pointList , index - 2 , index - 1 , index + 1 ) : 0 ;
+					let angleAfter = index <= pointList.length - 3 ? threePointsAngle( pointList , index - 1 , index + 1 , index + 2 ) : 0 ;
+					//console.log( "Angle before/after:" , radToRoundedDeg( angleBefore ) , radToRoundedDeg( angleAfter ) ) ;
+
+					if ( angleBefore <= angleThreshold && angleAfter <= angleThreshold ) {
+						//console.log( "==> remove it!" ) ;
+						pointList.splice( index , 1 ) ;
+						simplified = true ;
+						//index -- ;	// Can't do that, we need a mutli-pass approch
+					}
+				}
+			}
+		}
+	}
+} ;
+
+
+
+const DEFAULT_ANGLE_THRESHOLD = degToRad( 15 ) ;
+
+// Simplify the path, get a list of Polygon (only close-shapes are returned)
+Path.prototype.toPolygon = function( options = {} ) {
+	var groups = this.getPoints( {
+		step: options.step || 10 ,
+		forceKeyPoints: true ,
+		angleThreshold: ( options.angleThresholdDeg ? degToRad( + options.angleThresholdDeg || 0 ) : + options.angleThreshold || 0 ) || DEFAULT_ANGLE_THRESHOLD ,
+		noOpenShape: true ,
+		groupShape: true
+	} ) ;
+	
+	return groups.map( points => new Polygon( { points } ) ) ;
+} ;
+
+
+
+// Simplify the path, get a list of Polyline (only open-shapes are returned)
+Path.prototype.toPolyline = function( options = {} ) {
+	var groups = this.getPoints( {
+		step: options.step || 10 ,
+		forceKeyPoints: true ,
+		angleThreshold: ( options.angleThresholdDeg ? degToRad( + options.angleThresholdDeg || 0 ) : + options.angleThreshold || 0 ) || DEFAULT_ANGLE_THRESHOLD ,
+		noClosedShape: true ,
+		groupShape: true
+	} ) ;
+	
+	return groups.map( points => new Polyline( { points } ) ) ;
+} ;
+
+
+
+Path.prototype.computeHull = function() {
+	if ( ! this.polygonHull || ! this.polylineHull ) {
+		this.polygonHull = this.toPolygon() ;
+		this.polylineHull = this.toPolyline() ;
+	}
+
+	/*
+	this.boundingBox.nullify() ;
+	this.polygonHull.forEach( polygon => this.boundingBox.merge( polygon.boundingBox ) ) ;
+	this.polylineHull.forEach( polyline => this.boundingBox.merge( polyline.boundingBox ) ) ;
+	*/
+} ;
+
+
+
+Path.prototype.isInside = function( coords ) {
+	// First, check the BBox, maybe we don't have perform the more expensive polygon hull creation and test (lot of line-segments)...
+	if ( ! this.boundingBox.isInside( coords ) ) { return false ; }
+
+	if ( ! this.polygonHull ) { this.computeHull() ; }
+	return this.polygonHull.some( polygon => polygon.isInside( coords ) ) ;
+} ;
+
+
+
+/*
+	Now add path commands.
+	First, true SVG path commands.
+*/
+
+const ORIGIN = { x: 0 , y: 0 } ;
+//const radToDeg = rad => rad * 180 / Math.PI ;
+
+Path.commands = {} ;
+
+Path.commands.close = {
+	add: ( commands ) => commands.push( { type: 'close' } ) ,
+	toD: ( command , build ) => build.d += 'z' ,
+	toCurve: ( command , build ) => {
+		let lastPoint = build.lastCurve ? build.lastCurve.endPoint : ORIGIN ;
+
+		return new Line(
+			{ x: lastPoint.x , y: lastPoint.y } ,
+			{ x: build.openPoint.x , y: build.openPoint.y }
+		) ;
+	}
+} ;
+
+Path.commands.move = {
+	add: ( commands , data ) => commands.push( {
+		type: 'move' ,
+		rel: true ,
+		x: data.x || 0 ,
+		y: data.y || 0
+	} ) ,
+	toD: ( command , build ) => {
+		let y = build.invertY ? - command.y : command.y ;
+
+		if ( command.rel ) {
+			build.d += 'm ' + command.x + ' ' + y ;
+			build.cx += command.x ;
+			build.cy += y ;
+		}
+		else {
+			build.d += 'M ' + command.x + ' ' + y ;
+			build.cx = command.x ;
+			build.cy = y ;
+		}
+	} ,
+	toCurve: ( command , build ) => {
+		let lastPoint = build.lastCurve ? build.lastCurve.endPoint : ORIGIN ;
+
+		let ox = 0 , oy = 0 ;
+		if ( command.rel ) { ox = lastPoint.x ; oy = lastPoint.y ; }
+
+		return new Move(
+			{ x: ox + command.x , y: oy + command.y }
+		) ;
+	}
+} ;
+
+// Converted to 'move' (rel: false)
+Path.commands.moveTo = {
+	add: ( commands , data ) => commands.push( {
+		type: 'move' ,
+		x: data.x || 0 ,
+		y: data.y || 0
+	} )
+} ;
+
+Path.commands.line = {
+	add: ( commands , data ) => commands.push( {
+		type: 'line' ,
+		rel: true ,
+		x: data.x || 0 ,
+		y: data.y || 0
+	} ) ,
+	toD: ( command , build ) => {
+		let y = build.invertY ? - command.y : command.y ;
+
+		if ( command.rel ) {
+			build.d += 'l ' + command.x + ' ' + y ;
+			build.cx += command.x ;
+			build.cy += y ;
+		}
+		else {
+			build.d += 'L ' + command.x + ' ' + y ;
+			build.cx = command.x ;
+			build.cy = y ;
+		}
+	} ,
+	toCurve: ( command , build ) => {
+		let lastPoint = build.lastCurve ? build.lastCurve.endPoint : ORIGIN ;
+
+		let ox = 0 , oy = 0 ;
+		if ( command.rel ) { ox = lastPoint.x ; oy = lastPoint.y ; }
+
+		return new Line(
+			{ x: lastPoint.x , y: lastPoint.y } ,
+			{ x: ox + command.x , y: oy + command.y }
+		) ;
+	}
+} ;
+
+// Converted to 'line' (rel: false)
+Path.commands.lineTo = {
+	add: ( commands , data ) => commands.push( {
+		type: 'line' ,
+		x: data.x || 0 ,
+		y: data.y || 0
+	} )
+} ;
+
+Path.commands.hLine = {
+	add: ( commands , data ) => commands.push( {
+		type: 'hLine' ,
+		rel: true ,
+		x: typeof data === 'number' ? data || 0 : data.x || 0
+	} ) ,
+	toD: ( command , build ) => {
+		if ( command.rel ) {
+			build.d += 'h ' + command.x ;
+			build.cx += command.x ;
+		}
+		else {
+			build.d += 'H ' + command.x ;
+			build.cx = command.x ;
+		}
+	} ,
+	toCurve: ( command , build ) => {
+		let lastPoint = build.lastCurve ? build.lastCurve.endPoint : ORIGIN ;
+
+		let ox = 0 ;
+		if ( command.rel ) { ox = lastPoint.x ; }
+
+		return new Line(
+			{ x: lastPoint.x , y: lastPoint.y } ,
+			{ x: ox + command.x , y: lastPoint.y }
+		) ;
+	}
+} ;
+
+// Converted to 'hLine' (rel: false)
+Path.commands.hLineTo = {
+	add: ( commands , data ) => commands.push( {
+		type: 'hLine' ,
+		x: typeof data === 'number' ? data || 0 : data.x || 0
+	} )
+} ;
+
+Path.commands.vLine = {
+	add: ( commands , data ) => commands.push( {
+		type: 'vLine' ,
+		rel: true ,
+		y: typeof data === 'number' ? data || 0 : data.y || 0
+	} ) ,
+	toD: ( command , build ) => {
+		let y = build.invertY ? - command.y : command.y ;
+
+		if ( command.rel ) {
+			build.d += 'v ' + y ;
+			build.cy += y ;
+		}
+		else {
+			build.d += 'V ' + y ;
+			build.cy = y ;
+		}
+	} ,
+	toCurve: ( command , build ) => {
+		let lastPoint = build.lastCurve ? build.lastCurve.endPoint : ORIGIN ;
+
+		let oy = 0 ;
+		if ( command.rel ) { oy = lastPoint.y ; }
+
+		return new Line(
+			{ x: lastPoint.x , y: lastPoint.y } ,
+			{ x: lastPoint.x , y: oy + command.y }
+		) ;
+	}
+} ;
+
+// Converted to 'vLine' (rel: false)
+Path.commands.vLineTo = {
+	add: ( commands , data ) => commands.push( {
+		type: 'vLine' ,
+		y: typeof data === 'number' ? data || 0 : data.y || 0
+	} )
+} ;
+
+Path.commands.curve = {
+	add: ( commands , data ) => commands.push( {
+		type: 'curve' ,
+		rel: true ,
+		cx1: data.cx1 || 0 ,
+		cy1: data.cy1 || 0 ,
+		cx2: data.cx2 || 0 ,
+		cy2: data.cy2 || 0 ,
+		x: data.x || 0 ,
+		y: data.y || 0
+	} ) ,
+	toD: ( command , build ) => {
+		let cy1 = build.invertY ? - command.cy1 : command.cy1 ,
+			cy2 = build.invertY ? - command.cy2 : command.cy2 ,
+			y = build.invertY ? - command.y : command.y ;
+
+		if ( command.rel ) {
+			build.d += 'c ' + command.cx1 + ' ' + cy1 + ' ' + command.cx2 + ' ' + cy2 + ' '  + command.x + ' ' + y ;
+			build.cx += command.x ;
+			build.cy += y ;
+		}
+		else {
+			build.d += 'C ' + command.cx1 + ' ' + cy1 + ' ' + command.cx2 + ' ' + cy2 + ' '  + command.x + ' ' + y ;
+			build.cx = command.x ;
+			build.cy = y ;
+		}
+	} ,
+	toCurve: ( command , build ) => {
+		let lastPoint = build.lastCurve ? build.lastCurve.endPoint : ORIGIN ;
+
+		let ox = 0 , oy = 0 ;
+		if ( command.rel ) { ox = lastPoint.x ; oy = lastPoint.y ; }
+
+		return new CubicBezier(
+			{ x: lastPoint.x , y: lastPoint.y } ,
+			{ x: ox + command.cx1 , y: oy + command.cy1 } ,
+			{ x: ox + command.cx2 , y: oy + command.cy2 } ,
+			{ x: ox + command.x , y: oy + command.y }
+		) ;
+	}
+} ;
+
+// Converted to 'curve'
+Path.commands.curveTo = {
+	add: ( commands , data ) => commands.push( {
+		type: 'curve' ,
+		cx1: data.cx1 || 0 ,
+		cy1: data.cy1 || 0 ,
+		cx2: data.cx2 || 0 ,
+		cy2: data.cy2 || 0 ,
+		x: data.x || 0 ,
+		y: data.y || 0
+	} )
+} ;
+
+Path.commands.smoothCurve = {
+	add: ( commands , data ) => commands.push( {
+		type: 'smoothCurve' ,
+		rel: true ,
+		cx: data.cx || data.cx2 || 0 ,
+		cy: data.cy || data.cy2 || 0 ,
+		x: data.x || 0 ,
+		y: data.y || 0
+	} ) ,
+	toD: ( command , build ) => {
+		let cy = build.invertY ? - command.cy : command.cy ,
+			y = build.invertY ? - command.y : command.y ;
+
+		if ( command.rel ) {
+			build.d += 's ' + command.cx + ' ' + cy + ' ' + command.x + ' ' + y ;
+			build.cx += command.x ;
+			build.cy += y ;
+		}
+		else {
+			build.d += 'S ' + command.cx + ' ' + cy + ' ' + command.x + ' ' + y ;
+			build.cx = command.x ;
+			build.cy = y ;
+		}
+	} ,
+	toCurve: ( command , build ) => {
+		let lastPoint = build.lastCurve ? build.lastCurve.endPoint : ORIGIN ;
+		let lastControl = build.lastCurve && ( build.lastCurve instanceof CubicBezier ) ? build.lastCurve.endControl : lastPoint ;
+
+		let ox = 0 , oy = 0 ;
+		if ( command.rel ) { ox = lastPoint.x ; oy = lastPoint.y ; }
+
+		return new CubicBezier(
+			{ x: lastPoint.x , y: lastPoint.y } ,
+			{ x: 2 * lastPoint.x - lastControl.x , y: 2 * lastPoint.y - lastControl.y } ,
+			{ x: ox + command.cx , y: oy + command.cy } ,
+			{ x: ox + command.x , y: oy + command.y }
+		) ;
+	}
+} ;
+
+// Converted to 'smoothCurve'
+Path.commands.smoothCurveTo = {
+	add: ( commands , data ) => commands.push( {
+		type: 'smoothCurve' ,
+		cx: data.cx || data.cx2 || 0 ,
+		cy: data.cy || data.cy2 || 0 ,
+		x: data.x || 0 ,
+		y: data.y || 0
+	} )
+} ;
+
+// q-curve = Quadratic curve, it uses just one controle point instead of two
+Path.commands.qCurve = {
+	add: ( commands , data ) => commands.push( {
+		type: 'qCurve' ,
+		rel: true ,
+		cx: data.cx || data.cx1 || 0 ,
+		cy: data.cy || data.cy1 || 0 ,
+		x: data.x || 0 ,
+		y: data.y || 0
+	} ) ,
+	toD: ( command , build ) => {
+		let cy = build.invertY ? - command.cy : command.cy ,
+			y = build.invertY ? - command.y : command.y ;
+
+		if ( command.rel ) {
+			build.d += 'q ' + command.cx + ' ' + cy + ' ' + command.x + ' ' + y ;
+			build.cx += command.x ;
+			build.cy += y ;
+		}
+		else {
+			build.d += 'Q ' + command.cx + ' ' + cy + ' ' + command.x + ' ' + y ;
+			build.cx = command.x ;
+			build.cy = y ;
+		}
+	} ,
+	toCurve: ( command , build ) => {
+		let lastPoint = build.lastCurve ? build.lastCurve.endPoint : ORIGIN ;
+
+		let ox = 0 , oy = 0 ;
+		if ( command.rel ) { ox = lastPoint.x ; oy = lastPoint.y ; }
+
+		return new QuadraticBezier(
+			{ x: lastPoint.x , y: lastPoint.y } ,
+			{ x: ox + command.cx , y: oy + command.cy } ,
+			{ x: ox + command.x , y: oy + command.y }
+		) ;
+	}
+} ;
+
+// Converted to 'qCurve'
+Path.commands.qCurveTo = {
+	add: ( commands , data ) => commands.push( {
+		type: 'qCurve' ,
+		cx: data.cx || data.cx1 || 0 ,
+		cy: data.cy || data.cy1 || 0 ,
+		x: data.x || 0 ,
+		y: data.y || 0
+	} )
+} ;
+
+Path.commands.smoothQCurve = {
+	add: ( commands , data ) => commands.push( {
+		type: 'smoothQCurve' ,
+		rel: true ,
+		x: data.x || 0 ,
+		y: data.y || 0
+	} ) ,
+	toD: ( command , build ) => {
+		let y = build.invertY ? - command.y : command.y ;
+
+		if ( command.rel ) {
+			build.d += 't ' + command.x + ' ' + y ;
+			build.cx += command.x ;
+			build.cy += y ;
+		}
+		else {
+			build.d += 'T ' + command.x + ' ' + y ;
+			build.cx = command.x ;
+			build.cy = y ;
+		}
+	} ,
+	toCurve: ( command , build ) => {
+		let lastPoint = build.lastCurve ? build.lastCurve.endPoint : ORIGIN ;
+		let lastControl = build.lastCurve && ( build.lastCurve instanceof QuadraticBezier ) ? build.lastCurve.control : lastPoint ;
+
+		let ox = 0 , oy = 0 ;
+		if ( command.rel ) { ox = lastPoint.x ; oy = lastPoint.y ; }
+
+		return new QuadraticBezier(
+			{ x: lastPoint.x , y: lastPoint.y } ,
+			{ x: 2 * lastPoint.x - lastControl.x , y: 2 * lastPoint.y - lastControl.y } ,
+			{ x: ox + command.x , y: oy + command.y }
+		) ;
+	}
+} ;
+
+// Converted to 'smoothQCurve'
+Path.commands.smoothQCurveTo = {
+	add: ( commands , data ) => commands.push( {
+		type: 'smoothQCurve' ,
+		x: data.x || 0 ,
+		y: data.y || 0
+	} )
+} ;
+
+Path.commands.arc = {
+	add: ( commands , data ) => commands.push( {
+		type: 'arc' ,
+		rel: true ,
+		rx: data.rx || 0 ,
+		ry: data.ry || 0 ,
+		ra: data.ra || data.a || 0 ,	// x-axis rotation
+		la:
+			data.largeArc !== undefined ? !! data.largeArc :
+			data.longArc !== undefined ? !! data.longArc :
+			data.la !== undefined ? !! data.la :
+			false ,
+		pr:
+			data.positiveRotation !== undefined ? !! data.positiveRotation :
+			data.sweep !== undefined ? !! data.sweep :		// <- this is the SVG term
+			data.pr !== undefined ? !! data.pr :
+			true ,
+		x: data.x || 0 ,
+		y: data.y || 0
+	} ) ,
+	toD: ( command , build ) => {
+		let ra = build.invertY ? - command.ra : command.ra ,
+			pr = build.invertY ? ! command.pr : command.pr ,
+			y = build.invertY ? - command.y : command.y ;
+
+		if ( command.rel ) {
+			build.d += 'a ' + command.rx + ' ' + command.ry + ' ' + ra + ' ' + ( + command.la ) + ' '  + ( + pr ) + ' ' + command.x + ' ' + y ;
+			build.cx += command.x ;
+			build.cy += y ;
+		}
+		else {
+			build.d += 'A ' + command.rx + ' ' + command.ry + ' ' + ra + ' ' + ( + command.la ) + ' '  + ( + pr ) + ' ' + command.x + ' ' + y ;
+			build.cx = command.x ;
+			build.cy = y ;
+		}
+	} ,
+	toCurve: ( command , build ) => {
+		let lastPoint = build.lastCurve ? build.lastCurve.endPoint : ORIGIN ;
+
+		let ox = 0 , oy = 0 ;
+		if ( command.rel ) { ox = lastPoint.x ; oy = lastPoint.y ; }
+
+		return new Arc(
+			{ x: lastPoint.x , y: lastPoint.y } ,
+			{ x: command.rx , y: command.ry } ,
+			command.ra ,
+			command.la ,
+			command.pr ,
+			{ x: ox + command.x , y: oy + command.y }
+		) ;
+	}
+} ;
+
+// Converted to 'arc'
+Path.commands.arcTo = {
+	add: ( commands , data ) => commands.push( {
+		type: 'arc' ,
+		rx: data.rx || 0 ,
+		ry: data.ry || 0 ,
+		ra: data.ra || data.a || 0 ,	// x-axis rotation
+		la:
+			data.largeArc !== undefined ? !! data.largeArc :
+			data.longArc !== undefined ? !! data.longArc :
+			data.la !== undefined ? !! data.la :
+			false ,
+		pr:
+			data.positiveRotation !== undefined ? !! data.positiveRotation :
+			data.sweep !== undefined ? !! data.sweep :		// <- this is the SVG term
+			data.pr !== undefined ? !! data.pr :
+			true ,
+		x: data.x || 0 ,
+		y: data.y || 0
+	} )
+} ;
+
+// Converted to 'arc'
+// All angles use positive as Y-axis to X-axis (Spellcast usage)
+Path.commands.negativeArc = {
+	add: ( commands , data ) => commands.push( {
+		type: 'arc' ,
+		rel: true ,
+		rx: data.rx || 0 ,
+		ry: data.ry || 0 ,
+		ra: - ( data.ra || data.a || 0 ) ,	// x-axis rotation
+		la:
+			data.largeArc !== undefined ? !! data.largeArc :
+			data.longArc !== undefined ? !! data.longArc :
+			data.la !== undefined ? !! data.la :
+			false ,
+		pr: ! (
+			data.positiveRotation !== undefined ? !! data.positiveRotation :
+			data.sweep !== undefined ? !! data.sweep :		// <- this is the SVG term
+			data.pr !== undefined ? !! data.pr :
+			true
+		) ,
+		x: data.x || 0 ,
+		y: data.y || 0
+	} )
+} ;
+
+// Converted to 'arc'
+// All angles use positive as Y-axis to X-axis (Spellcast usage)
+Path.commands.negativeArcTo = {
+	add: ( commands , data ) => commands.push( {
+		type: 'arc' ,
+		rx: data.rx || 0 ,
+		ry: data.ry || 0 ,
+		ra: - ( data.ra || data.a || 0 ) ,	// x-axis rotation
+		la:
+			data.largeArc !== undefined ? !! data.largeArc :
+			data.longArc !== undefined ? !! data.longArc :
+			data.la !== undefined ? !! data.la :
+			false ,
+		pr: ! (
+			data.positiveRotation !== undefined ? !! data.positiveRotation :
+			data.sweep !== undefined ? !! data.sweep :		// <- this is the SVG term
+			data.pr !== undefined ? !! data.pr :
+			true
+		) ,
+		x: data.x || 0 ,
+		y: data.y || 0
+	} )
+} ;
+
+
+
+/*
+	Turtle-like commands.
+*/
+
+// Not a user command, user should use penUp or penDown
+Path.commands.pen = {
+	add: ( commands , data ) => commands.push( {
+		type: 'pen' ,
+		u: !! data.up
+	} ) ,
+	toD: ( command , build ) => {
+		build.pu = command.u ;
+	} ,
+	toCurve: ( command , build ) => {
+		build.pu = command.u ;
+	}
+} ;
+
+// Converted to 'pen'
+Path.commands.penUp = {
+	add: ( commands ) => commands.push( {
+		type: 'pen' ,
+		u: true
+	} )
+} ;
+
+// Converted to 'pen'
+Path.commands.penDown = {
+	add: ( commands ) => commands.push( {
+		type: 'pen' ,
+		u: false
+	} )
+} ;
+
+Path.commands.forward = {
+	add: ( commands , data ) => commands.push( {
+		type: 'forward' ,
+		l: typeof data === 'number' ? data : data.length || data.l || 0
+	} ) ,
+	toD: ( command , build ) => {
+		let dx = command.l * Math.cos( build.ca ) ,
+			dy = command.l * Math.sin( build.ca ) ;
+
+		if ( build.pu ) { build.d += 'm ' + dx + ' ' + dy ; }
+		else { build.d += 'l ' + dx + ' ' + dy ; }
+
+		build.cx += dx ;
+		build.cy += dy ;
+	} ,
+	toCurve: ( command , build ) => {
+		let lastPoint = build.lastCurve ? build.lastCurve.endPoint : ORIGIN ;
+
+		let dx = command.l * Math.cos( build.ca ) ,
+			dy = command.l * Math.sin( build.ca ) ;
+
+		if ( build.pu ) {
+			return new Move( { x: lastPoint.x + dx , y: lastPoint.y + dy } ) ;
+		}
+
+		return new Line(
+			{ x: lastPoint.x , y: lastPoint.y } ,
+			{ x: lastPoint.x + dx , y: lastPoint.y + dy }
+		) ;
+	}
+} ;
+
+// Converted to 'forward'
+Path.commands.backward = {
+	add: ( commands , data ) => commands.push( {
+		type: 'forward' ,
+		l: - ( typeof data === 'number' ? data : data.length || data.l || 0 )
+	} )
+} ;
+
+// Turn using positive as X-axis to Y-axis
+Path.commands.turn = {
+	add: ( commands , data ) => commands.push( {
+		type: 'turn' ,
+		rel: true ,
+		a: typeof data === 'number' ? data : data.angle || data.a || 0
+	} ) ,
+	toD: ( command , build ) => {
+		let a = build.invertY ? - command.a : command.a ;
+
+		if ( command.rel ) {
+			build.ca += degToRad( a ) ;
+		}
+		else {
+			build.ca = degToRad( a ) ;
+		}
+	} ,
+	toCurve: ( command , build ) => {
+		let a = build.invertY ? - command.a : command.a ;
+
+		if ( command.rel ) {
+			build.ca += degToRad( a ) ;
+		}
+		else {
+			build.ca = degToRad( a ) ;
+		}
+	}
+} ;
+
+// Converted to 'turn'
+// Turn from X-axis to Y-axis
+Path.commands.turnTo = {
+	add: ( commands , data ) => commands.push( {
+		type: 'turn' ,
+		a: typeof data === 'number' ? data : data.angle || data.a || 0
+	} )
+} ;
+
+// Converted to 'turn'
+// Turn using positive as Y-axis to X-axis (Spellcast usage)
+Path.commands.negativeTurn = {
+	add: ( commands , data ) => commands.push( {
+		type: 'turn' ,
+		rel: true ,
+		a: - ( typeof data === 'number' ? data : data.angle || data.a || 0 )
+	} )
+} ;
+
+// Converted to 'turn'
+// Turn from Y-axis to X-axis (clockwise when Y point upward, the invert of the standard 2D computer graphics) (Spellcast usage)
+Path.commands.negativeTurnTo = {
+	add: ( commands , data ) => commands.push( {
+		type: 'turn' ,
+		a: 90 - ( typeof data === 'number' ? data : data.angle || data.a || 0 )
+	} )
+} ;
+
+// A turtle-like way of doing a curve: combine a forward and turn, moving along a circle
+Path.commands.forwardTurn = {
+	add: ( commands , data ) => commands.push( {
+		type: 'forwardTurn' ,
+		l: data.length || data.l || 0 ,
+		a: data.angle || data.a || 0
+	} ) ,
+	toD: ( command , build ) => {
+		let a = build.invertY ? - command.a : command.a ;
+
+		/*
+			We will first transpose to a circle of center 0,0 and we are starting at x=radius,y=0 and moving positively
+		*/
+		let angleRad = degToRad( a ) ,
+			angleSign = angleRad >= 0 ? 1 : - 1 ,
+			alpha = Math.abs( angleRad ) ,
+			radius = command.l / alpha ,
+			trX = radius * Math.cos( alpha ) ,
+			trY = radius * Math.sin( alpha ) ,
+			dist = Math.sqrt( ( radius - trX ) ** 2 + trY ** 2 ) ,
+			beta = Math.atan2( radius - trX , trY ) ;	// beta is the deviation
+
+		let dx = dist * Math.cos( build.ca + angleSign * beta ) ,
+			dy = dist * Math.sin( build.ca + angleSign * beta ) ;
+
+		if ( build.pu ) {
+			build.d += 'm ' + dx + ' ' + dy ;
+		}
+		else {
+			build.d += 'a ' + radius + ' ' + radius + ' 0 ' + ( alpha > Math.PI ? 1 : 0 ) + ' '  + ( angleRad >= 0 ? 1 : 0 ) + ' ' + dx + ' ' + dy ;
+		}
+
+		build.cx += dx ;
+		build.cy += dy ;
+		build.ca += angleRad ;
+	}
+} ;
+
+// Converted to 'forwardTurn'
+// Turn using positive as Y-axis to X-axis (clockwise when Y point upward, the invert of the standard 2D computer graphics) (Spellcast usage)
+Path.commands.forwardNegativeTurn = {
+	add: ( commands , data ) => commands.push( {
+		type: 'forwardTurn' ,
+		l: data.length || data.l || 0 ,
+		a: - ( data.angle || data.a || 0 )
+	} )
+} ;
+
+
+
+// Create API methods
+for ( let type in Path.commands ) {
+	if ( Path.commands[ type ].add ) {
+		Path.prototype[ type ] = function( data ) {
+			Path.commands[ type ].add( this.commands , data ) ;
+			this.computeCurves() ;
+			return this ;
+		} ;
+	}
+}
+
+
+
+// Utilities
+
+// Create lines from an array of points (object with .x and .y)
+Path.linePointsToD = ( points , invertY = false ) => {
+	let yMul = invertY ? - 1 : 1 ,
+		str = 'M' ;
+
+	points.forEach( point => {
+		str += ' ' + point.x + ',' + ( point.y * yMul ) ;
+	} ) ;
+
+	return str ;
+} ;
+
+Path.polygonPointsToD = ( points , invertY = false ) => Path.linePointsToD( points , invertY ) + ' z' ;
+
+
+},{"../../package.json":128,"../BoundingBox.js":19,"../Polygon.js":32,"../Polyline.js":33,"./Arc.js":24,"./CubicBezier.js":26,"./Line.js":27,"./Move.js":28,"./QuadraticBezier.js":30}],30:[function(require,module,exports){
+/*
+	SVG Kit
+
+	Copyright (c) 2017 - 2024 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+/*
+	Mostly derived from svg-path-properties by RogerVecianaAbzu:
+	https://github.com/rveciana/svg-path-properties/blob/master/src/bezier.ts
+*/
+
+
+
+const Bezier = require( './Bezier.js' ) ;
+const BoundingBox = require( '../BoundingBox.js' ) ;
+
+
+
+function QuadraticBezier( startPoint , control , endPoint ) {
+	this.startPoint = startPoint ;
+	this.control = control ;
+	this.endPoint = endPoint ;
+	Bezier.call( this , startPoint , control , endPoint ) ;
+}
+
+module.exports = QuadraticBezier ;
+
+QuadraticBezier.prototype = Object.create( Bezier.prototype ) ;
+QuadraticBezier.prototype.constructor = QuadraticBezier ;
+
+
+// The parametric formula for a given axis
+function parametric( ps , t ) {
+	const mt = 1 - t ;
+	return mt * mt * ps[0] + 2 * mt * t * ps[1] + t * t * ps[2] ;
+}
+
+
+
+QuadraticBezier.getPoint =
+QuadraticBezier.prototype.getPoint = ( xs , ys , t ) => {
+	return {
+		x: parametric( xs , t ) ,
+		y: parametric( ys , t )
+	} ;
+} ;
+
+
+
+QuadraticBezier.getDerivative =
+QuadraticBezier.prototype.getDerivative = ( xs , ys , t ) => {
+	return {
+		x: ( 1 - t ) * 2 * ( xs[1] - xs[0] ) + t * 2 * ( xs[2] - xs[1] ) ,
+		y: ( 1 - t ) * 2 * ( ys[1] - ys[0] ) + t * 2 * ( ys[2] - ys[1] )
+	} ;
+} ;
+
+
+
+QuadraticBezier.getLength =
+QuadraticBezier.prototype.getLength = ( xs , ys , t = 1 ) => {
+	const ax = xs[0] - 2 * xs[1] + xs[2] ;
+	const ay = ys[0] - 2 * ys[1] + ys[2] ;
+	const bx = 2 * xs[1] - 2 * xs[0] ;
+	const by = 2 * ys[1] - 2 * ys[0] ;
+
+	const A = 4 * ( ax * ax + ay * ay ) ;
+	const B = 4 * ( ax * bx + ay * by ) ;
+	const C = bx * bx + by * by ;
+
+	if ( A === 0 ) {
+		return (
+			t * Math.sqrt( Math.pow( xs[2] - xs[0] , 2 ) + Math.pow( ys[2] - ys[0] , 2 ) )
+		) ;
+	}
+
+	const b = B / ( 2 * A ) ;
+	const c = C / A ;
+	const u = t + b ;
+	const k = c - b * b ;
+
+	const uuk = u * u + k > 0 ? Math.sqrt( u * u + k ) : 0 ;
+	const bbk = b * b + k > 0 ? Math.sqrt( b * b + k ) : 0 ;
+	const term = b + Math.sqrt( b * b + k ) !== 0 && ( ( u + uuk ) / ( b + bbk ) ) !== 0 ?
+		k * Math.log( Math.abs( ( u + uuk ) / ( b + bbk ) ) ) :
+		0 ;
+
+	return ( Math.sqrt( A ) / 2 ) * ( u * uuk - b * bbk + term ) ;
+} ;
+
+
+
+// Derived from:
+// https://stackoverflow.com/questions/24809978/calculating-the-bounding-box-of-cubic-bezier-curve
+QuadraticBezier.getBoundingBox =
+QuadraticBezier.prototype.getBoundingBox = function( xs , ys ) {
+	var xExtrema = [ xs[0] , xs[2] ] ,
+		yExtrema = [ ys[0] , ys[2] ] ;
+
+	getExtrema( xs , xExtrema ) ;
+	getExtrema( ys , yExtrema ) ;
+
+	return new BoundingBox(
+		Math.min( ... xExtrema ) ,
+		Math.min( ... yExtrema ) ,
+		Math.max( ... xExtrema ) ,
+		Math.max( ... yExtrema )
+	) ;
+} ;
+
+
+
+function getExtrema( ps , pExtrema ) {
+	let a = ps[0] - 2 * ps[1] + ps[2] ,
+		b = - 2 * ps[0] + 2 * ps[1] ,
+		c = ps[0] ;
+
+	if ( Math.abs( a ) > 1e-12 ) {
+		let t = - b / ( 2 * a ) ;
+		if ( 0 < t && t < 1 ) {
+			pExtrema.push( a * t * t + b * t + c ) ;
+		}
+	}
+}
+
+
+},{"../BoundingBox.js":19,"./Bezier.js":25}],31:[function(require,module,exports){
+module.exports={"tValues":[[],[],[-0.5773502691896257,0.5773502691896257],[0,-0.7745966692414834,0.7745966692414834],[-0.33998104358485626,0.33998104358485626,-0.8611363115940526,0.8611363115940526],[0,-0.5384693101056831,0.5384693101056831,-0.906179845938664,0.906179845938664],[0.6612093864662645,-0.6612093864662645,-0.2386191860831969,0.2386191860831969,-0.932469514203152,0.932469514203152],[0,0.4058451513773972,-0.4058451513773972,-0.7415311855993945,0.7415311855993945,-0.9491079123427585,0.9491079123427585],[-0.1834346424956498,0.1834346424956498,-0.525532409916329,0.525532409916329,-0.7966664774136267,0.7966664774136267,-0.9602898564975363,0.9602898564975363],[0,-0.8360311073266358,0.8360311073266358,-0.9681602395076261,0.9681602395076261,-0.3242534234038089,0.3242534234038089,-0.6133714327005904,0.6133714327005904],[-0.14887433898163122,0.14887433898163122,-0.4333953941292472,0.4333953941292472,-0.6794095682990244,0.6794095682990244,-0.8650633666889845,0.8650633666889845,-0.9739065285171717,0.9739065285171717],[0,-0.26954315595234496,0.26954315595234496,-0.5190961292068118,0.5190961292068118,-0.7301520055740494,0.7301520055740494,-0.8870625997680953,0.8870625997680953,-0.978228658146057,0.978228658146057],[-0.1252334085114689,0.1252334085114689,-0.3678314989981802,0.3678314989981802,-0.5873179542866175,0.5873179542866175,-0.7699026741943047,0.7699026741943047,-0.9041172563704749,0.9041172563704749,-0.9815606342467192,0.9815606342467192],[0,-0.2304583159551348,0.2304583159551348,-0.44849275103644687,0.44849275103644687,-0.6423493394403402,0.6423493394403402,-0.8015780907333099,0.8015780907333099,-0.9175983992229779,0.9175983992229779,-0.9841830547185881,0.9841830547185881],[-0.10805494870734367,0.10805494870734367,-0.31911236892788974,0.31911236892788974,-0.5152486363581541,0.5152486363581541,-0.6872929048116855,0.6872929048116855,-0.827201315069765,0.827201315069765,-0.9284348836635735,0.9284348836635735,-0.9862838086968123,0.9862838086968123],[0,-0.20119409399743451,0.20119409399743451,-0.3941513470775634,0.3941513470775634,-0.5709721726085388,0.5709721726085388,-0.7244177313601701,0.7244177313601701,-0.8482065834104272,0.8482065834104272,-0.937273392400706,0.937273392400706,-0.9879925180204854,0.9879925180204854],[-0.09501250983763744,0.09501250983763744,-0.2816035507792589,0.2816035507792589,-0.45801677765722737,0.45801677765722737,-0.6178762444026438,0.6178762444026438,-0.755404408355003,0.755404408355003,-0.8656312023878318,0.8656312023878318,-0.9445750230732326,0.9445750230732326,-0.9894009349916499,0.9894009349916499],[0,-0.17848418149584785,0.17848418149584785,-0.3512317634538763,0.3512317634538763,-0.5126905370864769,0.5126905370864769,-0.6576711592166907,0.6576711592166907,-0.7815140038968014,0.7815140038968014,-0.8802391537269859,0.8802391537269859,-0.9506755217687678,0.9506755217687678,-0.9905754753144174,0.9905754753144174],[-0.0847750130417353,0.0847750130417353,-0.2518862256915055,0.2518862256915055,-0.41175116146284263,0.41175116146284263,-0.5597708310739475,0.5597708310739475,-0.6916870430603532,0.6916870430603532,-0.8037049589725231,0.8037049589725231,-0.8926024664975557,0.8926024664975557,-0.9558239495713977,0.9558239495713977,-0.9915651684209309,0.9915651684209309],[0,-0.16035864564022537,0.16035864564022537,-0.31656409996362983,0.31656409996362983,-0.46457074137596094,0.46457074137596094,-0.600545304661681,0.600545304661681,-0.7209661773352294,0.7209661773352294,-0.8227146565371428,0.8227146565371428,-0.9031559036148179,0.9031559036148179,-0.96020815213483,0.96020815213483,-0.9924068438435844,0.9924068438435844],[-0.07652652113349734,0.07652652113349734,-0.22778585114164507,0.22778585114164507,-0.37370608871541955,0.37370608871541955,-0.5108670019508271,0.5108670019508271,-0.636053680726515,0.636053680726515,-0.7463319064601508,0.7463319064601508,-0.8391169718222188,0.8391169718222188,-0.912234428251326,0.912234428251326,-0.9639719272779138,0.9639719272779138,-0.9931285991850949,0.9931285991850949],[0,-0.1455618541608951,0.1455618541608951,-0.2880213168024011,0.2880213168024011,-0.4243421202074388,0.4243421202074388,-0.5516188358872198,0.5516188358872198,-0.6671388041974123,0.6671388041974123,-0.7684399634756779,0.7684399634756779,-0.8533633645833173,0.8533633645833173,-0.9200993341504008,0.9200993341504008,-0.9672268385663063,0.9672268385663063,-0.9937521706203895,0.9937521706203895],[-0.06973927331972223,0.06973927331972223,-0.20786042668822127,0.20786042668822127,-0.34193582089208424,0.34193582089208424,-0.469355837986757,0.469355837986757,-0.5876404035069116,0.5876404035069116,-0.6944872631866827,0.6944872631866827,-0.7878168059792081,0.7878168059792081,-0.8658125777203002,0.8658125777203002,-0.926956772187174,0.926956772187174,-0.9700604978354287,0.9700604978354287,-0.9942945854823992,0.9942945854823992],[0,-0.1332568242984661,0.1332568242984661,-0.26413568097034495,0.26413568097034495,-0.3903010380302908,0.3903010380302908,-0.5095014778460075,0.5095014778460075,-0.6196098757636461,0.6196098757636461,-0.7186613631319502,0.7186613631319502,-0.8048884016188399,0.8048884016188399,-0.8767523582704416,0.8767523582704416,-0.9329710868260161,0.9329710868260161,-0.9725424712181152,0.9725424712181152,-0.9947693349975522,0.9947693349975522],[-0.06405689286260563,0.06405689286260563,-0.1911188674736163,0.1911188674736163,-0.3150426796961634,0.3150426796961634,-0.4337935076260451,0.4337935076260451,-0.5454214713888396,0.5454214713888396,-0.6480936519369755,0.6480936519369755,-0.7401241915785544,0.7401241915785544,-0.820001985973903,0.820001985973903,-0.8864155270044011,0.8864155270044011,-0.9382745520027328,0.9382745520027328,-0.9747285559713095,0.9747285559713095,-0.9951872199970213,0.9951872199970213]],"cValues":[[],[],[1,1],[0.8888888888888888,0.5555555555555556,0.5555555555555556],[0.6521451548625461,0.6521451548625461,0.34785484513745385,0.34785484513745385],[0.5688888888888889,0.47862867049936647,0.47862867049936647,0.23692688505618908,0.23692688505618908],[0.3607615730481386,0.3607615730481386,0.46791393457269104,0.46791393457269104,0.17132449237917036,0.17132449237917036],[0.4179591836734694,0.3818300505051189,0.3818300505051189,0.27970539148927664,0.27970539148927664,0.1294849661688697,0.1294849661688697],[0.362683783378362,0.362683783378362,0.31370664587788727,0.31370664587788727,0.22238103445337448,0.22238103445337448,0.10122853629037626,0.10122853629037626],[0.3302393550012598,0.1806481606948574,0.1806481606948574,0.08127438836157441,0.08127438836157441,0.31234707704000286,0.31234707704000286,0.26061069640293544,0.26061069640293544],[0.29552422471475287,0.29552422471475287,0.26926671930999635,0.26926671930999635,0.21908636251598204,0.21908636251598204,0.1494513491505806,0.1494513491505806,0.06667134430868814,0.06667134430868814],[0.2729250867779006,0.26280454451024665,0.26280454451024665,0.23319376459199048,0.23319376459199048,0.18629021092773426,0.18629021092773426,0.1255803694649046,0.1255803694649046,0.05566856711617366,0.05566856711617366],[0.24914704581340277,0.24914704581340277,0.2334925365383548,0.2334925365383548,0.20316742672306592,0.20316742672306592,0.16007832854334622,0.16007832854334622,0.10693932599531843,0.10693932599531843,0.04717533638651183,0.04717533638651183],[0.2325515532308739,0.22628318026289723,0.22628318026289723,0.2078160475368885,0.2078160475368885,0.17814598076194574,0.17814598076194574,0.13887351021978725,0.13887351021978725,0.09212149983772845,0.09212149983772845,0.04048400476531588,0.04048400476531588],[0.2152638534631578,0.2152638534631578,0.2051984637212956,0.2051984637212956,0.18553839747793782,0.18553839747793782,0.15720316715819355,0.15720316715819355,0.12151857068790319,0.12151857068790319,0.08015808715976021,0.08015808715976021,0.03511946033175186,0.03511946033175186],[0.2025782419255613,0.19843148532711158,0.19843148532711158,0.1861610000155622,0.1861610000155622,0.16626920581699392,0.16626920581699392,0.13957067792615432,0.13957067792615432,0.10715922046717194,0.10715922046717194,0.07036604748810812,0.07036604748810812,0.03075324199611727,0.03075324199611727],[0.1894506104550685,0.1894506104550685,0.18260341504492358,0.18260341504492358,0.16915651939500254,0.16915651939500254,0.14959598881657674,0.14959598881657674,0.12462897125553388,0.12462897125553388,0.09515851168249279,0.09515851168249279,0.062253523938647894,0.062253523938647894,0.027152459411754096,0.027152459411754096],[0.17944647035620653,0.17656270536699264,0.17656270536699264,0.16800410215645004,0.16800410215645004,0.15404576107681028,0.15404576107681028,0.13513636846852548,0.13513636846852548,0.11188384719340397,0.11188384719340397,0.08503614831717918,0.08503614831717918,0.0554595293739872,0.0554595293739872,0.02414830286854793,0.02414830286854793],[0.1691423829631436,0.1691423829631436,0.16427648374583273,0.16427648374583273,0.15468467512626524,0.15468467512626524,0.14064291467065065,0.14064291467065065,0.12255520671147846,0.12255520671147846,0.10094204410628717,0.10094204410628717,0.07642573025488905,0.07642573025488905,0.0497145488949698,0.0497145488949698,0.02161601352648331,0.02161601352648331],[0.1610544498487837,0.15896884339395434,0.15896884339395434,0.15276604206585967,0.15276604206585967,0.1426067021736066,0.1426067021736066,0.12875396253933621,0.12875396253933621,0.11156664554733399,0.11156664554733399,0.09149002162245,0.09149002162245,0.06904454273764123,0.06904454273764123,0.0448142267656996,0.0448142267656996,0.019461788229726478,0.019461788229726478],[0.15275338713072584,0.15275338713072584,0.14917298647260374,0.14917298647260374,0.14209610931838204,0.14209610931838204,0.13168863844917664,0.13168863844917664,0.11819453196151841,0.11819453196151841,0.10193011981724044,0.10193011981724044,0.08327674157670475,0.08327674157670475,0.06267204833410907,0.06267204833410907,0.04060142980038694,0.04060142980038694,0.017614007139152118,0.017614007139152118],[0.14608113364969041,0.14452440398997005,0.14452440398997005,0.13988739479107315,0.13988739479107315,0.13226893863333747,0.13226893863333747,0.12183141605372853,0.12183141605372853,0.10879729916714838,0.10879729916714838,0.09344442345603386,0.09344442345603386,0.0761001136283793,0.0761001136283793,0.057134425426857205,0.057134425426857205,0.036953789770852494,0.036953789770852494,0.016017228257774335,0.016017228257774335],[0.13925187285563198,0.13925187285563198,0.13654149834601517,0.13654149834601517,0.13117350478706238,0.13117350478706238,0.12325237681051242,0.12325237681051242,0.11293229608053922,0.11293229608053922,0.10041414444288096,0.10041414444288096,0.08594160621706773,0.08594160621706773,0.06979646842452049,0.06979646842452049,0.052293335152683286,0.052293335152683286,0.03377490158481415,0.03377490158481415,0.0146279952982722,0.0146279952982722],[0.13365457218610619,0.1324620394046966,0.1324620394046966,0.12890572218808216,0.12890572218808216,0.12304908430672953,0.12304908430672953,0.11499664022241136,0.11499664022241136,0.10489209146454141,0.10489209146454141,0.09291576606003515,0.09291576606003515,0.07928141177671895,0.07928141177671895,0.06423242140852585,0.06423242140852585,0.04803767173108467,0.04803767173108467,0.030988005856979445,0.030988005856979445,0.013411859487141771,0.013411859487141771],[0.12793819534675216,0.12793819534675216,0.1258374563468283,0.1258374563468283,0.12167047292780339,0.12167047292780339,0.1155056680537256,0.1155056680537256,0.10744427011596563,0.10744427011596563,0.09761865210411388,0.09761865210411388,0.08619016153195327,0.08619016153195327,0.0733464814110803,0.0733464814110803,0.05929858491543678,0.05929858491543678,0.04427743881741981,0.04427743881741981,0.028531388628933663,0.028531388628933663,0.0123412297999872,0.0123412297999872]],"binomialCoefficients":[[1],[1,1],[1,2,1],[1,3,3,1]]}
+},{}],32:[function(require,module,exports){
+/*
+	SVG Kit
+
+	Copyright (c) 2017 - 2024 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+const BoundingBox = require( './BoundingBox.js' ) ;
+
+
+
+function Polygon( params ) {
+	this.points = [] ;
+	this.sides = [] ;
+	this.boundingBox = new BoundingBox( null ) ;
+
+	if ( params ) { this.set( params ) ; }
+}
+
+module.exports = Polygon ;
+
+Polygon.prototype.__prototypeUID__ = 'svg-kit/Polygon' ;
+Polygon.prototype.__prototypeVersion__ = require( '../package.json' ).version ;
+
+// Circular...
+const Path = require( './Path/Path.js' ) ;
+
+
+
+Polygon.prototype.set = function( params ) {
+	if ( params.points ) { this.setPoints( params.points ) ; }
+} ;
+
+
+
+Polygon.prototype.setPoints = function( points ) {
+	this.points.length = 0 ;
+	this.sides.length = 0 ;
+	this.boundingBox.nullify() ;
+
+	if ( ! Array.isArray( points ) ) { return ; }
+	for ( let point of points ) { this.addPoint( point , true ) ; }
+	if ( this.addClosingSide ) { this.addClosingSide() ; }
+} ;
+
+
+
+Polygon.prototype.addPoint = function( point , noClosingSide = false ) {
+	if ( ! point || typeof point !== 'object' ) { return ; }
+
+	var pointClone = { x: + point.x || 0 , y: + point.y || 0 } ;
+	this.points.push( pointClone ) ;
+	this.boundingBox.ensurePoint( pointClone ) ;
+
+	this.addLastSide() ;
+	if ( this.addClosingSide && ! noClosingSide ) { this.addClosingSide() ; }
+} ;
+
+
+
+Polygon.prototype.addLastSide = function() {
+	var count = this.points.length ;
+	if ( count <= 1 ) { return ; }
+	this.sides[ count - 2 ] = Polygon.getParametricLineParameters( this.points[ count - 2 ] , this.points[ count - 1 ] ) ;
+} ;
+
+
+
+Polygon.prototype.addClosingSide = function() {
+	var count = this.points.length ;
+	if ( count < 3 ) { return ; }
+	this.sides[ count - 1 ] = Polygon.getParametricLineParameters( this.points[ count - 1 ] , this.points[ 0 ] ) ;
+} ;
+
+
+
+Polygon.prototype.export = function( data = {} ) {
+	data.points = this.points.map( p => ( { x: p.x , y: p.y } ) ) ;
+	return data ;
+} ;
+
+
+
+Polygon.prototype.toD = function( invertY = false ) {
+	return Path.polygonPointsToD( this.points , invertY ) ;
+} ;
+
+
+
+Polygon.prototype.isInside = function( coords ) {
+	if ( ! this.sides.length ) { return false ; }
+
+	var count = 0 ;
+
+	// Cast rays on each side, and count the intersection
+	for ( let side of this.sides ) {
+		if ( Polygon.castRayOnSide( side , coords ) ) { count ++ ; }
+	}
+	
+	//console.log( "Polygon.isInside: count =" , count ) ;
+
+	// Odd count means it's inside, even count means it's outside
+	return !! ( count % 2 ) ;
+} ;
+
+
+
+/*
+	Get the line equation's parameters.
+	The equation is:   ax + by + c
+	The result is =0 on the line, >0 on the left-side (point 1 toward point 2), <0 on the right-side.
+
+	Also get the parametric line segment parameters.
+	For 0 ≤ t ≤ 1 :
+	x = x0 + dx * t
+	y = y0 + dy * t
+*/
+Polygon.getParametricLineParameters = function( point1 , point2 ) {
+	var dx = point2.x - point1.x ,
+		dy = point2.y - point1.y ;
+
+	return {
+		// Line equation
+		a: - dy ,
+		b: dx ,
+		c: - dx * point1.y + dy * point1.x ,
+		
+		// Parametric
+		x0: point1.x ,
+		y0: point1.y ,
+		dx ,
+		dy
+	} ;
+} ;
+
+
+
+// Apply the line equation on a point/coords, result is =0 if on the line, >0 if on the left-side, <0 if on the right-side
+Polygon.testSideLineEquation = function( side , coords ) {
+	return side.a * coords.x + side.b * coords.y + side.c ;
+} ;
+
+
+
+// Cast an horizontal ray, and return true if it intersect with a side.
+// The ray is infinite on the left-side (x<0) and stop ath the precise ray.x and ray.y coordinates.
+Polygon.castRayOnSide = function( side , ray ) {
+	// Tangential rays are always considered not intersecting, so horizontal line segments don't intersect
+	if ( ! side.dy ) { return false ; }
+	
+	// Compute the parametric t value for the side's line-segment for the Y horizontal line
+	// y = y0 + dy * t   <=>   t = ( y - y0 ) / dy
+	let t = ( ray.y - side.y0 ) / side.dy ;
+
+	// If we don't have 0 < t < 1, then the ray is not in the correct Y-axis range
+	// To avoid degenerate cases, we consider edge case to be OUTSIDE, no intersection.
+	if ( t <= 0 || t >= 1 ) { return false ; }
+
+	// Now get the X coord of the intersection
+	// x = x0 + dx * t
+	let x = side.x0 + side.dx * t ;
+	
+	// The ray is infinite on the left and stop at ray's (x,y), so for the ray to intersect,
+	// its X coord should be greater than the X coord of the line intersection.
+	// Again, to avoid degenerate cases, we consider edge case to be OUTSIDE, no intersection.
+	return ray.x > x ;
+} ;
+
+
+},{"../package.json":128,"./BoundingBox.js":19,"./Path/Path.js":29}],33:[function(require,module,exports){
+/*
+	SVG Kit
+
+	Copyright (c) 2017 - 2024 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+const Polygon = require( './Polygon.js' ) ;
+const BoundingBox = require( './BoundingBox.js' ) ;
+
+
+
+function Polyline( params ) {
+	this.points = [] ;
+	this.sides = [] ;
+	this.boundingBox = new BoundingBox( null ) ;
+
+	if ( params ) { this.set( params ) ; }
+}
+
+module.exports = Polyline ;
+
+Polyline.prototype = Object.create( Polygon.prototype ) ;
+Polyline.prototype.constructor = Polyline ;
+Polyline.prototype.__prototypeUID__ = 'svg-kit/Polyline' ;
+Polyline.prototype.__prototypeVersion__ = require( '../package.json' ).version ;
+
+Polyline.prototype.addClosingSide = null ;
+Polyline.prototype.isInside = function( coords ) { return false ; } ;	// There is no “inside”, just lines
+
+
+},{"../package.json":128,"./BoundingBox.js":19,"./Polygon.js":32}],34:[function(require,module,exports){
+/*
+	SVG Kit
+
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -6208,11 +8687,11 @@ Style.prototype.setDomSvgStyle = function( $element , palette ) {
 } ;
 
 
-},{"./color-utilities.js":47,"string-kit/lib/camel":107,"string-kit/lib/escape":110}],25:[function(require,module,exports){
+},{"./color-utilities.js":59,"string-kit/lib/camel":118,"string-kit/lib/escape":121}],35:[function(require,module,exports){
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -6366,11 +8845,11 @@ VG.prototype.addCssRule = function( rule ) {
 } ;
 
 
-},{"../package.json":117,"./VGContainer.js":27,"palette-shade":96}],26:[function(require,module,exports){
+},{"../package.json":128,"./VGContainer.js":37,"palette-shade":107}],36:[function(require,module,exports){
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -6442,6 +8921,7 @@ VGClip.prototype.addClippingEntity = function( clippingEntity , clone = false ) 
 		clippingEntity.parent = this ;
 		clippingEntity.root = this.root ;
 		this.clippingEntities.push( clippingEntity ) ;
+		clippingEntity.onAttach() ;
 	}
 } ;
 
@@ -6475,11 +8955,11 @@ VGClip.prototype.svgContentGroupAttributes = function() {
 } ;
 
 
-},{"../package.json":117,"./VGContainer.js":27,"./VGEntity.js":30,"./svg-kit.js":54,"array-kit":76}],27:[function(require,module,exports){
+},{"../package.json":128,"./VGContainer.js":37,"./VGEntity.js":40,"./svg-kit.js":65,"array-kit":87}],37:[function(require,module,exports){
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -6576,6 +9056,7 @@ VGContainer.prototype.addEntity = function( entity , clone = false ) {
 		entity.root = this.root ;
 		if ( entity.needFullRedraw ) { this.root.needFullRedraw = true ; }
 		this.entities.push( entity ) ;
+		entity.onAttach() ;
 	}
 } ;
 
@@ -6681,11 +9162,11 @@ VGContainer.prototype.morphSvgDom = function() {
 } ;
 
 
-},{"../package.json":117,"./VGEntity.js":30,"./svg-kit.js":54,"array-kit":76}],28:[function(require,module,exports){
+},{"../package.json":128,"./VGEntity.js":40,"./svg-kit.js":65,"array-kit":87}],38:[function(require,module,exports){
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -6714,7 +9195,6 @@ VGContainer.prototype.morphSvgDom = function() {
 
 const VGEntity = require( './VGEntity.js' ) ;
 const ConvexPolygon = require( './ConvexPolygon.js' ) ;
-const BoundingBox = require( './BoundingBox.js' ) ;
 const canvasUtilities = require( './canvas-utilities.js' ) ;
 
 
@@ -6722,13 +9202,9 @@ const canvasUtilities = require( './canvas-utilities.js' ) ;
 function VGConvexPolygon( params ) {
 	VGEntity.call( this , params ) ;
 
-	// Note: All properties of ConvexPolygon should be copied here
-	this.points = [] ;
-	this.sides = [] ;
-	this.clockwise = true ;
-	this.autofix = true ;
-	this.badConvexPolygon = false ;
-
+	this.convexPolygon = new ConvexPolygon() ;
+	this.convexPolygon.autofix = true ;
+	
 	if ( params ) { this.set( params ) ; }
 }
 
@@ -6739,9 +9215,6 @@ VGConvexPolygon.prototype.constructor = VGConvexPolygon ;
 VGConvexPolygon.prototype.__prototypeUID__ = 'svg-kit/VGConvexPolygon' ;
 VGConvexPolygon.prototype.__prototypeVersion__ = require( '../package.json' ).version ;
 
-// Pseudo inheritance from ConvexPolygon:
-Object.assign( VGConvexPolygon.prototype , ConvexPolygon.prototype ) ;
-
 
 
 VGConvexPolygon.prototype.svgTag = 'path' ;
@@ -6749,46 +9222,52 @@ VGConvexPolygon.prototype.svgTag = 'path' ;
 
 
 VGConvexPolygon.prototype.set = function( params ) {
-	ConvexPolygon.prototype.set.call( this , params ) ;
+	var refreshBbox = !! ( params.style?.stroke || params.style?.strokeWidth ) ;
+
+	if ( params.build ) {
+		// .build() call .set() again, no need to compute BBox here
+		this.build( params.build ) ;
+	}
+
+	if ( params.points ) {
+		this.convexPolygon.setPoints( params.points ) ;
+		refreshBbox = true ;
+		//if ( this.convexPolygon.badConvexPolygon ) { throw new Error( "Bad polygon (not simple, not convex, or degenerate case)" ) ; }
+	}
+
 	VGEntity.prototype.set.call( this , params ) ;
 
-	if ( params.build ) { this.build( params.build ) ; }
-
-	if ( params.points && this.badConvexPolygon ) {
-		//throw new Error( "Bad polygon (not simple, not convex, or degenerate case)" ) ;
-	}
+	if ( refreshBbox ) { this.computeBoundingBox() ; }
 } ;
 
 
 
 VGConvexPolygon.prototype.export = function( data = {} ) {
 	VGEntity.prototype.export.call( this , data ) ;
-	ConvexPolygon.prototype.export.call( this , data ) ;
+	this.convexPolygon.export( data ) ;
 	return data ;
 } ;
 
 
 
-VGConvexPolygon.prototype.getBoundingBox = function() {
-	var xmin = Infinity ,
-		xmax = - Infinity ,
-		ymin = Infinity ,
-		ymax = - Infinity ,
-		strokeWidth = this.style.stroke ? this.style.strokeWidth : 0 ;
+// Methods that pass to ConvexPolygon methods
+VGConvexPolygon.prototype.toD = function() { return this.convexPolygon.toD( this.root.invertY ) ; } ;
+VGConvexPolygon.prototype.isInside = function( coords ) { return this.convexPolygon.isInside( coords ) ; } ;
 
-	for ( let point of this.points ) {
-		if ( point.x < xmin ) { xmin = point.x ; }
-		if ( point.x > xmax ) { xmax = point.x ; }
-		if ( point.y < ymin ) { ymin = point.y ; }
-		if ( point.y > ymax ) { ymax = point.y ; }
-	}
+VGConvexPolygon.prototype.setPoints = function( points ) {
+	this.convexPolygon.setPoints( points ) ;
+	this.computeBoundingBox() ;
+} ;
 
-	return new BoundingBox(
-		xmin - strokeWidth ,
-		ymin - strokeWidth ,
-		xmax + strokeWidth ,
-		ymax + strokeWidth
-	) ;
+VGConvexPolygon.prototype.addPoint = function( point ) {
+	this.convexPolygon.addPoint( point ) ;
+	this.computeBoundingBox() ;
+} ;
+
+VGConvexPolygon.prototype.computeBoundingBox = function() {
+	this.boundingBox.set( this.convexPolygon.boundingBox ) ;
+	var width = this.style.stroke ? this.style.strokeWidth : 0 ;
+	if ( width ) { this.boundingBox.enlarge( width ) ; }
 } ;
 
 
@@ -6817,10 +9296,6 @@ VGConvexPolygon.prototype.build = function( data = {} ) {
 
 
 
-//VGConvexPolygon.prototype.isInside = function( coords ) { return ConvexPolygon.prototype.isInside.call( this , coords ) ; } ;
-
-
-
 VGConvexPolygon.prototype.svgAttributes = function( master = this ) {
 	var attr = {
 		// SVG attribute 'd' (data)
@@ -6828,13 +9303,6 @@ VGConvexPolygon.prototype.svgAttributes = function( master = this ) {
 	} ;
 
 	return attr ;
-} ;
-
-
-
-// Build the SVG 'd' attribute
-VGConvexPolygon.prototype.toD = function() {
-	return ConvexPolygon.prototype.toD.call( this , this.root.invertY ) ;
 } ;
 
 
@@ -6853,11 +9321,11 @@ VGConvexPolygon.prototype.renderHookForPath2D = function( path2D , canvasCtx , o
 } ;
 
 
-},{"../package.json":117,"./BoundingBox.js":19,"./ConvexPolygon.js":20,"./VGEntity.js":30,"./canvas-utilities.js":46}],29:[function(require,module,exports){
+},{"../package.json":128,"./ConvexPolygon.js":20,"./VGEntity.js":40,"./canvas-utilities.js":58}],39:[function(require,module,exports){
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -6915,26 +9383,21 @@ VGEllipse.prototype.svgTag = 'ellipse' ;
 
 
 VGEllipse.prototype.set = function( params ) {
-	let bboxChanged = false ;
+	var refreshBbox = !! ( params.style?.stroke || params.style?.strokeWidth ) ;
 
 	// Interop'
-	if ( params.cx !== undefined ) { this.x = params.cx ; bboxChanged = true ; }
-	if ( params.cy !== undefined ) { this.y = params.cy ; bboxChanged = true ; }
+	if ( params.cx !== undefined ) { this.x = params.cx ; refreshBbox = true ; }
+	if ( params.cy !== undefined ) { this.y = params.cy ; refreshBbox = true ; }
 
-	if ( params.x !== undefined ) { this.x = params.x ; bboxChanged = true ; }
-	if ( params.y !== undefined ) { this.y = params.y ; bboxChanged = true ; }
-	if ( params.r !== undefined ) { this.rx = this.ry = params.r ; bboxChanged = true ; }
-	if ( params.rx !== undefined ) { this.rx = params.rx ; bboxChanged = true ; }
-	if ( params.ry !== undefined ) { this.ry = params.ry ; bboxChanged = true ; }
-
-	if ( bboxChanged ) {
-		this.boundingBox.xmin = this.x - this.rx ;
-		this.boundingBox.xmax = this.x + this.rx ;
-		this.boundingBox.ymin = this.y - this.ry ;
-		this.boundingBox.ymax = this.y + this.ry ;
-	}
+	if ( params.x !== undefined ) { this.x = params.x ; refreshBbox = true ; }
+	if ( params.y !== undefined ) { this.y = params.y ; refreshBbox = true ; }
+	if ( params.r !== undefined ) { this.rx = this.ry = params.r ; refreshBbox = true ; }
+	if ( params.rx !== undefined ) { this.rx = params.rx ; refreshBbox = true ; }
+	if ( params.ry !== undefined ) { this.ry = params.ry ; refreshBbox = true ; }
 
 	VGEntity.prototype.set.call( this , params ) ;
+
+	if ( refreshBbox ) { this.computeBoundingBox() ; }
 } ;
 
 
@@ -6952,10 +9415,9 @@ VGEllipse.prototype.export = function( data = {} ) {
 
 
 
-VGEllipse.prototype.getBoundingBox = function() {
+VGEllipse.prototype.computeBoundingBox = function() {
 	var strokeWidth = this.style.stroke ? this.style.strokeWidth : 0 ;
-
-	return new BoundingBox(
+	this.boundingBox.setMinMax(
 		this.x - this.rx - strokeWidth ,
 		this.y - this.ry - strokeWidth ,
 		this.x + this.rx + strokeWidth ,
@@ -6996,12 +9458,12 @@ VGEllipse.prototype.renderHookForPath2D = function( path2D , canvasCtx , options
 } ;
 
 
-},{"../package.json":117,"./BoundingBox.js":19,"./VGEntity.js":30,"./canvas-utilities.js":46}],30:[function(require,module,exports){
+},{"../package.json":128,"./BoundingBox.js":19,"./VGEntity.js":40,"./canvas-utilities.js":58}],40:[function(require,module,exports){
 (function (process){(function (){
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -7093,8 +9555,10 @@ VGEntity.prototype.__prototypeVersion__ = require( '../package.json' ).version ;
 VGEntity.prototype.NS = VGEntity.NS = 'http://www.w3.org/2000/svg' ;
 VGEntity.prototype.isContainer = false ;
 VGEntity.prototype.isRenderingContainer = false ;	// If set, it's not a high-level container but it's rendered as a container
+VGEntity.prototype.noFill = false ;		// If set, this entity has no fill style (e.g. polyline has only stroke)
 VGEntity.prototype.svgTag = 'none' ;
 VGEntity.prototype.svgAttributes = ( master = this ) => ( {} ) ;
+VGEntity.prototype.onAttach = () => undefined ;
 
 
 
@@ -7945,16 +10409,16 @@ VGEntity.prototype.getEntityTree = function( depth = 0 ) {
 // Should be derived
 // Return null or an array of font names used by this entity
 VGEntity.prototype.getUsedFontNames = function() { return null ; } ;
-// Return null or a BoundingBox instance
-VGEntity.prototype.getBoundingBox = function() { return null ; } ;
+// Update the boundingBox
+VGEntity.prototype.computeBoundingBox = function() {} ;
 
 
 }).call(this)}).call(this,require('_process'))
-},{"../package.json":117,"./BoundingBox.js":19,"./DynamicArea.js":21,"./Style.js":24,"./color-utilities.js":47,"./fontLib.js":49,"./fx/fx.js":50,"_process":124,"dom-kit":88,"seventh":105,"string-kit/lib/camel":107,"string-kit/lib/escape":110}],31:[function(require,module,exports){
+},{"../package.json":128,"./BoundingBox.js":19,"./DynamicArea.js":21,"./Style.js":34,"./color-utilities.js":59,"./fontLib.js":61,"./fx/fx.js":62,"_process":135,"dom-kit":99,"seventh":116,"string-kit/lib/camel":118,"string-kit/lib/escape":121}],41:[function(require,module,exports){
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -8035,11 +10499,11 @@ StructuredTextLine.prototype.fuseEqualAttr = function() {
 } ;
 
 
-},{"./TextMetrics.js":35}],32:[function(require,module,exports){
+},{"./TextMetrics.js":45}],42:[function(require,module,exports){
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -8275,11 +10739,11 @@ StructuredTextPart.prototype.checkLineSplit = function() {
 } ;
 
 
-},{"./TextAttribute.js":34,"./TextMetrics.js":35,"string-kit/lib/escape.js":110}],33:[function(require,module,exports){
+},{"./TextAttribute.js":44,"./TextMetrics.js":45,"string-kit/lib/escape.js":121}],43:[function(require,module,exports){
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -8550,11 +11014,11 @@ StructuredTextRenderer.prototype.populateStyle = function( part , style ) {
 } ;
 
 
-},{}],34:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -9175,11 +11639,11 @@ TextAttribute.prototype.getFrameSvgStyle = function( inherit = null , relTo = nu
 } ;
 
 
-},{"../Metric.js":23,"../Style.js":24,"../color-utilities.js":47,"palette-shade":96}],35:[function(require,module,exports){
+},{"../Metric.js":23,"../Style.js":34,"../color-utilities.js":59,"palette-shade":107}],45:[function(require,module,exports){
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -9315,11 +11779,11 @@ TextMetrics.measureStructuredTextPart = async function( part , inheritedAttr ) {
 } ;
 
 
-},{"../fontLib.js":49,"../getImageSize.js":52}],36:[function(require,module,exports){
+},{"../fontLib.js":61,"../getImageSize.js":64}],46:[function(require,module,exports){
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -9571,8 +12035,8 @@ VGFlowingText.prototype.getCharacterCount = VGFlowingText.prototype.getCharCount
 
 
 
-VGFlowingText.prototype.getBoundingBox = function() {
-	return new BoundingBox( this.x , this.y , this.x + this.width , this.y + this.height ) ;
+VGFlowingText.prototype.computeBoundingBox = function() {
+	this.boundingBox.setMinMax( this.x , this.y , this.x + this.width , this.y + this.height ) ;
 } ;
 
 
@@ -10135,11 +12599,11 @@ VGFlowingText.prototype.computeXYOffset = function() {
 } ;
 
 
-},{"../../package.json":117,"../BoundingBox.js":19,"../VGPseudoContainer.js":42,"../canvas-utilities.js":46,"../fontLib.js":49,"./StructuredTextLine.js":31,"./StructuredTextPart.js":32,"./StructuredTextRenderer.js":33,"./TextAttribute.js":34,"./TextMetrics.js":35,"./VGFlowingTextImagePart.js":37,"./VGFlowingTextPart.js":38,"book-source":85,"dom-kit":88}],37:[function(require,module,exports){
+},{"../../package.json":128,"../BoundingBox.js":19,"../VGPseudoContainer.js":54,"../canvas-utilities.js":58,"../fontLib.js":61,"./StructuredTextLine.js":41,"./StructuredTextPart.js":42,"./StructuredTextRenderer.js":43,"./TextAttribute.js":44,"./TextMetrics.js":45,"./VGFlowingTextImagePart.js":47,"./VGFlowingTextPart.js":48,"book-source":96,"dom-kit":99}],47:[function(require,module,exports){
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -10285,11 +12749,11 @@ VGFlowingTextImagePart.prototype.renderHookForCanvas = async function( canvasCtx
 } ;
 
 
-},{"../../package.json":117,"../VGPseudoEntity.js":43,"dom-kit":88}],38:[function(require,module,exports){
+},{"../../package.json":128,"../VGPseudoEntity.js":55,"dom-kit":99}],48:[function(require,module,exports){
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -10724,11 +13188,11 @@ VGFlowingTextPart.prototype.renderHookForPath2D = async function( path2D , canva
 } ;
 
 
-},{"../../package.json":117,"../VGPseudoEntity.js":43,"../canvas-utilities.js":46,"../fontLib.js":49,"./TextAttribute.js":34,"./TextMetrics.js":35,"string-kit/lib/unicode.js":116}],39:[function(require,module,exports){
+},{"../../package.json":128,"../VGPseudoEntity.js":55,"../canvas-utilities.js":58,"../fontLib.js":61,"./TextAttribute.js":44,"./TextMetrics.js":45,"string-kit/lib/unicode.js":127}],49:[function(require,module,exports){
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -10781,11 +13245,11 @@ VGGroup.prototype.set = function( params ) {
 } ;
 
 
-},{"../package.json":117,"./VGContainer.js":27,"./svg-kit.js":54}],40:[function(require,module,exports){
+},{"../package.json":128,"./VGContainer.js":37,"./svg-kit.js":65}],50:[function(require,module,exports){
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -10921,8 +13385,8 @@ VGImage.prototype.export = function( data = {} ) {
 
 
 
-VGImage.prototype.getBoundingBox = function() {
-	return new BoundingBox( this.x , this.y , this.x + this.width , this.y + this.height ) ;
+VGImage.prototype.computeBoundingBox = function() {
+	this.boundingBox.setMinMax( this.x , this.y , this.x + this.width , this.y + this.height ) ;
 } ;
 
 
@@ -11369,11 +13833,11 @@ VGImage.prototype.getNinePatchCoordsList = function( imageSize ) {
 } ;
 
 
-},{"../package.json":117,"./BoundingBox.js":19,"./VGEntity.js":30,"./getImageSize.js":52,"dom-kit":88}],41:[function(require,module,exports){
+},{"../package.json":128,"./BoundingBox.js":19,"./VGEntity.js":40,"./getImageSize.js":64,"dom-kit":99}],51:[function(require,module,exports){
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -11401,15 +13865,16 @@ VGImage.prototype.getNinePatchCoordsList = function( imageSize ) {
 
 
 const VGEntity = require( './VGEntity.js' ) ;
+const VGPolygon = require( './VGPolygon.js' ) ;
+const Path = require( './Path/Path.js' ) ;
 const canvasUtilities = require( './canvas-utilities.js' ) ;
-const pathUtilities = require( './path-utilities.js' ) ;
 
 
 
 function VGPath( params ) {
 	VGEntity.call( this , params ) ;
 
-	this.commands = [] ;
+	this.path = new Path() ;
 
 	if ( params ) { this.set( params ) ; }
 }
@@ -11428,19 +13893,41 @@ VGPath.prototype.svgTag = 'path' ;
 
 
 VGPath.prototype.set = function( params ) {
-	if ( Array.isArray( params.commands ) ) { this.commands = params.commands ; }
+	var refreshBbox = !! ( params.style?.stroke || params.style?.strokeWidth ) ;
+
+	if ( Array.isArray( params.commands ) ) {
+		this.path.set( params.commands ) ;
+		refreshBbox = true ;
+	}
 
 	// /!\ Bounding box should be calculated from path
 
 	VGEntity.prototype.set.call( this , params ) ;
+
+	if ( refreshBbox ) { this.computeBoundingBox() ; }
 } ;
 
 
 
 VGPath.prototype.export = function( data = {} ) {
 	VGEntity.prototype.export.call( this , data ) ;
-	if ( this.commands.length ) { data.commands = this.commands ; }
+	this.path.export( data ) ;
 	return data ;
+} ;
+
+
+
+VGPath.prototype.onAttach = function() {
+	this.path.setInvertY( this.root.invertY ) ;
+	this.computeBoundingBox() ;
+} ;
+
+
+
+VGPath.prototype.computeBoundingBox = function() {
+	this.boundingBox.set( this.path.boundingBox ) ;
+	var width = this.style.stroke ? this.style.strokeWidth : 0 ;
+	if ( width ) { this.boundingBox.enlarge( width ) ; }
 } ;
 
 
@@ -11456,10 +13943,46 @@ VGPath.prototype.svgAttributes = function( master = this ) {
 
 
 
-// Build the SVG 'd' attribute
-VGPath.prototype.toD = function() {
-	return pathUtilities.commandsToD( this.commands , this.root.invertY ) ;
+// Methods that pass to Path methods
+VGPath.prototype.toD = function() { return this.path.toD( this.root.invertY ) ; } ;
+VGPath.prototype.isInside = function( coords ) { return this.path.isInside( coords ) ; } ;
+
+
+
+// Return an array of VGPolygon, the hull of the current path (non-closing path are EXCLUDED!)
+VGPath.prototype.toVGPolygonHull = function( options = {} ) {
+	this.path.computeHull() ;
+	return this.path.polygonHull.map( polygon => new VGPolygon( { polygon , style: options.style } ) ) ;
 } ;
+
+
+
+// Return an array of VGPolygon
+VGPath.prototype.toVGPolygon = function( options = {} ) {
+	var polygonList = this.path.toPolygon() ;
+	return polygonList.map( polygon => new VGPolygon( { polygon , style: options.style } ) ) ;
+} ;
+
+
+
+// Return an array of VGPolyline
+VGPath.prototype.toVGPolyline = function( options = {} ) {
+	var polylineList = this.path.toPolyline() ;
+	return polylineList.map( polyline => new VGPolyne( { polyline , style: options.style } ) ) ;
+} ;
+
+
+
+// Create API methods
+for ( let type in Path.commands ) {
+	if ( Path.commands[ type ].add ) {
+		VGPath.prototype[ type ] = function( data ) {
+			this.path[ type ]( data ) ;
+			this.computeBoundingBox() ;
+			return this ;
+		} ;
+	}
+}
 
 
 
@@ -11477,382 +14000,268 @@ VGPath.prototype.renderHookForPath2D = function( path2D , canvasCtx , options = 
 } ;
 
 
-
-/*
-	Now add path commands.
-	First, true SVG path commands.
-*/
-
-VGPath.prototype.close = function() {
-	this.commands.push( { type: 'close' } ) ;
-	return this ;
-} ;
-
-VGPath.prototype.move = function( data ) {
-	this.commands.push( {
-		type: 'move' ,
-		rel: true ,
-		x: data.x || 0 ,
-		y: data.y || 0
-	} ) ;
-	return this ;
-} ;
-
-VGPath.prototype.moveTo = function( data ) {
-	this.commands.push( {
-		type: 'move' ,
-		x: data.x || 0 ,
-		y: data.y || 0
-	} ) ;
-	return this ;
-} ;
-
-VGPath.prototype.line = function( data ) {
-	this.commands.push( {
-		type: 'line' ,
-		rel: true ,
-		x: data.x || 0 ,
-		y: data.y || 0
-	} ) ;
-	return this ;
-} ;
-
-VGPath.prototype.lineTo = function( data ) {
-	this.commands.push( {
-		type: 'line' ,
-		x: data.x || 0 ,
-		y: data.y || 0
-	} ) ;
-	return this ;
-} ;
-
-VGPath.prototype.curve = function( data ) {
-	this.commands.push( {
-		type: 'curve' ,
-		rel: true ,
-		cx1: data.cx1 || 0 ,
-		cy1: data.cy1 || 0 ,
-		cx2: data.cx2 || 0 ,
-		cy2: data.cy2 || 0 ,
-		x: data.x || 0 ,
-		y: data.y || 0
-	} ) ;
-	return this ;
-} ;
-
-VGPath.prototype.curveTo = function( data ) {
-	this.commands.push( {
-		type: 'curve' ,
-		cx1: data.cx1 || 0 ,
-		cy1: data.cy1 || 0 ,
-		cx2: data.cx2 || 0 ,
-		cy2: data.cy2 || 0 ,
-		x: data.x || 0 ,
-		y: data.y || 0
-	} ) ;
-	return this ;
-} ;
-
-VGPath.prototype.smoothCurve = function( data ) {
-	this.commands.push( {
-		type: 'smoothCurve' ,
-		rel: true ,
-		cx: data.cx || data.cx2 || 0 ,
-		cy: data.cy || data.cy2 || 0 ,
-		x: data.x || 0 ,
-		y: data.y || 0
-	} ) ;
-	return this ;
-} ;
-
-VGPath.prototype.smoothCurveTo = function( data ) {
-	this.commands.push( {
-		type: 'smoothCurve' ,
-		cx: data.cx || data.cx2 || 0 ,
-		cy: data.cy || data.cy2 || 0 ,
-		x: data.x || 0 ,
-		y: data.y || 0
-	} ) ;
-	return this ;
-} ;
-
-// q-curve = Quadratic curve, it uses just one controle point instead of two
-VGPath.prototype.qCurve = function( data ) {
-	this.commands.push( {
-		type: 'qCurve' ,
-		rel: true ,
-		cx: data.cx || data.cx1 || 0 ,
-		cy: data.cy || data.cy1 || 0 ,
-		x: data.x || 0 ,
-		y: data.y || 0
-	} ) ;
-	return this ;
-} ;
-
-VGPath.prototype.qCurveTo = function( data ) {
-	this.commands.push( {
-		type: 'qCurve' ,
-		cx: data.cx || data.cx1 || 0 ,
-		cy: data.cy || data.cy1 || 0 ,
-		x: data.x || 0 ,
-		y: data.y || 0
-	} ) ;
-	return this ;
-} ;
-
-VGPath.prototype.smoothQCurve = function( data ) {
-	this.commands.push( {
-		type: 'smoothQCurve' ,
-		rel: true ,
-		x: data.x || 0 ,
-		y: data.y || 0
-	} ) ;
-	return this ;
-} ;
-
-VGPath.prototype.smoothQCurveTo = function( data ) {
-	this.commands.push( {
-		type: 'smoothQCurve' ,
-		x: data.x || 0 ,
-		y: data.y || 0
-	} ) ;
-	return this ;
-} ;
-
-VGPath.prototype.arc = function( data ) {
-	this.commands.push( {
-		type: 'arc' ,
-		rel: true ,
-		rx: data.rx || 0 ,
-		ry: data.ry || 0 ,
-		ra: data.ra || data.a || 0 ,	// x-axis rotation
-		la:
-			data.largeArc !== undefined ? !! data.largeArc :
-			data.longArc !== undefined ? !! data.longArc :
-			data.la !== undefined ? !! data.la :
-			false ,
-		pr:
-			data.positiveRotation !== undefined ? !! data.positiveRotation :
-			data.sweep !== undefined ? !! data.sweep :		// <- this is the SVG term
-			data.pr !== undefined ? !! data.pr :
-			true ,
-		x: data.x || 0 ,
-		y: data.y || 0
-	} ) ;
-	return this ;
-} ;
-
-VGPath.prototype.arcTo = function( data ) {
-	this.commands.push( {
-		type: 'arc' ,
-		rx: data.rx || 0 ,
-		ry: data.ry || 0 ,
-		ra: data.ra || data.a || 0 ,	// x-axis rotation
-		la:
-			data.largeArc !== undefined ? !! data.largeArc :
-			data.longArc !== undefined ? !! data.longArc :
-			data.la !== undefined ? !! data.la :
-			false ,
-		pr:
-			data.positiveRotation !== undefined ? !! data.positiveRotation :
-			data.sweep !== undefined ? !! data.sweep :		// <- this is the SVG term
-			data.pr !== undefined ? !! data.pr :
-			true ,
-		x: data.x || 0 ,
-		y: data.y || 0
-	} ) ;
-	return this ;
-} ;
-
-// All angles use positive as Y-axis to X-axis (Spellcast usage)
-VGPath.prototype.negativeArc = function( data ) {
-	this.commands.push( {
-		type: 'arc' ,
-		rel: true ,
-		rx: data.rx || 0 ,
-		ry: data.ry || 0 ,
-		ra: - ( data.ra || data.a || 0 ) ,	// x-axis rotation
-		la:
-			data.largeArc !== undefined ? !! data.largeArc :
-			data.longArc !== undefined ? !! data.longArc :
-			data.la !== undefined ? !! data.la :
-			false ,
-		pr: ! (
-			data.positiveRotation !== undefined ? !! data.positiveRotation :
-			data.sweep !== undefined ? !! data.sweep :		// <- this is the SVG term
-			data.pr !== undefined ? !! data.pr :
-			true
-		) ,
-		x: data.x || 0 ,
-		y: data.y || 0
-	} ) ;
-	return this ;
-} ;
-
-// All angles use positive as Y-axis to X-axis (Spellcast usage)
-VGPath.prototype.negativeArcTo = function( data ) {
-	this.commands.push( {
-		type: 'arc' ,
-		rx: data.rx || 0 ,
-		ry: data.ry || 0 ,
-		ra: - ( data.ra || data.a || 0 ) ,	// x-axis rotation
-		la:
-			data.largeArc !== undefined ? !! data.largeArc :
-			data.longArc !== undefined ? !! data.longArc :
-			data.la !== undefined ? !! data.la :
-			false ,
-		pr: ! (
-			data.positiveRotation !== undefined ? !! data.positiveRotation :
-			data.sweep !== undefined ? !! data.sweep :		// <- this is the SVG term
-			data.pr !== undefined ? !! data.pr :
-			true
-		) ,
-		x: data.x || 0 ,
-		y: data.y || 0
-	} ) ;
-	return this ;
-} ;
-
-
-
-/*
-	VG-specific commands.
-*/
-
-// Better arc-like command, but use curve behind the scene
-VGPath.prototype.centerArc = function( data ) {
-	this.commands.push( {
-		type: 'centerArc' ,
-		rel: true ,
-		cx: data.cx || 0 ,
-		cy: data.cy || 0 ,
-		la: data.largeArc !== undefined ? !! data.largeArc :
-		data.longArc !== undefined ? !! data.longArc :
-		data.la !== undefined ? !! data.la :
-		false ,
-		x: data.x || 0 ,
-		y: data.y || 0
-	} ) ;
-	return this ;
-} ;
-
-VGPath.prototype.centerArcTo = function( data ) {
-	this.commands.push( {
-		type: 'centerArc' ,
-		cx: data.cx || 0 ,
-		cy: data.cy || 0 ,
-		la: data.largeArc !== undefined ? !! data.largeArc :
-		data.longArc !== undefined ? !! data.longArc :
-		data.la !== undefined ? !! data.la :
-		false ,
-		x: data.x || 0 ,
-		y: data.y || 0
-	} ) ;
-	return this ;
-} ;
-
-
-
-/*
-	Turtle-like commands.
-*/
-
-VGPath.prototype.penUp = function( data ) {
-	this.commands.push( {
-		type: 'pen' ,
-		u: true
-	} ) ;
-	return this ;
-} ;
-
-VGPath.prototype.penDown = function( data ) {
-	this.commands.push( {
-		type: 'pen' ,
-		u: false
-	} ) ;
-	return this ;
-} ;
-
-VGPath.prototype.forward = function( data ) {
-	this.commands.push( {
-		type: 'forward' ,
-		l: typeof data === 'number' ? data : data.length || data.l || 0
-	} ) ;
-	return this ;
-} ;
-
-VGPath.prototype.backward = function( data ) {
-	this.commands.push( {
-		type: 'forward' ,
-		l: - ( typeof data === 'number' ? data : data.length || data.l || 0 )
-	} ) ;
-	return this ;
-} ;
-
-// Turn using positive as X-axis to Y-axis
-VGPath.prototype.turn = function( data ) {
-	this.commands.push( {
-		type: 'turn' ,
-		rel: true ,
-		a: typeof data === 'number' ? data : data.angle || data.a || 0
-	} ) ;
-	return this ;
-} ;
-
-// Turn from X-axis to Y-axis
-VGPath.prototype.turnTo = function( data ) {
-	this.commands.push( {
-		type: 'turn' ,
-		a: typeof data === 'number' ? data : data.angle || data.a || 0
-	} ) ;
-	return this ;
-} ;
-
-// Turn using positive as Y-axis to X-axis (Spellcast usage)
-VGPath.prototype.negativeTurn = function( data ) {
-	this.commands.push( {
-		type: 'turn' ,
-		rel: true ,
-		a: - ( typeof data === 'number' ? data : data.angle || data.a || 0 )
-	} ) ;
-	return this ;
-} ;
-
-// Turn from Y-axis to X-axis (clockwise when Y point upward, the invert of the standard 2D computer graphics) (Spellcast usage)
-VGPath.prototype.negativeTurnTo = function( data ) {
-	this.commands.push( {
-		type: 'turn' ,
-		a: 90 - ( typeof data === 'number' ? data : data.angle || data.a || 0 )
-	} ) ;
-	return this ;
-} ;
-
-// A turtle-like way of doing a curve: combine a forward and turn, moving along a circle
-VGPath.prototype.forwardTurn = function( data ) {
-	this.commands.push( {
-		type: 'forwardTurn' ,
-		l: data.length || data.l || 0 ,
-		a: data.angle || data.a || 0
-	} ) ;
-	return this ;
-} ;
-
-// Turn using positive as Y-axis to X-axis (clockwise when Y point upward, the invert of the standard 2D computer graphics) (Spellcast usage)
-VGPath.prototype.forwardNegativeTurn = function( data ) {
-	this.commands.push( {
-		type: 'forwardTurn' ,
-		l: data.length || data.l || 0 ,
-		a: - ( data.angle || data.a || 0 )
-	} ) ;
-	return this ;
-} ;
-
-
-},{"../package.json":117,"./VGEntity.js":30,"./canvas-utilities.js":46,"./path-utilities.js":53}],42:[function(require,module,exports){
+},{"../package.json":128,"./Path/Path.js":29,"./VGEntity.js":40,"./VGPolygon.js":52,"./canvas-utilities.js":58}],52:[function(require,module,exports){
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+const VGEntity = require( './VGEntity.js' ) ;
+const Polygon = require( './Polygon.js' ) ;
+const canvasUtilities = require( './canvas-utilities.js' ) ;
+
+
+
+function VGPolygon( params ) {
+	VGEntity.call( this , params ) ;
+
+	this.polygon = params.polygon || new Polygon() ;
+	
+	if ( params ) { this.set( params ) ; }
+}
+
+module.exports = VGPolygon ;
+
+VGPolygon.prototype = Object.create( VGEntity.prototype ) ;
+VGPolygon.prototype.constructor = VGPolygon ;
+VGPolygon.prototype.__prototypeUID__ = 'svg-kit/VGPolygon' ;
+VGPolygon.prototype.__prototypeVersion__ = require( '../package.json' ).version ;
+
+
+
+VGPolygon.prototype.svgTag = 'path' ;
+
+
+
+VGPolygon.prototype.set = function( params ) {
+	var refreshBbox = !! ( params.style?.stroke || params.style?.strokeWidth ) ;
+
+	if ( params.points ) {
+		this.polygon.setPoints( params.points ) ;
+		refreshBbox = true ;
+	}
+
+	VGEntity.prototype.set.call( this , params ) ;
+
+	if ( refreshBbox ) { this.computeBoundingBox() ; }
+} ;
+
+
+
+VGPolygon.prototype.export = function( data = {} ) {
+	VGEntity.prototype.export.call( this , data ) ;
+	this.polygon.exports( data ) ;
+	return data ;
+} ;
+
+
+
+// Methods that pass to Polygon methods
+VGPolygon.prototype.toD = function() { return this.polygon.toD( this.root.invertY ) ; } ;
+VGPolygon.prototype.isInside = function( coords ) { return this.polygon.isInside( coords ) ; } ;
+
+VGPolygon.prototype.setPoints = function( points ) {
+	this.polygon.setPoints( points ) ;
+	this.computeBoundingBox() ;
+} ;
+
+VGPolygon.prototype.addPoint = function( point ) {
+	this.polygon.addPoint( point ) ;
+	this.computeBoundingBox() ;
+} ;
+
+VGPolygon.prototype.computeBoundingBox = function() {
+	this.boundingBox.set( this.polygon.boundingBox ) ;
+	var width = this.style.stroke ? this.style.strokeWidth : 0 ;
+	if ( width ) { this.boundingBox.enlarge( width ) ; }
+} ;
+
+
+
+VGPolygon.prototype.svgAttributes = function( master = this ) {
+	var attr = {
+		// SVG attribute 'd' (data)
+		d: this.toD()
+	} ;
+
+	return attr ;
+} ;
+
+
+
+VGPolygon.prototype.renderHookForCanvas = function( canvasCtx , options = {} , isRedraw = false , master = this ) {
+	canvasCtx.save() ;
+	canvasCtx.beginPath() ;
+	canvasUtilities.fillAndStrokeUsingStyle( canvasCtx , this.style , master?.palette , new Path2D( this.toD() ) ) ;
+	canvasCtx.restore() ;
+} ;
+
+
+
+VGPolygon.prototype.renderHookForPath2D = function( path2D , canvasCtx , options = {} , master = this ) {
+	path2D.addPath( new Path2D( this.toD() ) ) ;
+} ;
+
+
+},{"../package.json":128,"./Polygon.js":32,"./VGEntity.js":40,"./canvas-utilities.js":58}],53:[function(require,module,exports){
+/*
+	SVG Kit
+
+	Copyright (c) 2017 - 2024 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+"use strict" ;
+
+
+
+const VGEntity = require( './VGEntity.js' ) ;
+const Polyline = require( './Polyline.js' ) ;
+const canvasUtilities = require( './canvas-utilities.js' ) ;
+
+
+
+function VGPolyline( params ) {
+	VGEntity.call( this , params ) ;
+
+	this.polyline = params.polyline || new Polyline() ;
+	
+	if ( params ) { this.set( params ) ; }
+}
+
+module.exports = VGPolyline ;
+
+VGPolyline.prototype = Object.create( VGEntity.prototype ) ;
+VGPolyline.prototype.constructor = VGPolyline ;
+VGPolyline.prototype.__prototypeUID__ = 'svg-kit/VGPolyline' ;
+VGPolyline.prototype.__prototypeVersion__ = require( '../package.json' ).version ;
+
+
+
+VGPolyline.prototype.noFill = true ;
+VGPolyline.prototype.svgTag = 'path' ;
+
+
+
+VGPolyline.prototype.set = function( params ) {
+	var refreshBbox = !! ( params.style?.stroke || params.style?.strokeWidth ) ;
+
+	if ( params.points ) {
+		this.polyline.setPoints( params.points ) ;
+		refreshBbox = true ;
+	}
+
+	VGEntity.prototype.set.call( this , params ) ;
+
+	if ( refreshBbox ) { this.computeBoundingBox() ; }
+} ;
+
+
+
+VGPolyline.prototype.export = function( data = {} ) {
+	VGEntity.prototype.export.call( this , data ) ;
+	this.polyline.exports( data ) ;
+	return data ;
+} ;
+
+
+
+// Methods that pass to Polyline methods
+VGPolyline.prototype.toD = function() { return this.polyline.toD( this.root.invertY ) ; } ;
+VGPolyline.prototype.isInside = function( coords ) { return this.polyline.isInside( coords ) ; } ;
+
+VGPolyline.prototype.setPoints = function( points ) {
+	this.polyline.setPoints( points ) ;
+	this.computeBoundingBox() ;
+} ;
+
+VGPolyline.prototype.addPoint = function( point ) {
+	this.polyline.addPoint( point ) ;
+	this.computeBoundingBox() ;
+} ;
+
+VGPolyline.prototype.computeBoundingBox = function() {
+	this.boundingBox.set( this.polyline.boundingBox ) ;
+	var width = this.style.stroke ? this.style.strokeWidth : 0 ;
+	if ( width ) { this.boundingBox.enlarge( width ) ; }
+} ;
+
+
+
+VGPolyline.prototype.svgAttributes = function( master = this ) {
+	var attr = {
+		// SVG attribute 'd' (data)
+		d: this.toD()
+	} ;
+
+	return attr ;
+} ;
+
+
+
+VGPolyline.prototype.renderHookForCanvas = function( canvasCtx , options = {} , isRedraw = false , master = this ) {
+	canvasCtx.save() ;
+	canvasCtx.beginPath() ;
+	canvasUtilities.fillAndStrokeUsingStyle( canvasCtx , this.style , master?.palette , new Path2D( this.toD() ) ) ;
+	canvasCtx.restore() ;
+} ;
+
+
+
+VGPolyline.prototype.renderHookForPath2D = function( path2D , canvasCtx , options = {} , master = this ) {
+	path2D.addPath( new Path2D( this.toD() ) ) ;
+} ;
+
+
+},{"../package.json":128,"./Polyline.js":33,"./VGEntity.js":40,"./canvas-utilities.js":58}],54:[function(require,module,exports){
+/*
+	SVG Kit
+
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -11944,11 +14353,11 @@ VGPseudoContainer.prototype.clearPseudoEntities = function() {
 VGPseudoContainer.prototype.computePseudoEntities = async function() {} ;
 
 
-},{"../package.json":117,"./VGEntity.js":30,"./svg-kit.js":54,"array-kit":76}],43:[function(require,module,exports){
+},{"../package.json":128,"./VGEntity.js":40,"./svg-kit.js":65,"array-kit":87}],55:[function(require,module,exports){
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -12002,11 +14411,11 @@ VGPseudoEntity.prototype.__prototypeVersion__ = require( '../package.json' ).ver
 //VGPseudoEntity.prototype.isPseudoEntity = true ;
 
 
-},{"../package.json":117,"./VGEntity.js":30,"./svg-kit.js":54,"array-kit":76}],44:[function(require,module,exports){
+},{"../package.json":128,"./VGEntity.js":40,"./svg-kit.js":65,"array-kit":87}],56:[function(require,module,exports){
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -12068,10 +14477,12 @@ VGRect.prototype.svgTag = 'rect' ;
 
 
 VGRect.prototype.set = function( params ) {
-	if ( params.x !== undefined ) { this.boundingBox.x = this.x = params.x ; }
-	if ( params.y !== undefined ) { this.boundingBox.y = this.y = params.y ; }
-	if ( params.width !== undefined ) { this.boundingBox.width = this.width = params.width ; }
-	if ( params.height !== undefined ) { this.boundingBox.height = this.height = params.height ; }
+	var refreshBbox = !! ( params.style?.stroke || params.style?.strokeWidth ) ;
+
+	if ( params.x !== undefined ) { this.x = params.x ; refreshBbox = true ; }
+	if ( params.y !== undefined ) { this.y = params.y ; refreshBbox = true ; }
+	if ( params.width !== undefined ) { this.width = params.width ; refreshBbox = true ; }
+	if ( params.height !== undefined ) { this.height = params.height ; refreshBbox = true ; }
 
 	// Round corner radius
 	if ( params.r !== undefined ) { this.rx = this.ry = params.r ; }
@@ -12079,6 +14490,8 @@ VGRect.prototype.set = function( params ) {
 	if ( params.ry !== undefined ) { this.ry = params.ry ; }
 
 	VGEntity.prototype.set.call( this , params ) ;
+
+	if ( refreshBbox ) { this.computeBoundingBox() ; }
 } ;
 
 
@@ -12099,10 +14512,9 @@ VGRect.prototype.export = function( data = {} ) {
 
 
 
-VGRect.prototype.getBoundingBox = function() {
+VGRect.prototype.computeBoundingBox = function() {
 	var strokeWidth = this.style.stroke ? this.style.strokeWidth : 0 ;
-
-	return new BoundingBox(
+	this.boundingBox.setMinMax(
 		this.x - strokeWidth ,
 		this.y - strokeWidth ,
 		this.x + this.width + strokeWidth ,
@@ -12158,11 +14570,11 @@ VGRect.prototype.renderHookForPath2D = function( path2D , canvasCtx , options = 
 } ;
 
 
-},{"../package.json":117,"./BoundingBox.js":19,"./VGEntity.js":30,"./canvas-utilities.js":46}],45:[function(require,module,exports){
+},{"../package.json":128,"./BoundingBox.js":19,"./VGEntity.js":40,"./canvas-utilities.js":58}],57:[function(require,module,exports){
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -12341,11 +14753,11 @@ VGText.prototype.renderHookForCanvas = function( canvasCtx , options = {} , isRe
 } ;
 
 
-},{"../package.json":117,"./VGEntity.js":30}],46:[function(require,module,exports){
+},{"../package.json":128,"./VGEntity.js":40}],58:[function(require,module,exports){
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -12506,11 +14918,11 @@ canvas.contextToCanvasCoords = ( canvasCtx , contextCoords ) => {
 } ;
 
 
-},{"./color-utilities.js":47}],47:[function(require,module,exports){
+},{"./color-utilities.js":59}],59:[function(require,module,exports){
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -12648,12 +15060,12 @@ colorUtilities.getContrastColorCode = ( colorStr , rate = 0.5 ) => {
 } ;
 
 
-},{"palette-shade":96}],48:[function(require,module,exports){
+},{"palette-shade":107}],60:[function(require,module,exports){
 (function (process){(function (){
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -13100,12 +15512,12 @@ core.standalone = function( content , viewBox ) {
 
 
 }).call(this)}).call(this,require('_process'))
-},{"_process":124,"dom-kit":88,"fs":118,"string-kit/lib/escape.js":110}],49:[function(require,module,exports){
+},{"_process":135,"dom-kit":99,"fs":129,"string-kit/lib/escape.js":121}],61:[function(require,module,exports){
 (function (process,__dirname){(function (){
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -13479,11 +15891,11 @@ else {
 
 
 }).call(this)}).call(this,require('_process'),"/../svg-kit/lib")
-},{"_process":124,"fs":118,"opentype.js":92,"path":123}],50:[function(require,module,exports){
+},{"_process":135,"fs":129,"opentype.js":103,"path":134}],62:[function(require,module,exports){
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -13919,11 +16331,11 @@ exports.fade = ( params ) => {
 
 
 
-},{"../VGFlowingText/TextAttribute.js":34,"./mathFn.js":51}],51:[function(require,module,exports){
+},{"../VGFlowingText/TextAttribute.js":44,"./mathFn.js":63}],63:[function(require,module,exports){
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -14030,12 +16442,12 @@ easing.sine = t => 0.5 + Math.sin( - PI_OVER_2 + t * PI ) / 2 ;
 
 
 
-},{}],52:[function(require,module,exports){
+},{}],64:[function(require,module,exports){
 (function (process){(function (){
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -14088,320 +16500,11 @@ else {
 
 
 }).call(this)}).call(this,require('_process'))
-},{"_process":124,"image-size":118}],53:[function(require,module,exports){
+},{"_process":135,"image-size":129}],65:[function(require,module,exports){
 /*
 	SVG Kit
 
-	Copyright (c) 2017 - 2023 Cédric Ronvel
-
-	The MIT License (MIT)
-
-	Permission is hereby granted, free of charge, to any person obtaining a copy
-	of this software and associated documentation files (the "Software"), to deal
-	in the Software without restriction, including without limitation the rights
-	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-	copies of the Software, and to permit persons to whom the Software is
-	furnished to do so, subject to the following conditions:
-
-	The above copyright notice and this permission notice shall be included in all
-	copies or substantial portions of the Software.
-
-	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-	SOFTWARE.
-*/
-
-"use strict" ;
-
-
-
-const degToRad = deg => deg * Math.PI / 180 ;
-const radToDeg = rad => rad * 180 / Math.PI ;
-
-
-
-const pathUtilities = {} ;
-module.exports = pathUtilities ;
-
-
-
-// Create lines from an array of points (object with .x and .y)
-pathUtilities.linePointsToD = ( points , invertY = false ) => {
-	var yMul = invertY ? - 1 : 1 ,
-		str = 'M' ;
-
-	points.forEach( point => {
-		str += ' ' + point.x + ',' + ( point.y * yMul ) ;
-	} ) ;
-
-	return str ;
-} ;
-
-pathUtilities.polygonPointsToD = ( points , invertY = false ) => pathUtilities.linePointsToD( points , invertY ) + ' z' ;
-
-
-
-/*
-	This part is used to build the SVG 'd' attribute from the SVG Kit's command format.
-*/
-
-pathUtilities.commandsToD = ( commands , invertY = false ) => {
-	var build = {
-		invertY ,
-		d: '' ,
-		pu: false ,	// Pen Up, when true, turtle-like commands move without tracing anything
-		cx: 0 ,		// cursor position x
-		cy: 0 ,		// cursor position y
-		ca: invertY ? - Math.PI / 2 : Math.PI / 2		// cursor angle, default to positive Y-axis
-	} ;
-
-	commands.forEach( ( command , index ) => {
-		if ( index ) { build.d += ' ' ; }
-		builders[ command.type ]( command , build ) ;
-	} ) ;
-
-	return build.d ;
-} ;
-
-
-
-const builders = pathUtilities.builders = {} ;
-
-builders.close = ( command , build ) => {
-	build.d += 'z' ;
-} ;
-
-builders.move = ( command , build ) => {
-	var y = build.invertY ? - command.y : command.y ;
-
-	if ( command.rel ) {
-		build.d += 'm ' + command.x + ' ' + y ;
-		build.cx += command.x ;
-		build.cy += y ;
-	}
-	else {
-		build.d += 'M ' + command.x + ' ' + y ;
-		build.cx = command.x ;
-		build.cy = y ;
-	}
-} ;
-
-builders.line = ( command , build ) => {
-	var y = build.invertY ? - command.y : command.y ;
-
-	if ( command.rel ) {
-		build.d += 'l ' + command.x + ' ' + y ;
-		build.cx += command.x ;
-		build.cy += y ;
-	}
-	else {
-		build.d += 'L ' + command.x + ' ' + y ;
-		build.cx = command.x ;
-		build.cy = y ;
-	}
-} ;
-
-builders.curve = ( command , build ) => {
-	var cy1 = build.invertY ? - command.cy1 : command.cy1 ,
-		cy2 = build.invertY ? - command.cy2 : command.cy2 ,
-		y = build.invertY ? - command.y : command.y ;
-
-	if ( command.rel ) {
-		build.d += 'c ' + command.cx1 + ' ' + cy1 + ' ' + command.cx2 + ' ' + cy2 + ' '  + command.x + ' ' + y ;
-		build.cx += command.x ;
-		build.cy += y ;
-	}
-	else {
-		build.d += 'C ' + command.cx1 + ' ' + cy1 + ' ' + command.cx2 + ' ' + cy2 + ' '  + command.x + ' ' + y ;
-		build.cx = command.x ;
-		build.cy = y ;
-	}
-} ;
-
-builders.smoothCurve = ( command , build ) => {
-	var cy = build.invertY ? - command.cy : command.cy ,
-		y = build.invertY ? - command.y : command.y ;
-
-	if ( command.rel ) {
-		build.d += 's ' + command.cx + ' ' + cy + ' ' + command.x + ' ' + y ;
-		build.cx += command.x ;
-		build.cy += y ;
-	}
-	else {
-		build.d += 'S ' + command.cx + ' ' + cy + ' ' + command.x + ' ' + y ;
-		build.cx = command.x ;
-		build.cy = y ;
-	}
-} ;
-
-builders.qCurve = ( command , build ) => {
-	var cy = build.invertY ? - command.cy : command.cy ,
-		y = build.invertY ? - command.y : command.y ;
-
-	if ( command.rel ) {
-		build.d += 'q ' + command.cx + ' ' + cy + ' ' + command.x + ' ' + y ;
-		build.cx += command.x ;
-		build.cy += y ;
-	}
-	else {
-		build.d += 'Q ' + command.cx + ' ' + cy + ' ' + command.x + ' ' + y ;
-		build.cx = command.x ;
-		build.cy = y ;
-	}
-} ;
-
-builders.smoothQCurve = ( command , build ) => {
-	var y = build.invertY ? - command.y : command.y ;
-
-	if ( command.rel ) {
-		build.d += 't ' + command.x + ' ' + y ;
-		build.cx += command.x ;
-		build.cy += y ;
-	}
-	else {
-		build.d += 'T ' + command.x + ' ' + y ;
-		build.cx = command.x ;
-		build.cy = y ;
-	}
-} ;
-
-builders.arc = ( command , build ) => {
-	var ra = build.invertY ? - command.ra : command.ra ,
-		pr = build.invertY ? ! command.pr : command.pr ,
-		y = build.invertY ? - command.y : command.y ;
-
-	if ( command.rel ) {
-		build.d += 'a ' + command.rx + ' ' + command.ry + ' ' + ra + ' ' + ( + command.la ) + ' '  + ( + pr ) + ' ' + command.x + ' ' + y ;
-		build.cx += command.x ;
-		build.cy += y ;
-	}
-	else {
-		build.d += 'A ' + command.rx + ' ' + command.ry + ' ' + ra + ' ' + ( + command.la ) + ' '  + ( + pr ) + ' ' + command.x + ' ' + y ;
-		build.cx = command.x ;
-		build.cy = y ;
-	}
-} ;
-
-// VG-specific
-
-/*
-	Approximation of circles using cubic bezier curves.
-
-	Controle point distance/radius ratio for quarter of circle: 0.55228475 or 4/3 (sqrt(2)-1)
-	For half of a circle: 4/3
-
-	From: https://www.tinaja.com/glib/bezcirc2.pdf
-	The arc is bissected by the X-axis.
-	x0 = cos( / 2)			y0 = sin( / 2)
-	x3 = x1					y3 = - y0
-	x1 = (4 - x0) / 3		y1 = (1 - x0)(3 - x0) / 3 y0
-	x2 = x1					y2 = -y1
-
-	This distance ensure that the mid-time point is exactly on the arc.
-	It works very well for angle ranging from 0-90°, can be good enough for 90-180°,
-	but it's bad for greater than 180°.
-	In fact it's not possible to approximate a 270° arc with a single cubic bezier curve.
-*/
-function controleDistance( angle ) {
-	if ( ! angle ) { return 0 ; }
-	var angleRad = degToRad( angle ) ;
-	var x0 = Math.cos( angleRad / 2 ) ,
-		y0 = Math.sin( angleRad / 2 ) ,
-		x1 = ( 4 - x0 ) / 3 ,
-		y1 = ( 1 - x0 ) * ( 3 - x0 ) / ( 3 * y0 ) ;
-	return Math.sqrt( ( x0 - x1 ) ** 2 + ( y0 - y1 ) ** 2 ) ;
-}
-
-builders.centerArc = ( command , build ) => {
-
-	// ---------------------------------------------------------------------------------- NOT CODED ----------------------------------------------------------------
-
-	// It's supposed to ease circle creation inside path, converting them to SVG curves...
-
-	var { x , y , cx , cy } = command ;
-
-	if ( command.rel ) {
-		x += build.cx ;
-		y += build.cy ;
-		cx += build.cx ;
-		cy += build.cy ;
-	}
-
-	var startAngle = Math.atan2( build.cy - cy , build.cx - cx ) ,
-		endAngle = Math.atan2( y - cy , x - cx ) ;
-
-	build.cx = x ;
-	build.cy = y ;
-} ;
-
-// Turtle-like
-
-builders.pen = ( command , build ) => {
-	build.pu = command.u ;
-} ;
-
-builders.forward = ( command , build ) => {
-	var dx = command.l * Math.cos( build.ca ) ,
-		dy = command.l * Math.sin( build.ca ) ;
-
-	if ( build.pu ) { build.d += 'm ' + dx + ' ' + dy ; }
-	else { build.d += 'l ' + dx + ' ' + dy ; }
-
-	build.cx += dx ;
-	build.cy += dy ;
-} ;
-
-builders.turn = ( command , build ) => {
-	var a = build.invertY ? - command.a : command.a ;
-
-	if ( command.rel ) {
-		build.ca += degToRad( a ) ;
-	}
-	else {
-		build.ca = degToRad( a ) ;
-	}
-} ;
-
-builders.forwardTurn = ( command , build ) => {
-	var a = build.invertY ? - command.a : command.a ;
-
-	/*
-		We will first transpose to a circle of center 0,0 and we are starting at x=radius,y=0 and moving positively
-	*/
-	var angleRad = degToRad( a ) ,
-		angleSign = angleRad >= 0 ? 1 : - 1 ,
-		alpha = Math.abs( angleRad ) ,
-		radius = command.l / alpha ,
-		trX = radius * Math.cos( alpha ) ,
-		trY = radius * Math.sin( alpha ) ,
-		dist = Math.sqrt( ( radius - trX ) ** 2 + trY ** 2 ) ,
-		beta = Math.atan2( radius - trX , trY ) ;	// beta is the deviation
-
-	var dx = dist * Math.cos( build.ca + angleSign * beta ) ,
-		dy = dist * Math.sin( build.ca + angleSign * beta ) ;
-
-	if ( build.pu ) {
-		build.d += 'm ' + dx + ' ' + dy ;
-	}
-	else {
-		build.d += 'a ' + radius + ' ' + radius + ' 0 ' + ( alpha > Math.PI ? 1 : 0 ) + ' '  + ( angleRad >= 0 ? 1 : 0 ) + ' ' + dx + ' ' + dy ;
-	}
-
-	build.cx += dx ;
-	build.cy += dy ;
-	build.ca += angleRad ;
-} ;
-
-
-},{}],54:[function(require,module,exports){
-/*
-	SVG Kit
-
-	Copyright (c) 2017 - 2023 Cédric Ronvel
+	Copyright (c) 2017 - 2024 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -14433,11 +16536,13 @@ module.exports = svgKit ;
 
 Object.assign( svgKit , require( './core-utilities.js' ) ) ;
 Object.assign( svgKit , require( './color-utilities.js' ) ) ;
-svgKit.path = require( './path-utilities.js' ) ;
 svgKit.canvas = require( './canvas-utilities.js' ) ;
 
 svgKit.BoundingBox = require( './BoundingBox.js' ) ;
+svgKit.Polygon = require( './Polygon.js' ) ;
 svgKit.ConvexPolygon = require( './ConvexPolygon.js' ) ;
+svgKit.Polyline = require( './Polyline.js' ) ;
+svgKit.Path = require( './Path/Path.js' ) ;
 svgKit.Style = require( './Style.js' ) ;
 
 svgKit.VG = require( './VG.js' ) ;
@@ -14446,7 +16551,9 @@ svgKit.VGContainer = require( './VGContainer.js' ) ;
 svgKit.VGGroup = require( './VGGroup.js' ) ;
 svgKit.VGClip = require( './VGClip.js' ) ;
 svgKit.VGRect = require( './VGRect.js' ) ;
+svgKit.VGPolygon = require( './VGPolygon.js' ) ;
 svgKit.VGConvexPolygon = require( './VGConvexPolygon.js' ) ;
+svgKit.VGPolyline = require( './VGPolyline.js' ) ;
 svgKit.VGEllipse = require( './VGEllipse.js' ) ;
 svgKit.VGPath = require( './VGPath.js' ) ;
 svgKit.VGText = require( './VGText.js' ) ;
@@ -14489,7 +16596,7 @@ svgKit.objectToVG = function( object , clone = false ) {
 } ;
 
 
-},{"./BoundingBox.js":19,"./ConvexPolygon.js":20,"./DynamicArea.js":21,"./DynamicManager.js":22,"./Style.js":24,"./VG.js":25,"./VGClip.js":26,"./VGContainer.js":27,"./VGConvexPolygon.js":28,"./VGEllipse.js":29,"./VGEntity.js":30,"./VGFlowingText/StructuredTextLine.js":31,"./VGFlowingText/StructuredTextPart.js":32,"./VGFlowingText/TextAttribute.js":34,"./VGFlowingText/TextMetrics.js":35,"./VGFlowingText/VGFlowingText.js":36,"./VGGroup.js":39,"./VGImage.js":40,"./VGPath.js":41,"./VGRect.js":44,"./VGText.js":45,"./canvas-utilities.js":46,"./color-utilities.js":47,"./core-utilities.js":48,"./fontLib.js":49,"./fx/fx.js":50,"./path-utilities.js":53,"dom-kit":88,"opentype.js":92}],55:[function(require,module,exports){
+},{"./BoundingBox.js":19,"./ConvexPolygon.js":20,"./DynamicArea.js":21,"./DynamicManager.js":22,"./Path/Path.js":29,"./Polygon.js":32,"./Polyline.js":33,"./Style.js":34,"./VG.js":35,"./VGClip.js":36,"./VGContainer.js":37,"./VGConvexPolygon.js":38,"./VGEllipse.js":39,"./VGEntity.js":40,"./VGFlowingText/StructuredTextLine.js":41,"./VGFlowingText/StructuredTextPart.js":42,"./VGFlowingText/TextAttribute.js":44,"./VGFlowingText/TextMetrics.js":45,"./VGFlowingText/VGFlowingText.js":46,"./VGGroup.js":49,"./VGImage.js":50,"./VGPath.js":51,"./VGPolygon.js":52,"./VGPolyline.js":53,"./VGRect.js":56,"./VGText.js":57,"./canvas-utilities.js":58,"./color-utilities.js":59,"./core-utilities.js":60,"./fontLib.js":61,"./fx/fx.js":62,"dom-kit":99,"opentype.js":103}],66:[function(require,module,exports){
 function DOMParser(options){
 	this.options = options ||{locator:{}};
 	
@@ -14743,7 +16850,7 @@ exports.XMLSerializer = require('./dom').XMLSerializer ;
 exports.DOMParser = DOMParser;
 //}
 
-},{"./dom":56,"./entities":57,"./sax":75}],56:[function(require,module,exports){
+},{"./dom":67,"./entities":68,"./sax":86}],67:[function(require,module,exports){
 
 "use strict" ;
 
@@ -16151,7 +18258,7 @@ try{
 	exports.XMLSerializer = XMLSerializer;
 //}
 
-},{"nwmatcher":91,"string-kit":70}],57:[function(require,module,exports){
+},{"nwmatcher":102,"string-kit":81}],68:[function(require,module,exports){
 exports.entityMap = {
        lt: '<',
        gt: '>',
@@ -16396,7 +18503,7 @@ exports.entityMap = {
        diams: "♦"
 };
 //for(var  n in exports.entityMap){console.log(exports.entityMap[n].charCodeAt())}
-},{}],58:[function(require,module,exports){
+},{}],69:[function(require,module,exports){
 /*
 	String Kit
 
@@ -16810,7 +18917,7 @@ function arrayConcatSlice( intoArray , sourceArray , start = 0 , end = sourceArr
 }
 
 
-},{}],59:[function(require,module,exports){
+},{}],70:[function(require,module,exports){
 /*
 	String Kit
 
@@ -17079,7 +19186,7 @@ ansi.parse = str => {
 } ;
 
 
-},{}],60:[function(require,module,exports){
+},{}],71:[function(require,module,exports){
 /*
 	String Kit
 
@@ -17168,7 +19275,7 @@ camel.camelCaseToDash =
 camel.camelCaseToDashed = ( str ) => camel.camelCaseToSeparated( str , '-' , false ) ;
 
 
-},{}],61:[function(require,module,exports){
+},{}],72:[function(require,module,exports){
 /*
 	String Kit
 
@@ -17273,7 +19380,7 @@ exports.unicodePercentEncode = str => str.replace( /[\x00-\x1f\u0100-\uffff\x7f%
 exports.httpHeaderValue = str => exports.unicodePercentEncode( str ) ;
 
 
-},{}],62:[function(require,module,exports){
+},{}],73:[function(require,module,exports){
 (function (Buffer){(function (){
 /*
 	String Kit
@@ -18514,7 +20621,7 @@ function round( v , step ) {
 
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"./StringNumber.js":58,"./ansi.js":59,"./escape.js":61,"./inspect.js":64,"./naturalSort.js":68,"./unicode.js":73,"buffer":120}],63:[function(require,module,exports){
+},{"./StringNumber.js":69,"./ansi.js":70,"./escape.js":72,"./inspect.js":75,"./naturalSort.js":79,"./unicode.js":84,"buffer":131}],74:[function(require,module,exports){
 /*
 	String Kit
 
@@ -18830,7 +20937,7 @@ fuzzy.levenshtein = ( left , right ) => {
 } ;
 
 
-},{}],64:[function(require,module,exports){
+},{}],75:[function(require,module,exports){
 (function (Buffer,process){(function (){
 /*
 	String Kit
@@ -19594,9 +21701,9 @@ inspectStyle.html = Object.assign( {} , inspectStyle.none , {
 
 
 }).call(this)}).call(this,{"isBuffer":require("../../../../../../../../../../../opt/node-v20.11.0/lib/node_modules/browserify/node_modules/is-buffer/index.js")},require('_process'))
-},{"../../../../../../../../../../../opt/node-v20.11.0/lib/node_modules/browserify/node_modules/is-buffer/index.js":122,"./ansi.js":59,"./escape.js":61,"_process":124}],65:[function(require,module,exports){
+},{"../../../../../../../../../../../opt/node-v20.11.0/lib/node_modules/browserify/node_modules/is-buffer/index.js":133,"./ansi.js":70,"./escape.js":72,"_process":135}],76:[function(require,module,exports){
 module.exports={"߀":"0","́":""," ":" ","Ⓐ":"A","Ａ":"A","À":"A","Á":"A","Â":"A","Ầ":"A","Ấ":"A","Ẫ":"A","Ẩ":"A","Ã":"A","Ā":"A","Ă":"A","Ằ":"A","Ắ":"A","Ẵ":"A","Ẳ":"A","Ȧ":"A","Ǡ":"A","Ä":"A","Ǟ":"A","Ả":"A","Å":"A","Ǻ":"A","Ǎ":"A","Ȁ":"A","Ȃ":"A","Ạ":"A","Ậ":"A","Ặ":"A","Ḁ":"A","Ą":"A","Ⱥ":"A","Ɐ":"A","Ꜳ":"AA","Æ":"AE","Ǽ":"AE","Ǣ":"AE","Ꜵ":"AO","Ꜷ":"AU","Ꜹ":"AV","Ꜻ":"AV","Ꜽ":"AY","Ⓑ":"B","Ｂ":"B","Ḃ":"B","Ḅ":"B","Ḇ":"B","Ƀ":"B","Ɓ":"B","ｃ":"C","Ⓒ":"C","Ｃ":"C","Ꜿ":"C","Ḉ":"C","Ç":"C","Ⓓ":"D","Ｄ":"D","Ḋ":"D","Ď":"D","Ḍ":"D","Ḑ":"D","Ḓ":"D","Ḏ":"D","Đ":"D","Ɗ":"D","Ɖ":"D","ᴅ":"D","Ꝺ":"D","Ð":"Dh","Ǳ":"DZ","Ǆ":"DZ","ǲ":"Dz","ǅ":"Dz","ɛ":"E","Ⓔ":"E","Ｅ":"E","È":"E","É":"E","Ê":"E","Ề":"E","Ế":"E","Ễ":"E","Ể":"E","Ẽ":"E","Ē":"E","Ḕ":"E","Ḗ":"E","Ĕ":"E","Ė":"E","Ë":"E","Ẻ":"E","Ě":"E","Ȅ":"E","Ȇ":"E","Ẹ":"E","Ệ":"E","Ȩ":"E","Ḝ":"E","Ę":"E","Ḙ":"E","Ḛ":"E","Ɛ":"E","Ǝ":"E","ᴇ":"E","ꝼ":"F","Ⓕ":"F","Ｆ":"F","Ḟ":"F","Ƒ":"F","Ꝼ":"F","Ⓖ":"G","Ｇ":"G","Ǵ":"G","Ĝ":"G","Ḡ":"G","Ğ":"G","Ġ":"G","Ǧ":"G","Ģ":"G","Ǥ":"G","Ɠ":"G","Ꞡ":"G","Ᵹ":"G","Ꝿ":"G","ɢ":"G","Ⓗ":"H","Ｈ":"H","Ĥ":"H","Ḣ":"H","Ḧ":"H","Ȟ":"H","Ḥ":"H","Ḩ":"H","Ḫ":"H","Ħ":"H","Ⱨ":"H","Ⱶ":"H","Ɥ":"H","Ⓘ":"I","Ｉ":"I","Ì":"I","Í":"I","Î":"I","Ĩ":"I","Ī":"I","Ĭ":"I","İ":"I","Ï":"I","Ḯ":"I","Ỉ":"I","Ǐ":"I","Ȉ":"I","Ȋ":"I","Ị":"I","Į":"I","Ḭ":"I","Ɨ":"I","Ⓙ":"J","Ｊ":"J","Ĵ":"J","Ɉ":"J","ȷ":"J","Ⓚ":"K","Ｋ":"K","Ḱ":"K","Ǩ":"K","Ḳ":"K","Ķ":"K","Ḵ":"K","Ƙ":"K","Ⱪ":"K","Ꝁ":"K","Ꝃ":"K","Ꝅ":"K","Ꞣ":"K","Ⓛ":"L","Ｌ":"L","Ŀ":"L","Ĺ":"L","Ľ":"L","Ḷ":"L","Ḹ":"L","Ļ":"L","Ḽ":"L","Ḻ":"L","Ł":"L","Ƚ":"L","Ɫ":"L","Ⱡ":"L","Ꝉ":"L","Ꝇ":"L","Ꞁ":"L","Ǉ":"LJ","ǈ":"Lj","Ⓜ":"M","Ｍ":"M","Ḿ":"M","Ṁ":"M","Ṃ":"M","Ɱ":"M","Ɯ":"M","ϻ":"M","Ꞥ":"N","Ƞ":"N","Ⓝ":"N","Ｎ":"N","Ǹ":"N","Ń":"N","Ñ":"N","Ṅ":"N","Ň":"N","Ṇ":"N","Ņ":"N","Ṋ":"N","Ṉ":"N","Ɲ":"N","Ꞑ":"N","ᴎ":"N","Ǌ":"NJ","ǋ":"Nj","Ⓞ":"O","Ｏ":"O","Ò":"O","Ó":"O","Ô":"O","Ồ":"O","Ố":"O","Ỗ":"O","Ổ":"O","Õ":"O","Ṍ":"O","Ȭ":"O","Ṏ":"O","Ō":"O","Ṑ":"O","Ṓ":"O","Ŏ":"O","Ȯ":"O","Ȱ":"O","Ö":"O","Ȫ":"O","Ỏ":"O","Ő":"O","Ǒ":"O","Ȍ":"O","Ȏ":"O","Ơ":"O","Ờ":"O","Ớ":"O","Ỡ":"O","Ở":"O","Ợ":"O","Ọ":"O","Ộ":"O","Ǫ":"O","Ǭ":"O","Ø":"O","Ǿ":"O","Ɔ":"O","Ɵ":"O","Ꝋ":"O","Ꝍ":"O","Œ":"OE","Ƣ":"OI","Ꝏ":"OO","Ȣ":"OU","Ⓟ":"P","Ｐ":"P","Ṕ":"P","Ṗ":"P","Ƥ":"P","Ᵽ":"P","Ꝑ":"P","Ꝓ":"P","Ꝕ":"P","Ⓠ":"Q","Ｑ":"Q","Ꝗ":"Q","Ꝙ":"Q","Ɋ":"Q","Ⓡ":"R","Ｒ":"R","Ŕ":"R","Ṙ":"R","Ř":"R","Ȑ":"R","Ȓ":"R","Ṛ":"R","Ṝ":"R","Ŗ":"R","Ṟ":"R","Ɍ":"R","Ɽ":"R","Ꝛ":"R","Ꞧ":"R","Ꞃ":"R","Ⓢ":"S","Ｓ":"S","ẞ":"S","Ś":"S","Ṥ":"S","Ŝ":"S","Ṡ":"S","Š":"S","Ṧ":"S","Ṣ":"S","Ṩ":"S","Ș":"S","Ş":"S","Ȿ":"S","Ꞩ":"S","Ꞅ":"S","Ⓣ":"T","Ｔ":"T","Ṫ":"T","Ť":"T","Ṭ":"T","Ț":"T","Ţ":"T","Ṱ":"T","Ṯ":"T","Ŧ":"T","Ƭ":"T","Ʈ":"T","Ⱦ":"T","Ꞇ":"T","Þ":"Th","Ꜩ":"TZ","Ⓤ":"U","Ｕ":"U","Ù":"U","Ú":"U","Û":"U","Ũ":"U","Ṹ":"U","Ū":"U","Ṻ":"U","Ŭ":"U","Ü":"U","Ǜ":"U","Ǘ":"U","Ǖ":"U","Ǚ":"U","Ủ":"U","Ů":"U","Ű":"U","Ǔ":"U","Ȕ":"U","Ȗ":"U","Ư":"U","Ừ":"U","Ứ":"U","Ữ":"U","Ử":"U","Ự":"U","Ụ":"U","Ṳ":"U","Ų":"U","Ṷ":"U","Ṵ":"U","Ʉ":"U","Ⓥ":"V","Ｖ":"V","Ṽ":"V","Ṿ":"V","Ʋ":"V","Ꝟ":"V","Ʌ":"V","Ꝡ":"VY","Ⓦ":"W","Ｗ":"W","Ẁ":"W","Ẃ":"W","Ŵ":"W","Ẇ":"W","Ẅ":"W","Ẉ":"W","Ⱳ":"W","Ⓧ":"X","Ｘ":"X","Ẋ":"X","Ẍ":"X","Ⓨ":"Y","Ｙ":"Y","Ỳ":"Y","Ý":"Y","Ŷ":"Y","Ỹ":"Y","Ȳ":"Y","Ẏ":"Y","Ÿ":"Y","Ỷ":"Y","Ỵ":"Y","Ƴ":"Y","Ɏ":"Y","Ỿ":"Y","Ⓩ":"Z","Ｚ":"Z","Ź":"Z","Ẑ":"Z","Ż":"Z","Ž":"Z","Ẓ":"Z","Ẕ":"Z","Ƶ":"Z","Ȥ":"Z","Ɀ":"Z","Ⱬ":"Z","Ꝣ":"Z","ⓐ":"a","ａ":"a","ẚ":"a","à":"a","á":"a","â":"a","ầ":"a","ấ":"a","ẫ":"a","ẩ":"a","ã":"a","ā":"a","ă":"a","ằ":"a","ắ":"a","ẵ":"a","ẳ":"a","ȧ":"a","ǡ":"a","ä":"a","ǟ":"a","ả":"a","å":"a","ǻ":"a","ǎ":"a","ȁ":"a","ȃ":"a","ạ":"a","ậ":"a","ặ":"a","ḁ":"a","ą":"a","ⱥ":"a","ɐ":"a","ɑ":"a","ꜳ":"aa","æ":"ae","ǽ":"ae","ǣ":"ae","ꜵ":"ao","ꜷ":"au","ꜹ":"av","ꜻ":"av","ꜽ":"ay","ⓑ":"b","ｂ":"b","ḃ":"b","ḅ":"b","ḇ":"b","ƀ":"b","ƃ":"b","ɓ":"b","Ƃ":"b","ⓒ":"c","ć":"c","ĉ":"c","ċ":"c","č":"c","ç":"c","ḉ":"c","ƈ":"c","ȼ":"c","ꜿ":"c","ↄ":"c","C":"c","Ć":"c","Ĉ":"c","Ċ":"c","Č":"c","Ƈ":"c","Ȼ":"c","ⓓ":"d","ｄ":"d","ḋ":"d","ď":"d","ḍ":"d","ḑ":"d","ḓ":"d","ḏ":"d","đ":"d","ƌ":"d","ɖ":"d","ɗ":"d","Ƌ":"d","Ꮷ":"d","ԁ":"d","Ɦ":"d","ð":"dh","ǳ":"dz","ǆ":"dz","ⓔ":"e","ｅ":"e","è":"e","é":"e","ê":"e","ề":"e","ế":"e","ễ":"e","ể":"e","ẽ":"e","ē":"e","ḕ":"e","ḗ":"e","ĕ":"e","ė":"e","ë":"e","ẻ":"e","ě":"e","ȅ":"e","ȇ":"e","ẹ":"e","ệ":"e","ȩ":"e","ḝ":"e","ę":"e","ḙ":"e","ḛ":"e","ɇ":"e","ǝ":"e","ⓕ":"f","ｆ":"f","ḟ":"f","ƒ":"f","ﬀ":"ff","ﬁ":"fi","ﬂ":"fl","ﬃ":"ffi","ﬄ":"ffl","ⓖ":"g","ｇ":"g","ǵ":"g","ĝ":"g","ḡ":"g","ğ":"g","ġ":"g","ǧ":"g","ģ":"g","ǥ":"g","ɠ":"g","ꞡ":"g","ꝿ":"g","ᵹ":"g","ⓗ":"h","ｈ":"h","ĥ":"h","ḣ":"h","ḧ":"h","ȟ":"h","ḥ":"h","ḩ":"h","ḫ":"h","ẖ":"h","ħ":"h","ⱨ":"h","ⱶ":"h","ɥ":"h","ƕ":"hv","ⓘ":"i","ｉ":"i","ì":"i","í":"i","î":"i","ĩ":"i","ī":"i","ĭ":"i","ï":"i","ḯ":"i","ỉ":"i","ǐ":"i","ȉ":"i","ȋ":"i","ị":"i","į":"i","ḭ":"i","ɨ":"i","ı":"i","ⓙ":"j","ｊ":"j","ĵ":"j","ǰ":"j","ɉ":"j","ⓚ":"k","ｋ":"k","ḱ":"k","ǩ":"k","ḳ":"k","ķ":"k","ḵ":"k","ƙ":"k","ⱪ":"k","ꝁ":"k","ꝃ":"k","ꝅ":"k","ꞣ":"k","ⓛ":"l","ｌ":"l","ŀ":"l","ĺ":"l","ľ":"l","ḷ":"l","ḹ":"l","ļ":"l","ḽ":"l","ḻ":"l","ſ":"l","ł":"l","ƚ":"l","ɫ":"l","ⱡ":"l","ꝉ":"l","ꞁ":"l","ꝇ":"l","ɭ":"l","ǉ":"lj","ⓜ":"m","ｍ":"m","ḿ":"m","ṁ":"m","ṃ":"m","ɱ":"m","ɯ":"m","ⓝ":"n","ｎ":"n","ǹ":"n","ń":"n","ñ":"n","ṅ":"n","ň":"n","ṇ":"n","ņ":"n","ṋ":"n","ṉ":"n","ƞ":"n","ɲ":"n","ŉ":"n","ꞑ":"n","ꞥ":"n","ԉ":"n","ǌ":"nj","ⓞ":"o","ｏ":"o","ò":"o","ó":"o","ô":"o","ồ":"o","ố":"o","ỗ":"o","ổ":"o","õ":"o","ṍ":"o","ȭ":"o","ṏ":"o","ō":"o","ṑ":"o","ṓ":"o","ŏ":"o","ȯ":"o","ȱ":"o","ö":"o","ȫ":"o","ỏ":"o","ő":"o","ǒ":"o","ȍ":"o","ȏ":"o","ơ":"o","ờ":"o","ớ":"o","ỡ":"o","ở":"o","ợ":"o","ọ":"o","ộ":"o","ǫ":"o","ǭ":"o","ø":"o","ǿ":"o","ꝋ":"o","ꝍ":"o","ɵ":"o","ɔ":"o","ᴑ":"o","œ":"oe","ƣ":"oi","ꝏ":"oo","ȣ":"ou","ⓟ":"p","ｐ":"p","ṕ":"p","ṗ":"p","ƥ":"p","ᵽ":"p","ꝑ":"p","ꝓ":"p","ꝕ":"p","ρ":"p","ⓠ":"q","ｑ":"q","ɋ":"q","ꝗ":"q","ꝙ":"q","ⓡ":"r","ｒ":"r","ŕ":"r","ṙ":"r","ř":"r","ȑ":"r","ȓ":"r","ṛ":"r","ṝ":"r","ŗ":"r","ṟ":"r","ɍ":"r","ɽ":"r","ꝛ":"r","ꞧ":"r","ꞃ":"r","ⓢ":"s","ｓ":"s","ś":"s","ṥ":"s","ŝ":"s","ṡ":"s","š":"s","ṧ":"s","ṣ":"s","ṩ":"s","ș":"s","ş":"s","ȿ":"s","ꞩ":"s","ꞅ":"s","ẛ":"s","ʂ":"s","ß":"ss","ⓣ":"t","ｔ":"t","ṫ":"t","ẗ":"t","ť":"t","ṭ":"t","ț":"t","ţ":"t","ṱ":"t","ṯ":"t","ŧ":"t","ƭ":"t","ʈ":"t","ⱦ":"t","ꞇ":"t","þ":"th","ꜩ":"tz","ⓤ":"u","ｕ":"u","ù":"u","ú":"u","û":"u","ũ":"u","ṹ":"u","ū":"u","ṻ":"u","ŭ":"u","ü":"u","ǜ":"u","ǘ":"u","ǖ":"u","ǚ":"u","ủ":"u","ů":"u","ű":"u","ǔ":"u","ȕ":"u","ȗ":"u","ư":"u","ừ":"u","ứ":"u","ữ":"u","ử":"u","ự":"u","ụ":"u","ṳ":"u","ų":"u","ṷ":"u","ṵ":"u","ʉ":"u","ⓥ":"v","ｖ":"v","ṽ":"v","ṿ":"v","ʋ":"v","ꝟ":"v","ʌ":"v","ꝡ":"vy","ⓦ":"w","ｗ":"w","ẁ":"w","ẃ":"w","ŵ":"w","ẇ":"w","ẅ":"w","ẘ":"w","ẉ":"w","ⱳ":"w","ⓧ":"x","ｘ":"x","ẋ":"x","ẍ":"x","ⓨ":"y","ｙ":"y","ỳ":"y","ý":"y","ŷ":"y","ỹ":"y","ȳ":"y","ẏ":"y","ÿ":"y","ỷ":"y","ẙ":"y","ỵ":"y","ƴ":"y","ɏ":"y","ỿ":"y","ⓩ":"z","ｚ":"z","ź":"z","ẑ":"z","ż":"z","ž":"z","ẓ":"z","ẕ":"z","ƶ":"z","ȥ":"z","ɀ":"z","ⱬ":"z","ꝣ":"z"}
-},{}],66:[function(require,module,exports){
+},{}],77:[function(require,module,exports){
 /*
 	String Kit
 
@@ -19635,7 +21742,7 @@ module.exports = function( str ) {
 
 
 
-},{"./latinize-map.json":65}],67:[function(require,module,exports){
+},{"./latinize-map.json":76}],78:[function(require,module,exports){
 /*
 	String Kit
 
@@ -19695,7 +21802,7 @@ exports.occurrenceCount = function( str , subStr , overlap = false ) {
 } ;
 
 
-},{}],68:[function(require,module,exports){
+},{}],79:[function(require,module,exports){
 /*
 	String Kit
 
@@ -19842,7 +21949,7 @@ function naturalSort( a , b ) {
 module.exports = naturalSort ;
 
 
-},{}],69:[function(require,module,exports){
+},{}],80:[function(require,module,exports){
 /*
 	String Kit
 
@@ -19899,7 +22006,7 @@ exports.regexp.array2alternatives = function array2alternatives( array ) {
 
 
 
-},{"./escape.js":61}],70:[function(require,module,exports){
+},{"./escape.js":72}],81:[function(require,module,exports){
 /*
 	String Kit
 
@@ -19992,7 +22099,7 @@ stringKit.installPolyfills = function installPolyfills() {
 //*/
 
 
-},{"./StringNumber.js":58,"./ansi.js":59,"./camel.js":60,"./escape.js":61,"./format.js":62,"./fuzzy.js":63,"./inspect.js":64,"./latinize.js":66,"./misc.js":67,"./naturalSort.js":68,"./regexp.js":69,"./toTitleCase.js":71,"./unicode.js":73,"./wordwrap.js":74}],71:[function(require,module,exports){
+},{"./StringNumber.js":69,"./ansi.js":70,"./camel.js":71,"./escape.js":72,"./format.js":73,"./fuzzy.js":74,"./inspect.js":75,"./latinize.js":77,"./misc.js":78,"./naturalSort.js":79,"./regexp.js":80,"./toTitleCase.js":82,"./unicode.js":84,"./wordwrap.js":85}],82:[function(require,module,exports){
 /*
 	String Kit
 
@@ -20081,10 +22188,10 @@ module.exports = ( str , options = DEFAULT_OPTIONS ) => {
 } ;
 
 
-},{}],72:[function(require,module,exports){
+},{}],83:[function(require,module,exports){
 module.exports=[{"s":9728,"e":9747,"w":1},{"s":9748,"e":9749,"w":2},{"s":9750,"e":9799,"w":1},{"s":9800,"e":9811,"w":2},{"s":9812,"e":9854,"w":1},{"s":9855,"e":9855,"w":2},{"s":9856,"e":9874,"w":1},{"s":9875,"e":9875,"w":2},{"s":9876,"e":9888,"w":1},{"s":9889,"e":9889,"w":2},{"s":9890,"e":9897,"w":1},{"s":9898,"e":9899,"w":2},{"s":9900,"e":9916,"w":1},{"s":9917,"e":9918,"w":2},{"s":9919,"e":9923,"w":1},{"s":9924,"e":9925,"w":2},{"s":9926,"e":9933,"w":1},{"s":9934,"e":9934,"w":2},{"s":9935,"e":9939,"w":1},{"s":9940,"e":9940,"w":2},{"s":9941,"e":9961,"w":1},{"s":9962,"e":9962,"w":2},{"s":9963,"e":9969,"w":1},{"s":9970,"e":9971,"w":2},{"s":9972,"e":9972,"w":1},{"s":9973,"e":9973,"w":2},{"s":9974,"e":9977,"w":1},{"s":9978,"e":9978,"w":2},{"s":9979,"e":9980,"w":1},{"s":9981,"e":9981,"w":2},{"s":9982,"e":9983,"w":1},{"s":9984,"e":9988,"w":1},{"s":9989,"e":9989,"w":2},{"s":9990,"e":9993,"w":1},{"s":9994,"e":9995,"w":2},{"s":9996,"e":10023,"w":1},{"s":10024,"e":10024,"w":2},{"s":10025,"e":10059,"w":1},{"s":10060,"e":10060,"w":2},{"s":10061,"e":10061,"w":1},{"s":10062,"e":10062,"w":2},{"s":10063,"e":10066,"w":1},{"s":10067,"e":10069,"w":2},{"s":10070,"e":10070,"w":1},{"s":10071,"e":10071,"w":2},{"s":10072,"e":10132,"w":1},{"s":10133,"e":10135,"w":2},{"s":10136,"e":10159,"w":1},{"s":10160,"e":10160,"w":2},{"s":10161,"e":10174,"w":1},{"s":10175,"e":10175,"w":2},{"s":126976,"e":126979,"w":1},{"s":126980,"e":126980,"w":2},{"s":126981,"e":127182,"w":1},{"s":127183,"e":127183,"w":2},{"s":127184,"e":127373,"w":1},{"s":127374,"e":127374,"w":2},{"s":127375,"e":127376,"w":1},{"s":127377,"e":127386,"w":2},{"s":127387,"e":127487,"w":1},{"s":127744,"e":127776,"w":2},{"s":127777,"e":127788,"w":1},{"s":127789,"e":127797,"w":2},{"s":127798,"e":127798,"w":1},{"s":127799,"e":127868,"w":2},{"s":127869,"e":127869,"w":1},{"s":127870,"e":127891,"w":2},{"s":127892,"e":127903,"w":1},{"s":127904,"e":127946,"w":2},{"s":127947,"e":127950,"w":1},{"s":127951,"e":127955,"w":2},{"s":127956,"e":127967,"w":1},{"s":127968,"e":127984,"w":2},{"s":127985,"e":127987,"w":1},{"s":127988,"e":127988,"w":2},{"s":127989,"e":127991,"w":1},{"s":127992,"e":127994,"w":2},{"s":128000,"e":128062,"w":2},{"s":128063,"e":128063,"w":1},{"s":128064,"e":128064,"w":2},{"s":128065,"e":128065,"w":1},{"s":128066,"e":128252,"w":2},{"s":128253,"e":128254,"w":1},{"s":128255,"e":128317,"w":2},{"s":128318,"e":128330,"w":1},{"s":128331,"e":128334,"w":2},{"s":128335,"e":128335,"w":1},{"s":128336,"e":128359,"w":2},{"s":128360,"e":128377,"w":1},{"s":128378,"e":128378,"w":2},{"s":128379,"e":128404,"w":1},{"s":128405,"e":128406,"w":2},{"s":128407,"e":128419,"w":1},{"s":128420,"e":128420,"w":2},{"s":128421,"e":128506,"w":1},{"s":128507,"e":128591,"w":2},{"s":128592,"e":128639,"w":1},{"s":128640,"e":128709,"w":2},{"s":128710,"e":128715,"w":1},{"s":128716,"e":128716,"w":2},{"s":128717,"e":128719,"w":1},{"s":128720,"e":128722,"w":2},{"s":128723,"e":128724,"w":1},{"s":128725,"e":128727,"w":2},{"s":128728,"e":128746,"w":1},{"s":128747,"e":128748,"w":2},{"s":128749,"e":128755,"w":1},{"s":128756,"e":128764,"w":2},{"s":128765,"e":128991,"w":1},{"s":128992,"e":129003,"w":2},{"s":129004,"e":129291,"w":1},{"s":129292,"e":129338,"w":2},{"s":129339,"e":129339,"w":1},{"s":129340,"e":129349,"w":2},{"s":129350,"e":129350,"w":1},{"s":129351,"e":129400,"w":2},{"s":129401,"e":129401,"w":1},{"s":129402,"e":129483,"w":2},{"s":129484,"e":129484,"w":1},{"s":129485,"e":129535,"w":2},{"s":129536,"e":129647,"w":1},{"s":129648,"e":129652,"w":2},{"s":129653,"e":129655,"w":1},{"s":129656,"e":129658,"w":2},{"s":129659,"e":129663,"w":1},{"s":129664,"e":129670,"w":2},{"s":129671,"e":129679,"w":1},{"s":129680,"e":129704,"w":2},{"s":129705,"e":129711,"w":1},{"s":129712,"e":129718,"w":2},{"s":129719,"e":129727,"w":1},{"s":129728,"e":129730,"w":2},{"s":129731,"e":129743,"w":1},{"s":129744,"e":129750,"w":2},{"s":129751,"e":129791,"w":1}]
 
-},{}],73:[function(require,module,exports){
+},{}],84:[function(require,module,exports){
 /*
 	String Kit
 
@@ -20432,7 +22539,7 @@ unicode.isEmojiModifierCodePoint = code =>
 	code === 0xfe0f ;	// VARIATION SELECTOR-16 [VS16] {emoji variation selector}
 
 
-},{"./unicode-emoji-width-ranges.json":72}],74:[function(require,module,exports){
+},{"./unicode-emoji-width-ranges.json":83}],85:[function(require,module,exports){
 /*
 	String Kit
 
@@ -20636,7 +22743,7 @@ module.exports = function wordwrap( str , options ) {
 } ;
 
 
-},{"./unicode.js":73}],75:[function(require,module,exports){
+},{"./unicode.js":84}],86:[function(require,module,exports){
 //[4]   	NameStartChar	   ::=   	":" | [A-Z] | "_" | [a-z] | [#xC0-#xD6] | [#xD8-#xF6] | [#xF8-#x2FF] | [#x370-#x37D] | [#x37F-#x1FFF] | [#x200C-#x200D] | [#x2070-#x218F] | [#x2C00-#x2FEF] | [#x3001-#xD7FF] | [#xF900-#xFDCF] | [#xFDF0-#xFFFD] | [#x10000-#xEFFFF]
 //[4a]   	NameChar	   ::=   	NameStartChar | "-" | "." | [0-9] | #xB7 | [#x0300-#x036F] | [#x203F-#x2040]
 //[5]   	Name	   ::=   	NameStartChar (NameChar)*
@@ -21254,7 +23361,7 @@ function split(source,start){
 exports.XMLReader = XMLReader;
 
 
-},{}],76:[function(require,module,exports){
+},{}],87:[function(require,module,exports){
 /*
 	Array Kit
 
@@ -21302,7 +23409,7 @@ arrayKit.shuffle = array => arrayKit.sample( array , array.length , true ) ;
 arrayKit.randomSampleSize = ( array , min , max , inPlace ) => arrayKit.sample( array , arrayKit.randomInteger( min , max ) , inPlace ) ;
 
 
-},{"./delete.js":77,"./deleteValue.js":78,"./inPlaceFilter.js":79,"./range.js":80,"./sample.js":81}],77:[function(require,module,exports){
+},{"./delete.js":88,"./deleteValue.js":89,"./inPlaceFilter.js":90,"./range.js":91,"./sample.js":92}],88:[function(require,module,exports){
 /*
 	Array Kit
 
@@ -21354,7 +23461,7 @@ module.exports = ( src , index ) => {
 } ;
 
 
-},{}],78:[function(require,module,exports){
+},{}],89:[function(require,module,exports){
 /*
 	Array Kit
 
@@ -21418,7 +23525,7 @@ module.exports = ( src , value ) => {
 } ;
 
 
-},{}],79:[function(require,module,exports){
+},{}],90:[function(require,module,exports){
 /*
 	Array Kit
 
@@ -21483,7 +23590,7 @@ module.exports = ( src , fn , thisArg , forceKey ) => {
 } ;
 
 
-},{}],80:[function(require,module,exports){
+},{}],91:[function(require,module,exports){
 /*
 	Array Kit
 
@@ -21550,7 +23657,7 @@ module.exports = function( start , end , step ) {
 } ;
 
 
-},{}],81:[function(require,module,exports){
+},{}],92:[function(require,module,exports){
 /*
 	Array Kit
 
@@ -21607,7 +23714,7 @@ module.exports = ( array , count = Infinity , inPlace = false ) => {
 } ;
 
 
-},{}],82:[function(require,module,exports){
+},{}],93:[function(require,module,exports){
 /*
 	Book Source
 
@@ -23731,7 +25838,7 @@ function unstackToIndent( ctx , toIndent = 0 ) {
 }
 
 
-},{"./Style.js":83,"./Theme.js":84,"./documentParts.js":86,"./textPostFilters.js":87,"array-kit/lib/inPlaceFilter.js":79}],83:[function(require,module,exports){
+},{"./Style.js":94,"./Theme.js":95,"./documentParts.js":97,"./textPostFilters.js":98,"array-kit/lib/inPlaceFilter.js":90}],94:[function(require,module,exports){
 /*
 	Book Source
 
@@ -23849,7 +25956,7 @@ Style.parse = function( str , forTextElement = true ) {
 } ;
 
 
-},{"palette-shade":96}],84:[function(require,module,exports){
+},{"palette-shade":107}],95:[function(require,module,exports){
 /*
 	Book Source
 
@@ -23979,7 +26086,7 @@ Theme.prototype.substituteWithPalette = function() {
 } ;
 
 
-},{"palette-shade":96}],85:[function(require,module,exports){
+},{"palette-shade":107}],96:[function(require,module,exports){
 /*
 	Book Source
 
@@ -24028,7 +26135,7 @@ bookSource.Palette = paletteShade.Palette ;
 bookSource.parse = bookSource.StructuredDocument.parse ;
 
 
-},{"./StructuredDocument.js":82,"./Style.js":83,"./Theme.js":84,"./documentParts.js":86,"./textPostFilters.js":87,"palette-shade":96}],86:[function(require,module,exports){
+},{"./StructuredDocument.js":93,"./Style.js":94,"./Theme.js":95,"./documentParts.js":97,"./textPostFilters.js":98,"palette-shade":107}],97:[function(require,module,exports){
 /*
 	Book Source
 
@@ -24557,7 +26664,7 @@ TableHeadCell.prototype.constructor = TableHeadCell ;
 documentParts.TableHeadCell = TableHeadCell ;
 
 
-},{"string-kit/lib/emoji.js":108}],87:[function(require,module,exports){
+},{"string-kit/lib/emoji.js":119}],98:[function(require,module,exports){
 /*
 	Book Source
 
@@ -24659,7 +26766,7 @@ exports.apostrophe = ( part ) => {
 } ;
 
 
-},{}],88:[function(require,module,exports){
+},{}],99:[function(require,module,exports){
 (function (process){(function (){
 /*
 	Dom Kit
@@ -25234,7 +27341,7 @@ domKit.html = ( $element , html ) => $element.innerHTML = html ;
 
 
 }).call(this)}).call(this,require('_process'))
-},{"@cronvel/xmldom":55,"_process":124}],89:[function(require,module,exports){
+},{"@cronvel/xmldom":66,"_process":135}],100:[function(require,module,exports){
 /*
 	Next-Gen Events
 
@@ -25460,7 +27567,7 @@ LeanEvents.prototype.getAllStates = function() {
 } ;
 
 
-},{"../package.json":90}],90:[function(require,module,exports){
+},{"../package.json":101}],101:[function(require,module,exports){
 module.exports={
   "name": "nextgen-events",
   "version": "1.5.3",
@@ -25520,7 +27627,7 @@ module.exports={
   }
 }
 
-},{}],91:[function(require,module,exports){
+},{}],102:[function(require,module,exports){
 /*
  * Copyright (C) 2007-2018 Diego Perini
  * All rights reserved.
@@ -27298,7 +29405,7 @@ module.exports={
   return Dom;
 });
 
-},{}],92:[function(require,module,exports){
+},{}],103:[function(require,module,exports){
 (function (Buffer){(function (){
 /**
  * https://opentype.js.org v1.3.4 | (c) Frederik De Bleser and other contributors | MIT License | Uses tiny-inflate by Devon Govett and string.prototype.codepointat polyfill by Mathias Bynens
@@ -41779,7 +43886,7 @@ module.exports={
 
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"buffer":120,"fs":118}],93:[function(require,module,exports){
+},{"buffer":131,"fs":129}],104:[function(require,module,exports){
 /**
  * chroma.js - JavaScript library for color conversions
  *
@@ -42646,7 +44753,7 @@ module.exports={
 
 }));
 
-},{}],94:[function(require,module,exports){
+},{}],105:[function(require,module,exports){
 /*
 	Palette Shade
 
@@ -42861,7 +44968,7 @@ Color.parse = function( str ) {
 } ;
 
 
-},{}],95:[function(require,module,exports){
+},{}],106:[function(require,module,exports){
 /*
 	Palette Shade
 
@@ -43176,7 +45283,7 @@ Palette.cleanClip = function( chromaColor , lch ) {
 } ;
 
 
-},{"../extlib/chromajs.custom.js":93}],96:[function(require,module,exports){
+},{"../extlib/chromajs.custom.js":104}],107:[function(require,module,exports){
 /*
 	Palette Shade
 
@@ -43209,29 +45316,29 @@ exports.Color = require( './Color.js' ) ;
 exports.Palette = require( './Palette.js' ) ;
 
 
-},{"./Color.js":94,"./Palette.js":95}],97:[function(require,module,exports){
+},{"./Color.js":105,"./Palette.js":106}],108:[function(require,module,exports){
 arguments[4][9][0].apply(exports,arguments)
-},{"_process":124,"dup":9}],98:[function(require,module,exports){
+},{"_process":135,"dup":9}],109:[function(require,module,exports){
 arguments[4][10][0].apply(exports,arguments)
-},{"./seventh.js":105,"dup":10}],99:[function(require,module,exports){
+},{"./seventh.js":116,"dup":10}],110:[function(require,module,exports){
 arguments[4][11][0].apply(exports,arguments)
-},{"./seventh.js":105,"dup":11}],100:[function(require,module,exports){
+},{"./seventh.js":116,"dup":11}],111:[function(require,module,exports){
 arguments[4][12][0].apply(exports,arguments)
-},{"./seventh.js":105,"dup":12}],101:[function(require,module,exports){
+},{"./seventh.js":116,"dup":12}],112:[function(require,module,exports){
 arguments[4][13][0].apply(exports,arguments)
-},{"_process":124,"dup":13,"setimmediate":97,"timers":125}],102:[function(require,module,exports){
+},{"_process":135,"dup":13,"setimmediate":108,"timers":136}],113:[function(require,module,exports){
 arguments[4][14][0].apply(exports,arguments)
-},{"./seventh.js":105,"dup":14}],103:[function(require,module,exports){
+},{"./seventh.js":116,"dup":14}],114:[function(require,module,exports){
 arguments[4][15][0].apply(exports,arguments)
-},{"./seventh.js":105,"_process":124,"dup":15}],104:[function(require,module,exports){
+},{"./seventh.js":116,"_process":135,"dup":15}],115:[function(require,module,exports){
 arguments[4][16][0].apply(exports,arguments)
-},{"./seventh.js":105,"dup":16}],105:[function(require,module,exports){
+},{"./seventh.js":116,"dup":16}],116:[function(require,module,exports){
 arguments[4][17][0].apply(exports,arguments)
-},{"./Queue.js":98,"./api.js":99,"./batch.js":100,"./core.js":101,"./decorators.js":102,"./misc.js":103,"./parasite.js":104,"./wrapper.js":106,"dup":17}],106:[function(require,module,exports){
+},{"./Queue.js":109,"./api.js":110,"./batch.js":111,"./core.js":112,"./decorators.js":113,"./misc.js":114,"./parasite.js":115,"./wrapper.js":117,"dup":17}],117:[function(require,module,exports){
 arguments[4][18][0].apply(exports,arguments)
-},{"./seventh.js":105,"dup":18}],107:[function(require,module,exports){
-arguments[4][60][0].apply(exports,arguments)
-},{"dup":60}],108:[function(require,module,exports){
+},{"./seventh.js":116,"dup":18}],118:[function(require,module,exports){
+arguments[4][71][0].apply(exports,arguments)
+},{"dup":71}],119:[function(require,module,exports){
 /*
 	Book Source
 
@@ -43369,7 +45476,7 @@ emoji.splitIntoKeywords = ( name , noSimplify = false ) => {
 } ;
 
 
-},{"./english.js":109,"./json-data/emoji-char-to-canonical-name.json":111,"./json-data/emoji-keyword-to-charlist.json":112,"./latinize.js":115}],109:[function(require,module,exports){
+},{"./english.js":120,"./json-data/emoji-char-to-canonical-name.json":122,"./json-data/emoji-keyword-to-charlist.json":123,"./latinize.js":126}],120:[function(require,module,exports){
 /*
 	Book Source
 
@@ -43460,17 +45567,17 @@ english.undoPresentParticiple = word => {
 } ;
 
 
-},{}],110:[function(require,module,exports){
-arguments[4][61][0].apply(exports,arguments)
-},{"dup":61}],111:[function(require,module,exports){
-module.exports={"😀":"grinning-face","😃":"grinning-face-with-big-eyes","😄":"grinning-face-with-smiling-eyes","😁":"beaming-face-with-smiling-eyes","😆":"grinning-squinting-face","😅":"grinning-face-with-sweat","🤣":"rolling-on-the-floor-laughing","😂":"face-with-tears-of-joy","🙂":"slightly-smiling-face","🙃":"upside-down-face","🫠":"melting-face","😉":"winking-face","😊":"smiling-face-with-smiling-eyes","😇":"smiling-face-with-halo","🥰":"smiling-face-with-hearts","😍":"smiling-face-with-heart-eyes","🤩":"star-struck","😘":"face-blowing-a-kiss","😗":"kissing-face","☺️":"smiling-face","😚":"kissing-face-with-closed-eyes","😙":"kissing-face-with-smiling-eyes","🥲":"smiling-face-with-tear","😋":"face-savoring-food","😛":"face-with-tongue","😜":"winking-face-with-tongue","🤪":"zany-face","😝":"squinting-face-with-tongue","🤑":"money-mouth-face","🤗":"smiling-face-with-open-hands","🤭":"face-with-hand-over-mouth","🫢":"face-with-open-eyes-and-hand-over-mouth","🫣":"face-with-peeking-eye","🤫":"shushing-face","🤔":"thinking-face","🫡":"saluting-face","🤐":"zipper-mouth-face","🤨":"face-with-raised-eyebrow","😐":"neutral-face","😑":"expressionless-face","😶":"face-without-mouth","🫥":"dotted-line-face","😶‍🌫️":"face-in-clouds","😏":"smirking-face","😒":"unamused-face","🙄":"face-with-rolling-eyes","😬":"grimacing-face","😮‍💨":"face-exhaling","🤥":"lying-face","🫨":"shaking-face","😌":"relieved-face","😔":"pensive-face","😪":"sleepy-face","🤤":"drooling-face","😴":"sleeping-face","😷":"face-with-medical-mask","🤒":"face-with-thermometer","🤕":"face-with-head-bandage","🤢":"nauseated-face","🤮":"face-vomiting","🤧":"sneezing-face","🥵":"hot-face","🥶":"cold-face","🥴":"woozy-face","😵":"face-with-crossed-out-eyes","😵‍💫":"face-with-spiral-eyes","🤯":"exploding-head","🤠":"cowboy-hat-face","🥳":"partying-face","🥸":"disguised-face","😎":"smiling-face-with-sunglasses","🤓":"nerd-face","🧐":"face-with-monocle","😕":"confused-face","🫤":"face-with-diagonal-mouth","😟":"worried-face","🙁":"slightly-frowning-face","☹️":"frowning-face","😮":"face-with-open-mouth","😯":"hushed-face","😲":"astonished-face","😳":"flushed-face","🥺":"pleading-face","🥹":"face-holding-back-tears","😦":"frowning-face-with-open-mouth","😧":"anguished-face","😨":"fearful-face","😰":"anxious-face-with-sweat","😥":"sad-but-relieved-face","😢":"crying-face","😭":"loudly-crying-face","😱":"face-screaming-in-fear","😖":"confounded-face","😣":"persevering-face","😞":"disappointed-face","😓":"downcast-face-with-sweat","😩":"weary-face","😫":"tired-face","🥱":"yawning-face","😤":"face-with-steam-from-nose","😡":"enraged-face","😠":"angry-face","🤬":"face-with-symbols-on-mouth","😈":"smiling-face-with-horns","👿":"angry-face-with-horns","💀":"skull","☠️":"skull-and-crossbones","💩":"pile-of-poo","🤡":"clown-face","👹":"ogre","👺":"goblin","👻":"ghost","👽":"alien","👾":"alien-monster","🤖":"robot","😺":"grinning-cat","😸":"grinning-cat-with-smiling-eyes","😹":"cat-with-tears-of-joy","😻":"smiling-cat-with-heart-eyes","😼":"cat-with-wry-smile","😽":"kissing-cat","🙀":"weary-cat","😿":"crying-cat","😾":"pouting-cat","🙈":"see-no-evil-monkey","🙉":"hear-no-evil-monkey","🙊":"speak-no-evil-monkey","💌":"love-letter","💘":"heart-with-arrow","💝":"heart-with-ribbon","💖":"sparkling-heart","💗":"growing-heart","💓":"beating-heart","💞":"revolving-hearts","💕":"two-hearts","💟":"heart-decoration","❣️":"heart-exclamation","💔":"broken-heart","❤️‍🔥":"heart-on-fire","❤️‍🩹":"mending-heart","❤️":"red-heart","🩷":"pink-heart","🧡":"orange-heart","💛":"yellow-heart","💚":"green-heart","💙":"blue-heart","🩵":"light-blue-heart","💜":"purple-heart","🤎":"brown-heart","🖤":"black-heart","🩶":"grey-heart","🤍":"white-heart","💋":"kiss-mark","💯":"hundred-points","💢":"anger-symbol","💥":"collision","💫":"dizzy","💦":"sweat-droplets","💨":"dashing-away","🕳️":"hole","💬":"speech-balloon","👁️‍🗨️":"eye-in-speech-bubble","🗨️":"left-speech-bubble","🗯️":"right-anger-bubble","💭":"thought-balloon","💤":"zzz","👋":"waving-hand","🤚":"raised-back-of-hand","🖐️":"hand-with-fingers-splayed","✋":"raised-hand","🖖":"vulcan-salute","🫱":"rightwards-hand","🫲":"leftwards-hand","🫳":"palm-down-hand","🫴":"palm-up-hand","🫷":"leftwards-pushing-hand","🫸":"rightwards-pushing-hand","👌":"ok-hand","🤌":"pinched-fingers","🤏":"pinching-hand","✌️":"victory-hand","🤞":"crossed-fingers","🫰":"hand-with-index-finger-and-thumb-crossed","🤟":"love-you-gesture","🤘":"sign-of-the-horns","🤙":"call-me-hand","👈":"backhand-index-pointing-left","👉":"backhand-index-pointing-right","👆":"backhand-index-pointing-up","🖕":"middle-finger","👇":"backhand-index-pointing-down","☝️":"index-pointing-up","🫵":"index-pointing-at-the-viewer","👍":"thumbs-up","👎":"thumbs-down","✊":"raised-fist","👊":"oncoming-fist","🤛":"left-facing-fist","🤜":"right-facing-fist","👏":"clapping-hands","🙌":"raising-hands","🫶":"heart-hands","👐":"open-hands","🤲":"palms-up-together","🤝":"handshake","🙏":"folded-hands","✍️":"writing-hand","💅":"nail-polish","🤳":"selfie","💪":"flexed-biceps","🦾":"mechanical-arm","🦿":"mechanical-leg","🦵":"leg","🦶":"foot","👂":"ear","🦻":"ear-with-hearing-aid","👃":"nose","🧠":"brain","🫀":"anatomical-heart","🫁":"lungs","🦷":"tooth","🦴":"bone","👀":"eyes","👁️":"eye","👅":"tongue","👄":"mouth","🫦":"biting-lip","👶":"baby","🧒":"child","👦":"boy","👧":"girl","🧑":"person","👱":"person-blond-hair","👨":"man","🧔":"person-beard","🧔‍♂️":"man-beard","🧔‍♀️":"woman-beard","👨‍🦰":"man-red-hair","👨‍🦱":"man-curly-hair","👨‍🦳":"man-white-hair","👨‍🦲":"man-bald","👩":"woman","👩‍🦰":"woman-red-hair","🧑‍🦰":"person-red-hair","👩‍🦱":"woman-curly-hair","🧑‍🦱":"person-curly-hair","👩‍🦳":"woman-white-hair","🧑‍🦳":"person-white-hair","👩‍🦲":"woman-bald","🧑‍🦲":"person-bald","👱‍♀️":"woman-blond-hair","👱‍♂️":"man-blond-hair","🧓":"older-person","👴":"old-man","👵":"old-woman","🙍":"person-frowning","🙍‍♂️":"man-frowning","🙍‍♀️":"woman-frowning","🙎":"person-pouting","🙎‍♂️":"man-pouting","🙎‍♀️":"woman-pouting","🙅":"person-gesturing-no","🙅‍♂️":"man-gesturing-no","🙅‍♀️":"woman-gesturing-no","🙆":"person-gesturing-ok","🙆‍♂️":"man-gesturing-ok","🙆‍♀️":"woman-gesturing-ok","💁":"person-tipping-hand","💁‍♂️":"man-tipping-hand","💁‍♀️":"woman-tipping-hand","🙋":"person-raising-hand","🙋‍♂️":"man-raising-hand","🙋‍♀️":"woman-raising-hand","🧏":"deaf-person","🧏‍♂️":"deaf-man","🧏‍♀️":"deaf-woman","🙇":"person-bowing","🙇‍♂️":"man-bowing","🙇‍♀️":"woman-bowing","🤦":"person-facepalming","🤦‍♂️":"man-facepalming","🤦‍♀️":"woman-facepalming","🤷":"person-shrugging","🤷‍♂️":"man-shrugging","🤷‍♀️":"woman-shrugging","🧑‍⚕️":"health-worker","👨‍⚕️":"man-health-worker","👩‍⚕️":"woman-health-worker","🧑‍🎓":"student","👨‍🎓":"man-student","👩‍🎓":"woman-student","🧑‍🏫":"teacher","👨‍🏫":"man-teacher","👩‍🏫":"woman-teacher","🧑‍⚖️":"judge","👨‍⚖️":"man-judge","👩‍⚖️":"woman-judge","🧑‍🌾":"farmer","👨‍🌾":"man-farmer","👩‍🌾":"woman-farmer","🧑‍🍳":"cook","👨‍🍳":"man-cook","👩‍🍳":"woman-cook","🧑‍🔧":"mechanic","👨‍🔧":"man-mechanic","👩‍🔧":"woman-mechanic","🧑‍🏭":"factory-worker","👨‍🏭":"man-factory-worker","👩‍🏭":"woman-factory-worker","🧑‍💼":"office-worker","👨‍💼":"man-office-worker","👩‍💼":"woman-office-worker","🧑‍🔬":"scientist","👨‍🔬":"man-scientist","👩‍🔬":"woman-scientist","🧑‍💻":"technologist","👨‍💻":"man-technologist","👩‍💻":"woman-technologist","🧑‍🎤":"singer","👨‍🎤":"man-singer","👩‍🎤":"woman-singer","🧑‍🎨":"artist","👨‍🎨":"man-artist","👩‍🎨":"woman-artist","🧑‍✈️":"pilot","👨‍✈️":"man-pilot","👩‍✈️":"woman-pilot","🧑‍🚀":"astronaut","👨‍🚀":"man-astronaut","👩‍🚀":"woman-astronaut","🧑‍🚒":"firefighter","👨‍🚒":"man-firefighter","👩‍🚒":"woman-firefighter","👮":"police-officer","👮‍♂️":"man-police-officer","👮‍♀️":"woman-police-officer","🕵️":"detective","🕵️‍♂️":"man-detective","🕵️‍♀️":"woman-detective","💂":"guard","💂‍♂️":"man-guard","💂‍♀️":"woman-guard","🥷":"ninja","👷":"construction-worker","👷‍♂️":"man-construction-worker","👷‍♀️":"woman-construction-worker","🫅":"person-with-crown","🤴":"prince","👸":"princess","👳":"person-wearing-turban","👳‍♂️":"man-wearing-turban","👳‍♀️":"woman-wearing-turban","👲":"person-with-skullcap","🧕":"woman-with-headscarf","🤵":"person-in-tuxedo","🤵‍♂️":"man-in-tuxedo","🤵‍♀️":"woman-in-tuxedo","👰":"person-with-veil","👰‍♂️":"man-with-veil","👰‍♀️":"woman-with-veil","🤰":"pregnant-woman","🫃":"pregnant-man","🫄":"pregnant-person","🤱":"breast-feeding","👩‍🍼":"woman-feeding-baby","👨‍🍼":"man-feeding-baby","🧑‍🍼":"person-feeding-baby","👼":"baby-angel","🎅":"santa-claus","🤶":"mrs-claus","🧑‍🎄":"mx-claus","🦸":"superhero","🦸‍♂️":"man-superhero","🦸‍♀️":"woman-superhero","🦹":"supervillain","🦹‍♂️":"man-supervillain","🦹‍♀️":"woman-supervillain","🧙":"mage","🧙‍♂️":"man-mage","🧙‍♀️":"woman-mage","🧚":"fairy","🧚‍♂️":"man-fairy","🧚‍♀️":"woman-fairy","🧛":"vampire","🧛‍♂️":"man-vampire","🧛‍♀️":"woman-vampire","🧜":"merperson","🧜‍♂️":"merman","🧜‍♀️":"mermaid","🧝":"elf","🧝‍♂️":"man-elf","🧝‍♀️":"woman-elf","🧞":"genie","🧞‍♂️":"man-genie","🧞‍♀️":"woman-genie","🧟":"zombie","🧟‍♂️":"man-zombie","🧟‍♀️":"woman-zombie","🧌":"troll","💆":"person-getting-massage","💆‍♂️":"man-getting-massage","💆‍♀️":"woman-getting-massage","💇":"person-getting-haircut","💇‍♂️":"man-getting-haircut","💇‍♀️":"woman-getting-haircut","🚶":"person-walking","🚶‍♂️":"man-walking","🚶‍♀️":"woman-walking","🧍":"person-standing","🧍‍♂️":"man-standing","🧍‍♀️":"woman-standing","🧎":"person-kneeling","🧎‍♂️":"man-kneeling","🧎‍♀️":"woman-kneeling","🧑‍🦯":"person-with-white-cane","👨‍🦯":"man-with-white-cane","👩‍🦯":"woman-with-white-cane","🧑‍🦼":"person-in-motorized-wheelchair","👨‍🦼":"man-in-motorized-wheelchair","👩‍🦼":"woman-in-motorized-wheelchair","🧑‍🦽":"person-in-manual-wheelchair","👨‍🦽":"man-in-manual-wheelchair","👩‍🦽":"woman-in-manual-wheelchair","🏃":"person-running","🏃‍♂️":"man-running","🏃‍♀️":"woman-running","💃":"woman-dancing","🕺":"man-dancing","🕴️":"person-in-suit-levitating","👯":"people-with-bunny-ears","👯‍♂️":"men-with-bunny-ears","👯‍♀️":"women-with-bunny-ears","🧖":"person-in-steamy-room","🧖‍♂️":"man-in-steamy-room","🧖‍♀️":"woman-in-steamy-room","🧗":"person-climbing","🧗‍♂️":"man-climbing","🧗‍♀️":"woman-climbing","🤺":"person-fencing","🏇":"horse-racing","⛷️":"skier","🏂":"snowboarder","🏌️":"person-golfing","🏌️‍♂️":"man-golfing","🏌️‍♀️":"woman-golfing","🏄":"person-surfing","🏄‍♂️":"man-surfing","🏄‍♀️":"woman-surfing","🚣":"person-rowing-boat","🚣‍♂️":"man-rowing-boat","🚣‍♀️":"woman-rowing-boat","🏊":"person-swimming","🏊‍♂️":"man-swimming","🏊‍♀️":"woman-swimming","⛹️":"person-bouncing-ball","⛹️‍♂️":"man-bouncing-ball","⛹️‍♀️":"woman-bouncing-ball","🏋️":"person-lifting-weights","🏋️‍♂️":"man-lifting-weights","🏋️‍♀️":"woman-lifting-weights","🚴":"person-biking","🚴‍♂️":"man-biking","🚴‍♀️":"woman-biking","🚵":"person-mountain-biking","🚵‍♂️":"man-mountain-biking","🚵‍♀️":"woman-mountain-biking","🤸":"person-cartwheeling","🤸‍♂️":"man-cartwheeling","🤸‍♀️":"woman-cartwheeling","🤼":"people-wrestling","🤼‍♂️":"men-wrestling","🤼‍♀️":"women-wrestling","🤽":"person-playing-water-polo","🤽‍♂️":"man-playing-water-polo","🤽‍♀️":"woman-playing-water-polo","🤾":"person-playing-handball","🤾‍♂️":"man-playing-handball","🤾‍♀️":"woman-playing-handball","🤹":"person-juggling","🤹‍♂️":"man-juggling","🤹‍♀️":"woman-juggling","🧘":"person-in-lotus-position","🧘‍♂️":"man-in-lotus-position","🧘‍♀️":"woman-in-lotus-position","🛀":"person-taking-bath","🛌":"person-in-bed","🧑‍🤝‍🧑":"people-holding-hands","👭":"women-holding-hands","👫":"woman-and-man-holding-hands","👬":"men-holding-hands","💏":"kiss","👩‍❤️‍💋‍👨":"kiss-woman-man","👨‍❤️‍💋‍👨":"kiss-man-man","👩‍❤️‍💋‍👩":"kiss-woman-woman","💑":"couple-with-heart","👩‍❤️‍👨":"couple-with-heart-woman-man","👨‍❤️‍👨":"couple-with-heart-man-man","👩‍❤️‍👩":"couple-with-heart-woman-woman","👪":"family","👨‍👩‍👦":"family-man-woman-boy","👨‍👩‍👧":"family-man-woman-girl","👨‍👩‍👧‍👦":"family-man-woman-girl-boy","👨‍👩‍👦‍👦":"family-man-woman-boy-boy","👨‍👩‍👧‍👧":"family-man-woman-girl-girl","👨‍👨‍👦":"family-man-man-boy","👨‍👨‍👧":"family-man-man-girl","👨‍👨‍👧‍👦":"family-man-man-girl-boy","👨‍👨‍👦‍👦":"family-man-man-boy-boy","👨‍👨‍👧‍👧":"family-man-man-girl-girl","👩‍👩‍👦":"family-woman-woman-boy","👩‍👩‍👧":"family-woman-woman-girl","👩‍👩‍👧‍👦":"family-woman-woman-girl-boy","👩‍👩‍👦‍👦":"family-woman-woman-boy-boy","👩‍👩‍👧‍👧":"family-woman-woman-girl-girl","👨‍👦":"family-man-boy","👨‍👦‍👦":"family-man-boy-boy","👨‍👧":"family-man-girl","👨‍👧‍👦":"family-man-girl-boy","👨‍👧‍👧":"family-man-girl-girl","👩‍👦":"family-woman-boy","👩‍👦‍👦":"family-woman-boy-boy","👩‍👧":"family-woman-girl","👩‍👧‍👦":"family-woman-girl-boy","👩‍👧‍👧":"family-woman-girl-girl","🗣️":"speaking-head","👤":"bust-in-silhouette","👥":"busts-in-silhouette","🫂":"people-hugging","👣":"footprints","🐵":"monkey-face","🐒":"monkey","🦍":"gorilla","🦧":"orangutan","🐶":"dog-face","🐕":"dog","🦮":"guide-dog","🐕‍🦺":"service-dog","🐩":"poodle","🐺":"wolf","🦊":"fox","🦝":"raccoon","🐱":"cat-face","🐈":"cat","🐈‍⬛":"black-cat","🦁":"lion","🐯":"tiger-face","🐅":"tiger","🐆":"leopard","🐴":"horse-face","🫎":"moose","🫏":"donkey","🐎":"horse","🦄":"unicorn","🦓":"zebra","🦌":"deer","🦬":"bison","🐮":"cow-face","🐂":"ox","🐃":"water-buffalo","🐄":"cow","🐷":"pig-face","🐖":"pig","🐗":"boar","🐽":"pig-nose","🐏":"ram","🐑":"ewe","🐐":"goat","🐪":"camel","🐫":"two-hump-camel","🦙":"llama","🦒":"giraffe","🐘":"elephant","🦣":"mammoth","🦏":"rhinoceros","🦛":"hippopotamus","🐭":"mouse-face","🐁":"mouse","🐀":"rat","🐹":"hamster","🐰":"rabbit-face","🐇":"rabbit","🐿️":"chipmunk","🦫":"beaver","🦔":"hedgehog","🦇":"bat","🐻":"bear","🐻‍❄️":"polar-bear","🐨":"koala","🐼":"panda","🦥":"sloth","🦦":"otter","🦨":"skunk","🦘":"kangaroo","🦡":"badger","🐾":"paw-prints","🦃":"turkey","🐔":"chicken","🐓":"rooster","🐣":"hatching-chick","🐤":"baby-chick","🐥":"front-facing-baby-chick","🐦":"bird","🐧":"penguin","🕊️":"dove","🦅":"eagle","🦆":"duck","🦢":"swan","🦉":"owl","🦤":"dodo","🪶":"feather","🦩":"flamingo","🦚":"peacock","🦜":"parrot","🪽":"wing","🐦‍⬛":"black-bird","🪿":"goose","🐸":"frog","🐊":"crocodile","🐢":"turtle","🦎":"lizard","🐍":"snake","🐲":"dragon-face","🐉":"dragon","🦕":"sauropod","🦖":"t-rex","🐳":"spouting-whale","🐋":"whale","🐬":"dolphin","🦭":"seal","🐟":"fish","🐠":"tropical-fish","🐡":"blowfish","🦈":"shark","🐙":"octopus","🐚":"spiral-shell","🪸":"coral","🪼":"jellyfish","🐌":"snail","🦋":"butterfly","🐛":"bug","🐜":"ant","🐝":"honeybee","🪲":"beetle","🐞":"lady-beetle","🦗":"cricket","🪳":"cockroach","🕷️":"spider","🕸️":"spider-web","🦂":"scorpion","🦟":"mosquito","🪰":"fly","🪱":"worm","🦠":"microbe","💐":"bouquet","🌸":"cherry-blossom","💮":"white-flower","🪷":"lotus","🏵️":"rosette","🌹":"rose","🥀":"wilted-flower","🌺":"hibiscus","🌻":"sunflower","🌼":"blossom","🌷":"tulip","🪻":"hyacinth","🌱":"seedling","🪴":"potted-plant","🌲":"evergreen-tree","🌳":"deciduous-tree","🌴":"palm-tree","🌵":"cactus","🌾":"sheaf-of-rice","🌿":"herb","☘️":"shamrock","🍀":"four-leaf-clover","🍁":"maple-leaf","🍂":"fallen-leaf","🍃":"leaf-fluttering-in-wind","🪹":"empty-nest","🪺":"nest-with-eggs","🍄":"mushroom","🍇":"grapes","🍈":"melon","🍉":"watermelon","🍊":"tangerine","🍋":"lemon","🍌":"banana","🍍":"pineapple","🥭":"mango","🍎":"red-apple","🍏":"green-apple","🍐":"pear","🍑":"peach","🍒":"cherries","🍓":"strawberry","🫐":"blueberries","🥝":"kiwi-fruit","🍅":"tomato","🫒":"olive","🥥":"coconut","🥑":"avocado","🍆":"eggplant","🥔":"potato","🥕":"carrot","🌽":"ear-of-corn","🌶️":"hot-pepper","🫑":"bell-pepper","🥒":"cucumber","🥬":"leafy-green","🥦":"broccoli","🧄":"garlic","🧅":"onion","🥜":"peanuts","🫘":"beans","🌰":"chestnut","🫚":"ginger-root","🫛":"pea-pod","🍞":"bread","🥐":"croissant","🥖":"baguette-bread","🫓":"flatbread","🥨":"pretzel","🥯":"bagel","🥞":"pancakes","🧇":"waffle","🧀":"cheese-wedge","🍖":"meat-on-bone","🍗":"poultry-leg","🥩":"cut-of-meat","🥓":"bacon","🍔":"hamburger","🍟":"french-fries","🍕":"pizza","🌭":"hot-dog","🥪":"sandwich","🌮":"taco","🌯":"burrito","🫔":"tamale","🥙":"stuffed-flatbread","🧆":"falafel","🥚":"egg","🍳":"cooking","🥘":"shallow-pan-of-food","🍲":"pot-of-food","🫕":"fondue","🥣":"bowl-with-spoon","🥗":"green-salad","🍿":"popcorn","🧈":"butter","🧂":"salt","🥫":"canned-food","🍱":"bento-box","🍘":"rice-cracker","🍙":"rice-ball","🍚":"cooked-rice","🍛":"curry-rice","🍜":"steaming-bowl","🍝":"spaghetti","🍠":"roasted-sweet-potato","🍢":"oden","🍣":"sushi","🍤":"fried-shrimp","🍥":"fish-cake-with-swirl","🥮":"moon-cake","🍡":"dango","🥟":"dumpling","🥠":"fortune-cookie","🥡":"takeout-box","🦀":"crab","🦞":"lobster","🦐":"shrimp","🦑":"squid","🦪":"oyster","🍦":"soft-ice-cream","🍧":"shaved-ice","🍨":"ice-cream","🍩":"doughnut","🍪":"cookie","🎂":"birthday-cake","🍰":"shortcake","🧁":"cupcake","🥧":"pie","🍫":"chocolate-bar","🍬":"candy","🍭":"lollipop","🍮":"custard","🍯":"honey-pot","🍼":"baby-bottle","🥛":"glass-of-milk","☕":"hot-beverage","🫖":"teapot","🍵":"teacup-without-handle","🍶":"sake","🍾":"bottle-with-popping-cork","🍷":"wine-glass","🍸":"cocktail-glass","🍹":"tropical-drink","🍺":"beer-mug","🍻":"clinking-beer-mugs","🥂":"clinking-glasses","🥃":"tumbler-glass","🫗":"pouring-liquid","🥤":"cup-with-straw","🧋":"bubble-tea","🧃":"beverage-box","🧉":"mate","🧊":"ice","🥢":"chopsticks","🍽️":"fork-and-knife-with-plate","🍴":"fork-and-knife","🥄":"spoon","🔪":"kitchen-knife","🫙":"jar","🏺":"amphora","🌍":"globe-showing-europe-africa","🌎":"globe-showing-americas","🌏":"globe-showing-asia-australia","🌐":"globe-with-meridians","🗺️":"world-map","🗾":"map-of-japan","🧭":"compass","🏔️":"snow-capped-mountain","⛰️":"mountain","🌋":"volcano","🗻":"mount-fuji","🏕️":"camping","🏖️":"beach-with-umbrella","🏜️":"desert","🏝️":"desert-island","🏞️":"national-park","🏟️":"stadium","🏛️":"classical-building","🏗️":"building-construction","🧱":"brick","🪨":"rock","🪵":"wood","🛖":"hut","🏘️":"houses","🏚️":"derelict-house","🏠":"house","🏡":"house-with-garden","🏢":"office-building","🏣":"japanese-post-office","🏤":"post-office","🏥":"hospital","🏦":"bank","🏨":"hotel","🏩":"love-hotel","🏪":"convenience-store","🏫":"school","🏬":"department-store","🏭":"factory","🏯":"japanese-castle","🏰":"castle","💒":"wedding","🗼":"tokyo-tower","🗽":"statue-of-liberty","⛪":"church","🕌":"mosque","🛕":"hindu-temple","🕍":"synagogue","⛩️":"shinto-shrine","🕋":"kaaba","⛲":"fountain","⛺":"tent","🌁":"foggy","🌃":"night-with-stars","🏙️":"cityscape","🌄":"sunrise-over-mountains","🌅":"sunrise","🌆":"cityscape-at-dusk","🌇":"sunset","🌉":"bridge-at-night","♨️":"hot-springs","🎠":"carousel-horse","🛝":"playground-slide","🎡":"ferris-wheel","🎢":"roller-coaster","💈":"barber-pole","🎪":"circus-tent","🚂":"locomotive","🚃":"railway-car","🚄":"high-speed-train","🚅":"bullet-train","🚆":"train","🚇":"metro","🚈":"light-rail","🚉":"station","🚊":"tram","🚝":"monorail","🚞":"mountain-railway","🚋":"tram-car","🚌":"bus","🚍":"oncoming-bus","🚎":"trolleybus","🚐":"minibus","🚑":"ambulance","🚒":"fire-engine","🚓":"police-car","🚔":"oncoming-police-car","🚕":"taxi","🚖":"oncoming-taxi","🚗":"automobile","🚘":"oncoming-automobile","🚙":"sport-utility-vehicle","🛻":"pickup-truck","🚚":"delivery-truck","🚛":"articulated-lorry","🚜":"tractor","🏎️":"racing-car","🏍️":"motorcycle","🛵":"motor-scooter","🦽":"manual-wheelchair","🦼":"motorized-wheelchair","🛺":"auto-rickshaw","🚲":"bicycle","🛴":"kick-scooter","🛹":"skateboard","🛼":"roller-skate","🚏":"bus-stop","🛣️":"motorway","🛤️":"railway-track","🛢️":"oil-drum","⛽":"fuel-pump","🛞":"wheel","🚨":"police-car-light","🚥":"horizontal-traffic-light","🚦":"vertical-traffic-light","🛑":"stop-sign","🚧":"construction","⚓":"anchor","🛟":"ring-buoy","⛵":"sailboat","🛶":"canoe","🚤":"speedboat","🛳️":"passenger-ship","⛴️":"ferry","🛥️":"motor-boat","🚢":"ship","✈️":"airplane","🛩️":"small-airplane","🛫":"airplane-departure","🛬":"airplane-arrival","🪂":"parachute","💺":"seat","🚁":"helicopter","🚟":"suspension-railway","🚠":"mountain-cableway","🚡":"aerial-tramway","🛰️":"satellite","🚀":"rocket","🛸":"flying-saucer","🛎️":"bellhop-bell","🧳":"luggage","⌛":"hourglass-done","⏳":"hourglass-not-done","⌚":"watch","⏰":"alarm-clock","⏱️":"stopwatch","⏲️":"timer-clock","🕰️":"mantelpiece-clock","🕛":"twelve-o-clock","🕧":"twelve-thirty","🕐":"one-o-clock","🕜":"one-thirty","🕑":"two-o-clock","🕝":"two-thirty","🕒":"three-o-clock","🕞":"three-thirty","🕓":"four-o-clock","🕟":"four-thirty","🕔":"five-o-clock","🕠":"five-thirty","🕕":"six-o-clock","🕡":"six-thirty","🕖":"seven-o-clock","🕢":"seven-thirty","🕗":"eight-o-clock","🕣":"eight-thirty","🕘":"nine-o-clock","🕤":"nine-thirty","🕙":"ten-o-clock","🕥":"ten-thirty","🕚":"eleven-o-clock","🕦":"eleven-thirty","🌑":"new-moon","🌒":"waxing-crescent-moon","🌓":"first-quarter-moon","🌔":"waxing-gibbous-moon","🌕":"full-moon","🌖":"waning-gibbous-moon","🌗":"last-quarter-moon","🌘":"waning-crescent-moon","🌙":"crescent-moon","🌚":"new-moon-face","🌛":"first-quarter-moon-face","🌜":"last-quarter-moon-face","🌡️":"thermometer","☀️":"sun","🌝":"full-moon-face","🌞":"sun-with-face","🪐":"ringed-planet","⭐":"star","🌟":"glowing-star","🌠":"shooting-star","🌌":"milky-way","☁️":"cloud","⛅":"sun-behind-cloud","⛈️":"cloud-with-lightning-and-rain","🌤️":"sun-behind-small-cloud","🌥️":"sun-behind-large-cloud","🌦️":"sun-behind-rain-cloud","🌧️":"cloud-with-rain","🌨️":"cloud-with-snow","🌩️":"cloud-with-lightning","🌪️":"tornado","🌫️":"fog","🌬️":"wind-face","🌀":"cyclone","🌈":"rainbow","🌂":"closed-umbrella","☂️":"umbrella","☔":"umbrella-with-rain-drops","⛱️":"umbrella-on-ground","⚡":"high-voltage","❄️":"snowflake","☃️":"snowman","⛄":"snowman-without-snow","☄️":"comet","🔥":"fire","💧":"droplet","🌊":"water-wave","🎃":"jack-o-lantern","🎄":"christmas-tree","🎆":"fireworks","🎇":"sparkler","🧨":"firecracker","✨":"sparkles","🎈":"balloon","🎉":"party-popper","🎊":"confetti-ball","🎋":"tanabata-tree","🎍":"pine-decoration","🎎":"japanese-dolls","🎏":"carp-streamer","🎐":"wind-chime","🎑":"moon-viewing-ceremony","🧧":"red-envelope","🎀":"ribbon","🎁":"wrapped-gift","🎗️":"reminder-ribbon","🎟️":"admission-tickets","🎫":"ticket","🎖️":"military-medal","🏆":"trophy","🏅":"sports-medal","🥇":"1st-place-medal","🥈":"2nd-place-medal","🥉":"3rd-place-medal","⚽":"soccer-ball","⚾":"baseball","🥎":"softball","🏀":"basketball","🏐":"volleyball","🏈":"american-football","🏉":"rugby-football","🎾":"tennis","🥏":"flying-disc","🎳":"bowling","🏏":"cricket-game","🏑":"field-hockey","🏒":"ice-hockey","🥍":"lacrosse","🏓":"ping-pong","🏸":"badminton","🥊":"boxing-glove","🥋":"martial-arts-uniform","🥅":"goal-net","⛳":"flag-in-hole","⛸️":"ice-skate","🎣":"fishing-pole","🤿":"diving-mask","🎽":"running-shirt","🎿":"skis","🛷":"sled","🥌":"curling-stone","🎯":"bullseye","🪀":"yo-yo","🪁":"kite","🔫":"water-pistol","🎱":"pool-8-ball","🔮":"crystal-ball","🪄":"magic-wand","🎮":"video-game","🕹️":"joystick","🎰":"slot-machine","🎲":"game-die","🧩":"puzzle-piece","🧸":"teddy-bear","🪅":"pinata","🪩":"mirror-ball","🪆":"nesting-dolls","♠️":"spade-suit","♥️":"heart-suit","♦️":"diamond-suit","♣️":"club-suit","♟️":"chess-pawn","🃏":"joker","🀄":"mahjong-red-dragon","🎴":"flower-playing-cards","🎭":"performing-arts","🖼️":"framed-picture","🎨":"artist-palette","🧵":"thread","🪡":"sewing-needle","🧶":"yarn","🪢":"knot","👓":"glasses","🕶️":"sunglasses","🥽":"goggles","🥼":"lab-coat","🦺":"safety-vest","👔":"necktie","👕":"t-shirt","👖":"jeans","🧣":"scarf","🧤":"gloves","🧥":"coat","🧦":"socks","👗":"dress","👘":"kimono","🥻":"sari","🩱":"one-piece-swimsuit","🩲":"briefs","🩳":"shorts","👙":"bikini","👚":"woman-s-clothes","🪭":"folding-hand-fan","👛":"purse","👜":"handbag","👝":"clutch-bag","🛍️":"shopping-bags","🎒":"backpack","🩴":"thong-sandal","👞":"man-s-shoe","👟":"running-shoe","🥾":"hiking-boot","🥿":"flat-shoe","👠":"high-heeled-shoe","👡":"woman-s-sandal","🩰":"ballet-shoes","👢":"woman-s-boot","🪮":"hair-pick","👑":"crown","👒":"woman-s-hat","🎩":"top-hat","🎓":"graduation-cap","🧢":"billed-cap","🪖":"military-helmet","⛑️":"rescue-worker-s-helmet","📿":"prayer-beads","💄":"lipstick","💍":"ring","💎":"gem-stone","🔇":"muted-speaker","🔈":"speaker-low-volume","🔉":"speaker-medium-volume","🔊":"speaker-high-volume","📢":"loudspeaker","📣":"megaphone","📯":"postal-horn","🔔":"bell","🔕":"bell-with-slash","🎼":"musical-score","🎵":"musical-note","🎶":"musical-notes","🎙️":"studio-microphone","🎚️":"level-slider","🎛️":"control-knobs","🎤":"microphone","🎧":"headphone","📻":"radio","🎷":"saxophone","🪗":"accordion","🎸":"guitar","🎹":"musical-keyboard","🎺":"trumpet","🎻":"violin","🪕":"banjo","🥁":"drum","🪘":"long-drum","🪇":"maracas","🪈":"flute","📱":"mobile-phone","📲":"mobile-phone-with-arrow","☎️":"telephone","📞":"telephone-receiver","📟":"pager","📠":"fax-machine","🔋":"battery","🪫":"low-battery","🔌":"electric-plug","💻":"laptop","🖥️":"desktop-computer","🖨️":"printer","⌨️":"keyboard","🖱️":"computer-mouse","🖲️":"trackball","💽":"computer-disk","💾":"floppy-disk","💿":"optical-disk","📀":"dvd","🧮":"abacus","🎥":"movie-camera","🎞️":"film-frames","📽️":"film-projector","🎬":"clapper-board","📺":"television","📷":"camera","📸":"camera-with-flash","📹":"video-camera","📼":"videocassette","🔍":"magnifying-glass-tilted-left","🔎":"magnifying-glass-tilted-right","🕯️":"candle","💡":"light-bulb","🔦":"flashlight","🏮":"red-paper-lantern","🪔":"diya-lamp","📔":"notebook-with-decorative-cover","📕":"closed-book","📖":"open-book","📗":"green-book","📘":"blue-book","📙":"orange-book","📚":"books","📓":"notebook","📒":"ledger","📃":"page-with-curl","📜":"scroll","📄":"page-facing-up","📰":"newspaper","🗞️":"rolled-up-newspaper","📑":"bookmark-tabs","🔖":"bookmark","🏷️":"label","💰":"money-bag","🪙":"coin","💴":"yen-banknote","💵":"dollar-banknote","💶":"euro-banknote","💷":"pound-banknote","💸":"money-with-wings","💳":"credit-card","🧾":"receipt","💹":"chart-increasing-with-yen","✉️":"envelope","📧":"e-mail","📨":"incoming-envelope","📩":"envelope-with-arrow","📤":"outbox-tray","📥":"inbox-tray","📦":"package","📫":"closed-mailbox-with-raised-flag","📪":"closed-mailbox-with-lowered-flag","📬":"open-mailbox-with-raised-flag","📭":"open-mailbox-with-lowered-flag","📮":"postbox","🗳️":"ballot-box-with-ballot","✏️":"pencil","✒️":"black-nib","🖋️":"fountain-pen","🖊️":"pen","🖌️":"paintbrush","🖍️":"crayon","📝":"memo","💼":"briefcase","📁":"file-folder","📂":"open-file-folder","🗂️":"card-index-dividers","📅":"calendar","📆":"tear-off-calendar","🗒️":"spiral-notepad","🗓️":"spiral-calendar","📇":"card-index","📈":"chart-increasing","📉":"chart-decreasing","📊":"bar-chart","📋":"clipboard","📌":"pushpin","📍":"round-pushpin","📎":"paperclip","🖇️":"linked-paperclips","📏":"straight-ruler","📐":"triangular-ruler","✂️":"scissors","🗃️":"card-file-box","🗄️":"file-cabinet","🗑️":"wastebasket","🔒":"locked","🔓":"unlocked","🔏":"locked-with-pen","🔐":"locked-with-key","🔑":"key","🗝️":"old-key","🔨":"hammer","🪓":"axe","⛏️":"pick","⚒️":"hammer-and-pick","🛠️":"hammer-and-wrench","🗡️":"dagger","⚔️":"crossed-swords","💣":"bomb","🪃":"boomerang","🏹":"bow-and-arrow","🛡️":"shield","🪚":"carpentry-saw","🔧":"wrench","🪛":"screwdriver","🔩":"nut-and-bolt","⚙️":"gear","🗜️":"clamp","⚖️":"balance-scale","🦯":"white-cane","🔗":"link","⛓️":"chains","🪝":"hook","🧰":"toolbox","🧲":"magnet","🪜":"ladder","⚗️":"alembic","🧪":"test-tube","🧫":"petri-dish","🧬":"dna","🔬":"microscope","🔭":"telescope","📡":"satellite-antenna","💉":"syringe","🩸":"drop-of-blood","💊":"pill","🩹":"adhesive-bandage","🩼":"crutch","🩺":"stethoscope","🩻":"x-ray","🚪":"door","🛗":"elevator","🪞":"mirror","🪟":"window","🛏️":"bed","🛋️":"couch-and-lamp","🪑":"chair","🚽":"toilet","🪠":"plunger","🚿":"shower","🛁":"bathtub","🪤":"mouse-trap","🪒":"razor","🧴":"lotion-bottle","🧷":"safety-pin","🧹":"broom","🧺":"basket","🧻":"roll-of-paper","🪣":"bucket","🧼":"soap","🫧":"bubbles","🪥":"toothbrush","🧽":"sponge","🧯":"fire-extinguisher","🛒":"shopping-cart","🚬":"cigarette","⚰️":"coffin","🪦":"headstone","⚱️":"funeral-urn","🧿":"nazar-amulet","🪬":"hamsa","🗿":"moai","🪧":"placard","🪪":"identification-card","🏧":"atm-sign","🚮":"litter-in-bin-sign","🚰":"potable-water","♿":"wheelchair-symbol","🚹":"men-s-room","🚺":"women-s-room","🚻":"restroom","🚼":"baby-symbol","🚾":"water-closet","🛂":"passport-control","🛃":"customs","🛄":"baggage-claim","🛅":"left-luggage","⚠️":"warning","🚸":"children-crossing","⛔":"no-entry","🚫":"prohibited","🚳":"no-bicycles","🚭":"no-smoking","🚯":"no-littering","🚱":"non-potable-water","🚷":"no-pedestrians","📵":"no-mobile-phones","🔞":"no-one-under-eighteen","☢️":"radioactive","☣️":"biohazard","⬆️":"up-arrow","↗️":"up-right-arrow","➡️":"right-arrow","↘️":"down-right-arrow","⬇️":"down-arrow","↙️":"down-left-arrow","⬅️":"left-arrow","↖️":"up-left-arrow","↕️":"up-down-arrow","↔️":"left-right-arrow","↩️":"right-arrow-curving-left","↪️":"left-arrow-curving-right","⤴️":"right-arrow-curving-up","⤵️":"right-arrow-curving-down","🔃":"clockwise-vertical-arrows","🔄":"counterclockwise-arrows-button","🔙":"back-arrow","🔚":"end-arrow","🔛":"on-arrow","🔜":"soon-arrow","🔝":"top-arrow","🛐":"place-of-worship","⚛️":"atom-symbol","🕉️":"om","✡️":"star-of-david","☸️":"wheel-of-dharma","☯️":"yin-yang","✝️":"latin-cross","☦️":"orthodox-cross","☪️":"star-and-crescent","☮️":"peace-symbol","🕎":"menorah","🔯":"dotted-six-pointed-star","🪯":"khanda","♈":"aries","♉":"taurus","♊":"gemini","♋":"cancer","♌":"leo","♍":"virgo","♎":"libra","♏":"scorpio","♐":"sagittarius","♑":"capricorn","♒":"aquarius","♓":"pisces","⛎":"ophiuchus","🔀":"shuffle-tracks-button","🔁":"repeat-button","🔂":"repeat-single-button","▶️":"play-button","⏩":"fast-forward-button","⏭️":"next-track-button","⏯️":"play-or-pause-button","◀️":"reverse-button","⏪":"fast-reverse-button","⏮️":"last-track-button","🔼":"upwards-button","⏫":"fast-up-button","🔽":"downwards-button","⏬":"fast-down-button","⏸️":"pause-button","⏹️":"stop-button","⏺️":"record-button","⏏️":"eject-button","🎦":"cinema","🔅":"dim-button","🔆":"bright-button","📶":"antenna-bars","🛜":"wireless","📳":"vibration-mode","📴":"mobile-phone-off","♀️":"female-sign","♂️":"male-sign","⚧️":"transgender-symbol","✖️":"multiply","➕":"plus","➖":"minus","➗":"divide","🟰":"heavy-equals-sign","♾️":"infinity","‼️":"double-exclamation-mark","⁉️":"exclamation-question-mark","❓":"red-question-mark","❔":"white-question-mark","❕":"white-exclamation-mark","❗":"red-exclamation-mark","〰️":"wavy-dash","💱":"currency-exchange","💲":"heavy-dollar-sign","⚕️":"medical-symbol","♻️":"recycling-symbol","⚜️":"fleur-de-lis","🔱":"trident-emblem","📛":"name-badge","🔰":"japanese-symbol-for-beginner","⭕":"hollow-red-circle","✅":"check-mark-button","☑️":"check-box-with-check","✔️":"check-mark","❌":"cross-mark","❎":"cross-mark-button","➰":"curly-loop","➿":"double-curly-loop","〽️":"part-alternation-mark","✳️":"eight-spoked-asterisk","✴️":"eight-pointed-star","❇️":"sparkle","©️":"copyright","®️":"registered","™️":"trade-mark","#️⃣":"keycap-#","*️⃣":"keycap-*","0️⃣":"keycap-0","1️⃣":"keycap-1","2️⃣":"keycap-2","3️⃣":"keycap-3","4️⃣":"keycap-4","5️⃣":"keycap-5","6️⃣":"keycap-6","7️⃣":"keycap-7","8️⃣":"keycap-8","9️⃣":"keycap-9","🔟":"keycap-10","🔠":"input-latin-uppercase","🔡":"input-latin-lowercase","🔢":"input-numbers","🔣":"input-symbols","🔤":"input-latin-letters","🅰️":"a-button-blood-type","🆎":"ab-button-blood-type","🅱️":"b-button-blood-type","🆑":"cl-button","🆒":"cool-button","🆓":"free-button","ℹ️":"information","🆔":"id-button","Ⓜ️":"circled-m","🆕":"new-button","🆖":"ng-button","🅾️":"o-button-blood-type","🆗":"ok-button","🅿️":"p-button","🆘":"sos-button","🆙":"up-button","🆚":"vs-button","🈁":"japanese-here-button","🈂️":"japanese-service-charge-button","🈷️":"japanese-monthly-amount-button","🈶":"japanese-not-free-of-charge-button","🈯":"japanese-reserved-button","🉐":"japanese-bargain-button","🈹":"japanese-discount-button","🈚":"japanese-free-of-charge-button","🈲":"japanese-prohibited-button","🉑":"japanese-acceptable-button","🈸":"japanese-application-button","🈴":"japanese-passing-grade-button","🈳":"japanese-vacancy-button","㊗️":"japanese-congratulations-button","㊙️":"japanese-secret-button","🈺":"japanese-open-for-business-button","🈵":"japanese-no-vacancy-button","🔴":"red-circle","🟠":"orange-circle","🟡":"yellow-circle","🟢":"green-circle","🔵":"blue-circle","🟣":"purple-circle","🟤":"brown-circle","⚫":"black-circle","⚪":"white-circle","🟥":"red-square","🟧":"orange-square","🟨":"yellow-square","🟩":"green-square","🟦":"blue-square","🟪":"purple-square","🟫":"brown-square","⬛":"black-large-square","⬜":"white-large-square","◼️":"black-medium-square","◻️":"white-medium-square","◾":"black-medium-small-square","◽":"white-medium-small-square","▪️":"black-small-square","▫️":"white-small-square","🔶":"large-orange-diamond","🔷":"large-blue-diamond","🔸":"small-orange-diamond","🔹":"small-blue-diamond","🔺":"red-triangle-pointed-up","🔻":"red-triangle-pointed-down","💠":"diamond-with-a-dot","🔘":"radio-button","🔳":"white-square-button","🔲":"black-square-button","🏁":"chequered-flag","🚩":"triangular-flag","🎌":"crossed-flags","🏴":"black-flag","🏳️":"white-flag","🏳️‍🌈":"rainbow-flag","🏳️‍⚧️":"transgender-flag","🏴‍☠️":"pirate-flag","🇦🇨":"flag-ascension-island","🇦🇩":"flag-andorra","🇦🇪":"flag-united-arab-emirates","🇦🇫":"flag-afghanistan","🇦🇬":"flag-antigua-&-barbuda","🇦🇮":"flag-anguilla","🇦🇱":"flag-albania","🇦🇲":"flag-armenia","🇦🇴":"flag-angola","🇦🇶":"flag-antarctica","🇦🇷":"flag-argentina","🇦🇸":"flag-american-samoa","🇦🇹":"flag-austria","🇦🇺":"flag-australia","🇦🇼":"flag-aruba","🇦🇽":"flag-aland-islands","🇦🇿":"flag-azerbaijan","🇧🇦":"flag-bosnia-&-herzegovina","🇧🇧":"flag-barbados","🇧🇩":"flag-bangladesh","🇧🇪":"flag-belgium","🇧🇫":"flag-burkina-faso","🇧🇬":"flag-bulgaria","🇧🇭":"flag-bahrain","🇧🇮":"flag-burundi","🇧🇯":"flag-benin","🇧🇱":"flag-st-barthelemy","🇧🇲":"flag-bermuda","🇧🇳":"flag-brunei","🇧🇴":"flag-bolivia","🇧🇶":"flag-caribbean-netherlands","🇧🇷":"flag-brazil","🇧🇸":"flag-bahamas","🇧🇹":"flag-bhutan","🇧🇻":"flag-bouvet-island","🇧🇼":"flag-botswana","🇧🇾":"flag-belarus","🇧🇿":"flag-belize","🇨🇦":"flag-canada","🇨🇨":"flag-cocos-keeling-islands","🇨🇩":"flag-congo-kinshasa","🇨🇫":"flag-central-african-republic","🇨🇬":"flag-congo-brazzaville","🇨🇭":"flag-switzerland","🇨🇮":"flag-cote-d-ivoire","🇨🇰":"flag-cook-islands","🇨🇱":"flag-chile","🇨🇲":"flag-cameroon","🇨🇳":"flag-china","🇨🇴":"flag-colombia","🇨🇵":"flag-clipperton-island","🇨🇷":"flag-costa-rica","🇨🇺":"flag-cuba","🇨🇻":"flag-cape-verde","🇨🇼":"flag-curacao","🇨🇽":"flag-christmas-island","🇨🇾":"flag-cyprus","🇨🇿":"flag-czechia","🇩🇪":"flag-germany","🇩🇬":"flag-diego-garcia","🇩🇯":"flag-djibouti","🇩🇰":"flag-denmark","🇩🇲":"flag-dominica","🇩🇴":"flag-dominican-republic","🇩🇿":"flag-algeria","🇪🇦":"flag-ceuta-&-melilla","🇪🇨":"flag-ecuador","🇪🇪":"flag-estonia","🇪🇬":"flag-egypt","🇪🇭":"flag-western-sahara","🇪🇷":"flag-eritrea","🇪🇸":"flag-spain","🇪🇹":"flag-ethiopia","🇪🇺":"flag-european-union","🇫🇮":"flag-finland","🇫🇯":"flag-fiji","🇫🇰":"flag-falkland-islands","🇫🇲":"flag-micronesia","🇫🇴":"flag-faroe-islands","🇫🇷":"flag-france","🇬🇦":"flag-gabon","🇬🇧":"flag-united-kingdom","🇬🇩":"flag-grenada","🇬🇪":"flag-georgia","🇬🇫":"flag-french-guiana","🇬🇬":"flag-guernsey","🇬🇭":"flag-ghana","🇬🇮":"flag-gibraltar","🇬🇱":"flag-greenland","🇬🇲":"flag-gambia","🇬🇳":"flag-guinea","🇬🇵":"flag-guadeloupe","🇬🇶":"flag-equatorial-guinea","🇬🇷":"flag-greece","🇬🇸":"flag-south-georgia-&-south-sandwich-islands","🇬🇹":"flag-guatemala","🇬🇺":"flag-guam","🇬🇼":"flag-guinea-bissau","🇬🇾":"flag-guyana","🇭🇰":"flag-hong-kong-sar-china","🇭🇲":"flag-heard-&-mcdonald-islands","🇭🇳":"flag-honduras","🇭🇷":"flag-croatia","🇭🇹":"flag-haiti","🇭🇺":"flag-hungary","🇮🇨":"flag-canary-islands","🇮🇩":"flag-indonesia","🇮🇪":"flag-ireland","🇮🇱":"flag-israel","🇮🇲":"flag-isle-of-man","🇮🇳":"flag-india","🇮🇴":"flag-british-indian-ocean-territory","🇮🇶":"flag-iraq","🇮🇷":"flag-iran","🇮🇸":"flag-iceland","🇮🇹":"flag-italy","🇯🇪":"flag-jersey","🇯🇲":"flag-jamaica","🇯🇴":"flag-jordan","🇯🇵":"flag-japan","🇰🇪":"flag-kenya","🇰🇬":"flag-kyrgyzstan","🇰🇭":"flag-cambodia","🇰🇮":"flag-kiribati","🇰🇲":"flag-comoros","🇰🇳":"flag-st-kitts-&-nevis","🇰🇵":"flag-north-korea","🇰🇷":"flag-south-korea","🇰🇼":"flag-kuwait","🇰🇾":"flag-cayman-islands","🇰🇿":"flag-kazakhstan","🇱🇦":"flag-laos","🇱🇧":"flag-lebanon","🇱🇨":"flag-st-lucia","🇱🇮":"flag-liechtenstein","🇱🇰":"flag-sri-lanka","🇱🇷":"flag-liberia","🇱🇸":"flag-lesotho","🇱🇹":"flag-lithuania","🇱🇺":"flag-luxembourg","🇱🇻":"flag-latvia","🇱🇾":"flag-libya","🇲🇦":"flag-morocco","🇲🇨":"flag-monaco","🇲🇩":"flag-moldova","🇲🇪":"flag-montenegro","🇲🇫":"flag-st-martin","🇲🇬":"flag-madagascar","🇲🇭":"flag-marshall-islands","🇲🇰":"flag-north-macedonia","🇲🇱":"flag-mali","🇲🇲":"flag-myanmar-burma","🇲🇳":"flag-mongolia","🇲🇴":"flag-macao-sar-china","🇲🇵":"flag-northern-mariana-islands","🇲🇶":"flag-martinique","🇲🇷":"flag-mauritania","🇲🇸":"flag-montserrat","🇲🇹":"flag-malta","🇲🇺":"flag-mauritius","🇲🇻":"flag-maldives","🇲🇼":"flag-malawi","🇲🇽":"flag-mexico","🇲🇾":"flag-malaysia","🇲🇿":"flag-mozambique","🇳🇦":"flag-namibia","🇳🇨":"flag-new-caledonia","🇳🇪":"flag-niger","🇳🇫":"flag-norfolk-island","🇳🇬":"flag-nigeria","🇳🇮":"flag-nicaragua","🇳🇱":"flag-netherlands","🇳🇴":"flag-norway","🇳🇵":"flag-nepal","🇳🇷":"flag-nauru","🇳🇺":"flag-niue","🇳🇿":"flag-new-zealand","🇴🇲":"flag-oman","🇵🇦":"flag-panama","🇵🇪":"flag-peru","🇵🇫":"flag-french-polynesia","🇵🇬":"flag-papua-new-guinea","🇵🇭":"flag-philippines","🇵🇰":"flag-pakistan","🇵🇱":"flag-poland","🇵🇲":"flag-st-pierre-&-miquelon","🇵🇳":"flag-pitcairn-islands","🇵🇷":"flag-puerto-rico","🇵🇸":"flag-palestinian-territories","🇵🇹":"flag-portugal","🇵🇼":"flag-palau","🇵🇾":"flag-paraguay","🇶🇦":"flag-qatar","🇷🇪":"flag-reunion","🇷🇴":"flag-romania","🇷🇸":"flag-serbia","🇷🇺":"flag-russia","🇷🇼":"flag-rwanda","🇸🇦":"flag-saudi-arabia","🇸🇧":"flag-solomon-islands","🇸🇨":"flag-seychelles","🇸🇩":"flag-sudan","🇸🇪":"flag-sweden","🇸🇬":"flag-singapore","🇸🇭":"flag-st-helena","🇸🇮":"flag-slovenia","🇸🇯":"flag-svalbard-&-jan-mayen","🇸🇰":"flag-slovakia","🇸🇱":"flag-sierra-leone","🇸🇲":"flag-san-marino","🇸🇳":"flag-senegal","🇸🇴":"flag-somalia","🇸🇷":"flag-suriname","🇸🇸":"flag-south-sudan","🇸🇹":"flag-sao-tome-&-principe","🇸🇻":"flag-el-salvador","🇸🇽":"flag-sint-maarten","🇸🇾":"flag-syria","🇸🇿":"flag-eswatini","🇹🇦":"flag-tristan-da-cunha","🇹🇨":"flag-turks-&-caicos-islands","🇹🇩":"flag-chad","🇹🇫":"flag-french-southern-territories","🇹🇬":"flag-togo","🇹🇭":"flag-thailand","🇹🇯":"flag-tajikistan","🇹🇰":"flag-tokelau","🇹🇱":"flag-timor-leste","🇹🇲":"flag-turkmenistan","🇹🇳":"flag-tunisia","🇹🇴":"flag-tonga","🇹🇷":"flag-turkey","🇹🇹":"flag-trinidad-&-tobago","🇹🇻":"flag-tuvalu","🇹🇼":"flag-taiwan","🇹🇿":"flag-tanzania","🇺🇦":"flag-ukraine","🇺🇬":"flag-uganda","🇺🇲":"flag-us-outlying-islands","🇺🇳":"flag-united-nations","🇺🇸":"flag-united-states","🇺🇾":"flag-uruguay","🇺🇿":"flag-uzbekistan","🇻🇦":"flag-vatican-city","🇻🇨":"flag-st-vincent-&-grenadines","🇻🇪":"flag-venezuela","🇻🇬":"flag-british-virgin-islands","🇻🇮":"flag-us-virgin-islands","🇻🇳":"flag-vietnam","🇻🇺":"flag-vanuatu","🇼🇫":"flag-wallis-&-futuna","🇼🇸":"flag-samoa","🇽🇰":"flag-kosovo","🇾🇪":"flag-yemen","🇾🇹":"flag-mayotte","🇿🇦":"flag-south-africa","🇿🇲":"flag-zambia","🇿🇼":"flag-zimbabwe","🏴󠁧󠁢󠁥󠁮󠁧󠁿":"flag-england","🏴󠁧󠁢󠁳󠁣󠁴󠁿":"flag-scotland","🏴󠁧󠁢󠁷󠁬󠁳󠁿":"flag-wales"}
-},{}],112:[function(require,module,exports){
-module.exports={"10":["🔟"],"grin":["😀","😃","😄","😆","😅","😺","😸"],"face":["😀","😃","😄","😁","😆","😅","😂","🙂","🙃","🫠","😉","😊","😇","🥰","😍","😘","😗","☺️","😚","😙","🥲","😋","😛","😜","🤪","😝","🤑","🤗","🤭","🫢","🫣","🤫","🤔","🫡","🤐","🤨","😐","😑","😶","🫥","😶‍🌫️","😏","😒","🙄","😬","😮‍💨","🤥","🫨","😌","😔","😪","🤤","😴","😷","🤒","🤕","🤢","🤮","🤧","🥵","🥶","🥴","😵","😵‍💫","🤠","🥳","🥸","😎","🤓","🧐","😕","🫤","😟","🙁","☹️","😮","😯","😲","😳","🥺","🥹","😦","😧","😨","😰","😥","😢","😭","😱","😖","😣","😞","😓","😩","😫","🥱","😤","😡","😠","🤬","😈","👿","🤡","🤛","🤜","🐵","🐶","🐱","🐯","🐴","🐮","🐷","🐭","🐰","🐥","🐲","🌚","🌛","🌜","🌝","🌞","🌬️","📄"],"big":["😃"],"eyes":["😃","😄","😁","😊","😍","😚","😙","🫢","🙄","😵","😵‍💫","😸","😻","👀"],"smile":["😄","😁","🙂","😊","😇","🥰","😍","☺️","😙","🥲","🤗","😎","😈","😸","😻","😼"],"beam":["😁"],"squint":["😆","😝"],"sweat":["😅","😰","😓","💦"],"roll":["🤣","🙄","🧻"],"on":["🤣","🤬","❤️‍🔥","🍖","⛱️","🔛"],"the":["🤣","🤘","🫵"],"floor":["🤣"],"laugh":["🤣"],"tears":["😂","🥹","😹"],"joy":["😂","😹"],"slightly":["🙂","🙁"],"upside":["🙃"],"down":["🙃","🫳","👇","👎","↘️","⬇️","↙️","↕️","⤵️","⏬","🔻"],"melt":["🫠"],"wink":["😉","😜"],"halo":["😇"],"hearts":["🥰","💞","💕"],"heart":["😍","😻","💘","💝","💖","💗","💓","💟","❣️","💔","❤️‍🔥","❤️‍🩹","❤️","🩷","🧡","💛","💚","💙","🩵","💜","🤎","🖤","🩶","🤍","🫶","🫀","💑","👩‍❤️‍👨","👨‍❤️‍👨","👩‍❤️‍👩","♥️"],"star":["🤩","⭐","🌟","🌠","✡️","☪️","🔯","✴️"],"struck":["🤩"],"blow":["😘"],"kiss":["😘","😗","😚","😙","😽","💋","💏","👩‍❤️‍💋‍👨","👨‍❤️‍💋‍👨","👩‍❤️‍💋‍👩"],"closed":["😚","🌂","📕","📫","📪"],"tear":["🥲","📆"],"savore":["😋"],"food":["😋","🥘","🍲","🥫"],"tongue":["😛","😜","😝","👅"],"zany":["🤪"],"money":["🤑","💰","💸"],"mouth":["🤑","🤭","🫢","🤐","😶","🫤","😮","😦","🤬","👄"],"open":["🤗","🫢","😮","😦","👐","📖","📬","📭","📂","🈺"],"hands":["🤗","👏","🙌","🫶","👐","🙏","🧑‍🤝‍🧑","👭","👫","👬"],"hand":["🤭","🫢","👋","🤚","🖐️","✋","🫱","🫲","🫳","🫴","🫷","🫸","👌","🤏","✌️","🫰","🤙","✍️","💁","💁‍♂️","💁‍♀️","🙋","🙋‍♂️","🙋‍♀️","🪭"],"over":["🤭","🫢","🌄"],"and":["🫢","☠️","🫰","👫","🍽️","🍴","⛈️","⚒️","🛠️","🏹","🔩","🛋️","☪️"],"peek":["🫣"],"eye":["🫣","👁️‍🗨️","👁️"],"shush":["🤫"],"think":["🤔"],"salute":["🫡","🖖"],"zipper":["🤐"],"raised":["🤨","🤚","✋","✊","📫","📬"],"eyebrow":["🤨"],"neutral":["😐"],"expressionless":["😑"],"without":["😶","🍵","⛄"],"dotted":["🫥","🔯"],"line":["🫥"],"in":["😶‍🌫️","😱","👁️‍🗨️","🤵","🤵‍♂️","🤵‍♀️","🧑‍🦼","👨‍🦼","👩‍🦼","🧑‍🦽","👨‍🦽","👩‍🦽","🕴️","🧖","🧖‍♂️","🧖‍♀️","🧘","🧘‍♂️","🧘‍♀️","🛌","👤","👥","🍃","⛳","🚮"],"clouds":["😶‍🌫️"],"smirk":["😏"],"unamused":["😒"],"grimace":["😬"],"exhale":["😮‍💨"],"lying":["🤥"],"shake":["🫨"],"relieved":["😌","😥"],"pensive":["😔"],"sleepy":["😪"],"drool":["🤤"],"sleep":["😴"],"medical":["😷","⚕️"],"mask":["😷","🤿"],"thermometer":["🤒","🌡️"],"head":["🤕","🤯","🗣️"],"bandage":["🤕","🩹"],"nauseated":["🤢"],"vomite":["🤮"],"sneez":["🤧"],"hot":["🥵","🌶️","🌭","☕","♨️"],"cold":["🥶"],"woozy":["🥴"],"crossed":["😵","🤞","🫰","⚔️","🎌"],"out":["😵"],"spiral":["😵‍💫","🐚","🗒️","🗓️"],"explode":["🤯"],"cowboy":["🤠"],"hat":["🤠","👒","🎩"],"party":["🥳","🎉"],"disguised":["🥸"],"sunglasses":["😎","🕶️"],"nerd":["🤓"],"monocle":["🧐"],"confused":["😕"],"diagonal":["🫤"],"worried":["😟"],"frown":["🙁","☹️","😦","🙍","🙍‍♂️","🙍‍♀️"],"hushed":["😯"],"astonished":["😲"],"flushed":["😳"],"plead":["🥺"],"hold":["🥹","🧑‍🤝‍🧑","👭","👫","👬"],"back":["🥹","🤚","🔙"],"anguished":["😧"],"fearful":["😨"],"anxious":["😰"],"sad":["😥"],"but":["😥"],"cry":["😢","😭","😿"],"loudly":["😭"],"scream":["😱"],"fear":["😱"],"confounded":["😖"],"persever":["😣"],"disappointed":["😞"],"downcast":["😓"],"weary":["😩","🙀"],"tired":["😫"],"yawn":["🥱"],"steam":["😤","🍜"],"from":["😤"],"nose":["😤","👃","🐽"],"enraged":["😡"],"angry":["😠","👿"],"symbols":["🤬","🔣"],"horns":["😈","👿","🤘"],"skull":["💀","☠️"],"crossbones":["☠️"],"pile":["💩"],"poo":["💩"],"clown":["🤡"],"ogre":["👹"],"goblin":["👺"],"ghost":["👻"],"alien":["👽","👾"],"monster":["👾"],"robot":["🤖"],"cat":["😺","😸","😹","😻","😼","😽","🙀","😿","😾","🐱","🐈","🐈‍⬛"],"wry":["😼"],"pout":["😾","🙎","🙎‍♂️","🙎‍♀️"],"see":["🙈"],"no":["🙈","🙉","🙊","🙅","🙅‍♂️","🙅‍♀️","⛔","🚳","🚭","🚯","🚷","📵","🔞","🈵"],"evil":["🙈","🙉","🙊"],"monkey":["🙈","🙉","🙊","🐵","🐒"],"hear":["🙉","🦻"],"speak":["🙊","🗣️"],"love":["💌","🤟","🏩"],"letter":["💌"],"arrow":["💘","📲","📩","🏹","⬆️","↗️","➡️","↘️","⬇️","↙️","⬅️","↖️","↕️","↔️","↩️","↪️","⤴️","⤵️","🔙","🔚","🔛","🔜","🔝"],"ribbon":["💝","🎀","🎗️"],"sparkle":["💖","❇️"],"grow":["💗"],"beat":["💓"],"revolve":["💞"],"two":["💕","🐫","🕑","🕝"],"decoration":["💟","🎍"],"exclamation":["❣️","‼️","⁉️","❕","❗"],"broken":["💔"],"fire":["❤️‍🔥","🚒","🔥","🧯"],"mend":["❤️‍🩹"],"red":["❤️","👨‍🦰","👩‍🦰","🧑‍🦰","🍎","🧧","🀄","🏮","❓","❗","⭕","🔴","🟥","🔺","🔻"],"pink":["🩷"],"orange":["🧡","📙","🟠","🟧","🔶","🔸"],"yellow":["💛","🟡","🟨"],"green":["💚","🍏","🥬","🥗","📗","🟢","🟩"],"blue":["💙","🩵","📘","🔵","🟦","🔷","🔹"],"light":["🩵","🚈","🚨","🚥","🚦","💡"],"purple":["💜","🟣","🟪"],"brown":["🤎","🟤","🟫"],"black":["🖤","🐈‍⬛","🐦‍⬛","✒️","⚫","⬛","◼️","◾","▪️","🔲","🏴"],"grey":["🩶"],"white":["🤍","👨‍🦳","👩‍🦳","🧑‍🦳","🧑‍🦯","👨‍🦯","👩‍🦯","💮","🦯","❔","❕","⚪","⬜","◻️","◽","▫️","🔳","🏳️"],"mark":["💋","‼️","⁉️","❓","❔","❕","❗","✅","✔️","❌","❎","〽️","™️"],"hundred":["💯"],"points":["💯"],"anger":["💢","🗯️"],"symbol":["💢","♿","🚼","⚛️","☮️","⚧️","⚕️","♻️","🔰"],"collision":["💥"],"dizzy":["💫"],"droplets":["💦"],"dash":["💨","〰️"],"away":["💨"],"hole":["🕳️","⛳"],"speech":["💬","👁️‍🗨️","🗨️"],"balloon":["💬","💭","🎈"],"bubble":["👁️‍🗨️","🗨️","🗯️","🧋"],"left":["🗨️","👈","🤛","🔍","🛅","↙️","⬅️","↖️","↔️","↩️","↪️"],"right":["🗯️","👉","🤜","🔎","↗️","➡️","↘️","↔️","↩️","↪️","⤴️","⤵️"],"thought":["💭"],"zzz":["💤"],"wave":["👋","🌊"],"fingers":["🖐️","🤌","🤞"],"splayed":["🖐️"],"vulcan":["🖖"],"rightwards":["🫱","🫸"],"leftwards":["🫲","🫷"],"palm":["🫳","🫴","🌴"],"up":["🫴","👆","☝️","👍","🤲","📄","🗞️","⬆️","↗️","↖️","↕️","⤴️","⏫","🆙","🔺"],"push":["🫷","🫸"],"ok":["👌","🙆","🙆‍♂️","🙆‍♀️","🆗"],"pinched":["🤌"],"pinch":["🤏"],"victory":["✌️"],"index":["🫰","👈","👉","👆","👇","☝️","🫵","🗂️","📇"],"finger":["🫰","🖕"],"thumb":["🫰"],"you":["🤟"],"gesture":["🤟","🙅","🙅‍♂️","🙅‍♀️","🙆","🙆‍♂️","🙆‍♀️"],"sign":["🤘","🛑","🏧","🚮","♀️","♂️","🟰","💲"],"call":["🤙"],"me":["🤙"],"backhand":["👈","👉","👆","👇"],"point":["👈","👉","👆","👇","☝️","🫵"],"middle":["🖕"],"at":["🫵","🌆","🌉"],"viewer":["🫵"],"thumbs":["👍","👎"],"fist":["✊","👊","🤛","🤜"],"oncome":["👊","🚍","🚔","🚖","🚘"],"clap":["👏"],"raise":["🙌","🙋","🙋‍♂️","🙋‍♀️"],"palms":["🤲"],"together":["🤲"],"handshake":["🤝"],"folded":["🙏"],"write":["✍️"],"nail":["💅"],"polish":["💅"],"selfie":["🤳"],"flexed":["💪"],"biceps":["💪"],"mechanical":["🦾","🦿"],"arm":["🦾"],"leg":["🦿","🦵","🍗"],"foot":["🦶"],"ear":["👂","🦻","🌽"],"aid":["🦻"],"brain":["🧠"],"anatomical":["🫀"],"lungs":["🫁"],"tooth":["🦷"],"bone":["🦴","🍖"],"bite":["🫦"],"lip":["🫦"],"baby":["👶","👩‍🍼","👨‍🍼","🧑‍🍼","👼","🐤","🐥","🍼","🚼"],"child":["🧒"],"boy":["👦","👨‍👩‍👦","👨‍👩‍👧‍👦","👨‍👩‍👦‍👦","👨‍👨‍👦","👨‍👨‍👧‍👦","👨‍👨‍👦‍👦","👩‍👩‍👦","👩‍👩‍👧‍👦","👩‍👩‍👦‍👦","👨‍👦","👨‍👦‍👦","👨‍👧‍👦","👩‍👦","👩‍👦‍👦","👩‍👧‍👦"],"girl":["👧","👨‍👩‍👧","👨‍👩‍👧‍👦","👨‍👩‍👧‍👧","👨‍👨‍👧","👨‍👨‍👧‍👦","👨‍👨‍👧‍👧","👩‍👩‍👧","👩‍👩‍👧‍👦","👩‍👩‍👧‍👧","👨‍👧","👨‍👧‍👦","👨‍👧‍👧","👩‍👧","👩‍👧‍👦","👩‍👧‍👧"],"person":["🧑","👱","🧔","🧑‍🦰","🧑‍🦱","🧑‍🦳","🧑‍🦲","🧓","🙍","🙎","🙅","🙆","💁","🙋","🧏","🙇","🤦","🤷","🫅","👳","👲","🤵","👰","🫄","🧑‍🍼","💆","💇","🚶","🧍","🧎","🧑‍🦯","🧑‍🦼","🧑‍🦽","🏃","🕴️","🧖","🧗","🤺","🏌️","🏄","🚣","🏊","⛹️","🏋️","🚴","🚵","🤸","🤽","🤾","🤹","🧘","🛀","🛌"],"blond":["👱","👱‍♀️","👱‍♂️"],"hair":["👱","👨‍🦰","👨‍🦱","👨‍🦳","👩‍🦰","🧑‍🦰","👩‍🦱","🧑‍🦱","👩‍🦳","🧑‍🦳","👱‍♀️","👱‍♂️","🪮"],"man":["👨","🧔‍♂️","👨‍🦰","👨‍🦱","👨‍🦳","👨‍🦲","👱‍♂️","👴","🙍‍♂️","🙎‍♂️","🙅‍♂️","🙆‍♂️","💁‍♂️","🙋‍♂️","🧏‍♂️","🙇‍♂️","🤦‍♂️","🤷‍♂️","👨‍⚕️","👨‍🎓","👨‍🏫","👨‍⚖️","👨‍🌾","👨‍🍳","👨‍🔧","👨‍🏭","👨‍💼","👨‍🔬","👨‍💻","👨‍🎤","👨‍🎨","👨‍✈️","👨‍🚀","👨‍🚒","👮‍♂️","🕵️‍♂️","💂‍♂️","👷‍♂️","👳‍♂️","🤵‍♂️","👰‍♂️","🫃","👨‍🍼","🦸‍♂️","🦹‍♂️","🧙‍♂️","🧚‍♂️","🧛‍♂️","🧝‍♂️","🧞‍♂️","🧟‍♂️","💆‍♂️","💇‍♂️","🚶‍♂️","🧍‍♂️","🧎‍♂️","👨‍🦯","👨‍🦼","👨‍🦽","🏃‍♂️","🕺","🧖‍♂️","🧗‍♂️","🏌️‍♂️","🏄‍♂️","🚣‍♂️","🏊‍♂️","⛹️‍♂️","🏋️‍♂️","🚴‍♂️","🚵‍♂️","🤸‍♂️","🤽‍♂️","🤾‍♂️","🤹‍♂️","🧘‍♂️","👫","👩‍❤️‍💋‍👨","👨‍❤️‍💋‍👨","👩‍❤️‍👨","👨‍❤️‍👨","👨‍👩‍👦","👨‍👩‍👧","👨‍👩‍👧‍👦","👨‍👩‍👦‍👦","👨‍👩‍👧‍👧","👨‍👨‍👦","👨‍👨‍👧","👨‍👨‍👧‍👦","👨‍👨‍👦‍👦","👨‍👨‍👧‍👧","👨‍👦","👨‍👦‍👦","👨‍👧","👨‍👧‍👦","👨‍👧‍👧","👞","🇮🇲"],"beard":["🧔","🧔‍♂️","🧔‍♀️"],"woman":["🧔‍♀️","👩","👩‍🦰","👩‍🦱","👩‍🦳","👩‍🦲","👱‍♀️","👵","🙍‍♀️","🙎‍♀️","🙅‍♀️","🙆‍♀️","💁‍♀️","🙋‍♀️","🧏‍♀️","🙇‍♀️","🤦‍♀️","🤷‍♀️","👩‍⚕️","👩‍🎓","👩‍🏫","👩‍⚖️","👩‍🌾","👩‍🍳","👩‍🔧","👩‍🏭","👩‍💼","👩‍🔬","👩‍💻","👩‍🎤","👩‍🎨","👩‍✈️","👩‍🚀","👩‍🚒","👮‍♀️","🕵️‍♀️","💂‍♀️","👷‍♀️","👳‍♀️","🧕","🤵‍♀️","👰‍♀️","🤰","👩‍🍼","🦸‍♀️","🦹‍♀️","🧙‍♀️","🧚‍♀️","🧛‍♀️","🧝‍♀️","🧞‍♀️","🧟‍♀️","💆‍♀️","💇‍♀️","🚶‍♀️","🧍‍♀️","🧎‍♀️","👩‍🦯","👩‍🦼","👩‍🦽","🏃‍♀️","💃","🧖‍♀️","🧗‍♀️","🏌️‍♀️","🏄‍♀️","🚣‍♀️","🏊‍♀️","⛹️‍♀️","🏋️‍♀️","🚴‍♀️","🚵‍♀️","🤸‍♀️","🤽‍♀️","🤾‍♀️","🤹‍♀️","🧘‍♀️","👫","👩‍❤️‍💋‍👨","👩‍❤️‍💋‍👩","👩‍❤️‍👨","👩‍❤️‍👩","👨‍👩‍👦","👨‍👩‍👧","👨‍👩‍👧‍👦","👨‍👩‍👦‍👦","👨‍👩‍👧‍👧","👩‍👩‍👦","👩‍👩‍👧","👩‍👩‍👧‍👦","👩‍👩‍👦‍👦","👩‍👩‍👧‍👧","👩‍👦","👩‍👦‍👦","👩‍👧","👩‍👧‍👦","👩‍👧‍👧","👚","👡","👢","👒"],"curly":["👨‍🦱","👩‍🦱","🧑‍🦱","➰","➿"],"bald":["👨‍🦲","👩‍🦲","🧑‍🦲"],"older":["🧓"],"old":["👴","👵","🗝️"],"tip":["💁","💁‍♂️","💁‍♀️"],"deaf":["🧏","🧏‍♂️","🧏‍♀️"],"bow":["🙇","🙇‍♂️","🙇‍♀️","🏹"],"facepalm":["🤦","🤦‍♂️","🤦‍♀️"],"shrug":["🤷","🤷‍♂️","🤷‍♀️"],"health":["🧑‍⚕️","👨‍⚕️","👩‍⚕️"],"worker":["🧑‍⚕️","👨‍⚕️","👩‍⚕️","🧑‍🏭","👨‍🏭","👩‍🏭","🧑‍💼","👨‍💼","👩‍💼","👷","👷‍♂️","👷‍♀️","⛑️"],"student":["🧑‍🎓","👨‍🎓","👩‍🎓"],"teacher":["🧑‍🏫","👨‍🏫","👩‍🏫"],"judge":["🧑‍⚖️","👨‍⚖️","👩‍⚖️"],"farmer":["🧑‍🌾","👨‍🌾","👩‍🌾"],"cook":["🧑‍🍳","👨‍🍳","👩‍🍳","🍳","🇨🇰"],"mechanic":["🧑‍🔧","👨‍🔧","👩‍🔧"],"factory":["🧑‍🏭","👨‍🏭","👩‍🏭","🏭"],"office":["🧑‍💼","👨‍💼","👩‍💼","🏢","🏣","🏤"],"scientist":["🧑‍🔬","👨‍🔬","👩‍🔬"],"technologist":["🧑‍💻","👨‍💻","👩‍💻"],"singer":["🧑‍🎤","👨‍🎤","👩‍🎤"],"artist":["🧑‍🎨","👨‍🎨","👩‍🎨","🎨"],"pilot":["🧑‍✈️","👨‍✈️","👩‍✈️"],"astronaut":["🧑‍🚀","👨‍🚀","👩‍🚀"],"firefighter":["🧑‍🚒","👨‍🚒","👩‍🚒"],"police":["👮","👮‍♂️","👮‍♀️","🚓","🚔","🚨"],"officer":["👮","👮‍♂️","👮‍♀️"],"detective":["🕵️","🕵️‍♂️","🕵️‍♀️"],"guard":["💂","💂‍♂️","💂‍♀️"],"ninja":["🥷"],"construction":["👷","👷‍♂️","👷‍♀️","🏗️","🚧"],"crown":["🫅","👑"],"prince":["🤴"],"princess":["👸"],"wear":["👳","👳‍♂️","👳‍♀️"],"turban":["👳","👳‍♂️","👳‍♀️"],"skullcap":["👲"],"headscarf":["🧕"],"tuxedo":["🤵","🤵‍♂️","🤵‍♀️"],"veil":["👰","👰‍♂️","👰‍♀️"],"pregnant":["🤰","🫃","🫄"],"breast":["🤱"],"feed":["🤱","👩‍🍼","👨‍🍼","🧑‍🍼"],"angel":["👼"],"santa":["🎅"],"claus":["🎅","🤶","🧑‍🎄"],"mrs":["🤶"],"mx":["🧑‍🎄"],"superhero":["🦸","🦸‍♂️","🦸‍♀️"],"supervillain":["🦹","🦹‍♂️","🦹‍♀️"],"mage":["🧙","🧙‍♂️","🧙‍♀️"],"fairy":["🧚","🧚‍♂️","🧚‍♀️"],"vampire":["🧛","🧛‍♂️","🧛‍♀️"],"merperson":["🧜"],"merman":["🧜‍♂️"],"mermaid":["🧜‍♀️"],"elf":["🧝","🧝‍♂️","🧝‍♀️"],"genie":["🧞","🧞‍♂️","🧞‍♀️"],"zombie":["🧟","🧟‍♂️","🧟‍♀️"],"troll":["🧌"],"gett":["💆","💆‍♂️","💆‍♀️","💇","💇‍♂️","💇‍♀️"],"massage":["💆","💆‍♂️","💆‍♀️"],"haircut":["💇","💇‍♂️","💇‍♀️"],"walk":["🚶","🚶‍♂️","🚶‍♀️"],"stand":["🧍","🧍‍♂️","🧍‍♀️"],"kneel":["🧎","🧎‍♂️","🧎‍♀️"],"cane":["🧑‍🦯","👨‍🦯","👩‍🦯","🦯"],"motorized":["🧑‍🦼","👨‍🦼","👩‍🦼","🦼"],"wheelchair":["🧑‍🦼","👨‍🦼","👩‍🦼","🧑‍🦽","👨‍🦽","👩‍🦽","🦽","🦼","♿"],"manual":["🧑‍🦽","👨‍🦽","👩‍🦽","🦽"],"run":["🏃","🏃‍♂️","🏃‍♀️","🎽","👟"],"dance":["💃","🕺"],"suit":["🕴️","♠️","♥️","♦️","♣️"],"levitate":["🕴️"],"people":["👯","🤼","🧑‍🤝‍🧑","🫂"],"bunny":["👯","👯‍♂️","👯‍♀️"],"ears":["👯","👯‍♂️","👯‍♀️"],"men":["👯‍♂️","🤼‍♂️","👬","🚹"],"women":["👯‍♀️","🤼‍♀️","👭","🚺"],"steamy":["🧖","🧖‍♂️","🧖‍♀️"],"room":["🧖","🧖‍♂️","🧖‍♀️","🚹","🚺"],"climb":["🧗","🧗‍♂️","🧗‍♀️"],"fence":["🤺"],"horse":["🏇","🐴","🐎","🎠"],"race":["🏇","🏎️"],"skier":["⛷️"],"snowboarder":["🏂"],"golf":["🏌️","🏌️‍♂️","🏌️‍♀️"],"surf":["🏄","🏄‍♂️","🏄‍♀️"],"row":["🚣","🚣‍♂️","🚣‍♀️"],"boat":["🚣","🚣‍♂️","🚣‍♀️","🛥️"],"swim":["🏊","🏊‍♂️","🏊‍♀️"],"bounce":["⛹️","⛹️‍♂️","⛹️‍♀️"],"ball":["⛹️","⛹️‍♂️","⛹️‍♀️","🍙","🎊","⚽","🎱","🔮","🪩"],"lift":["🏋️","🏋️‍♂️","🏋️‍♀️"],"weights":["🏋️","🏋️‍♂️","🏋️‍♀️"],"bike":["🚴","🚴‍♂️","🚴‍♀️","🚵","🚵‍♂️","🚵‍♀️"],"mountain":["🚵","🚵‍♂️","🚵‍♀️","🏔️","⛰️","🚞","🚠"],"cartwheel":["🤸","🤸‍♂️","🤸‍♀️"],"wrestle":["🤼","🤼‍♂️","🤼‍♀️"],"play":["🤽","🤽‍♂️","🤽‍♀️","🤾","🤾‍♂️","🤾‍♀️","🎴","▶️","⏯️"],"water":["🤽","🤽‍♂️","🤽‍♀️","🐃","🌊","🔫","🚰","🚾","🚱"],"polo":["🤽","🤽‍♂️","🤽‍♀️"],"handball":["🤾","🤾‍♂️","🤾‍♀️"],"juggle":["🤹","🤹‍♂️","🤹‍♀️"],"lotus":["🧘","🧘‍♂️","🧘‍♀️","🪷"],"position":["🧘","🧘‍♂️","🧘‍♀️"],"take":["🛀"],"bath":["🛀"],"bed":["🛌","🛏️"],"couple":["💑","👩‍❤️‍👨","👨‍❤️‍👨","👩‍❤️‍👩"],"family":["👪","👨‍👩‍👦","👨‍👩‍👧","👨‍👩‍👧‍👦","👨‍👩‍👦‍👦","👨‍👩‍👧‍👧","👨‍👨‍👦","👨‍👨‍👧","👨‍👨‍👧‍👦","👨‍👨‍👦‍👦","👨‍👨‍👧‍👧","👩‍👩‍👦","👩‍👩‍👧","👩‍👩‍👧‍👦","👩‍👩‍👦‍👦","👩‍👩‍👧‍👧","👨‍👦","👨‍👦‍👦","👨‍👧","👨‍👧‍👦","👨‍👧‍👧","👩‍👦","👩‍👦‍👦","👩‍👧","👩‍👧‍👦","👩‍👧‍👧"],"bust":["👤"],"silhouette":["👤","👥"],"busts":["👥"],"hug":["🫂"],"footprints":["👣"],"gorilla":["🦍"],"orangutan":["🦧"],"dog":["🐶","🐕","🦮","🐕‍🦺","🌭"],"guide":["🦮"],"service":["🐕‍🦺","🈂️"],"poodle":["🐩"],"wolf":["🐺"],"fox":["🦊"],"raccoon":["🦝"],"lion":["🦁"],"tiger":["🐯","🐅"],"leopard":["🐆"],"moose":["🫎"],"donkey":["🫏"],"unicorn":["🦄"],"zebra":["🦓"],"deer":["🦌"],"bison":["🦬"],"cow":["🐮","🐄"],"ox":["🐂"],"buffalo":["🐃"],"pig":["🐷","🐖","🐽"],"boar":["🐗"],"ram":["🐏"],"ewe":["🐑"],"goat":["🐐"],"camel":["🐪","🐫"],"hump":["🐫"],"llama":["🦙"],"giraffe":["🦒"],"elephant":["🐘"],"mammoth":["🦣"],"rhinoceros":["🦏"],"hippopotamus":["🦛"],"mouse":["🐭","🐁","🖱️","🪤"],"rat":["🐀"],"hamster":["🐹"],"rabbit":["🐰","🐇"],"chipmunk":["🐿️"],"beaver":["🦫"],"hedgehog":["🦔"],"bat":["🦇"],"bear":["🐻","🐻‍❄️","🧸"],"polar":["🐻‍❄️"],"koala":["🐨"],"panda":["🐼"],"sloth":["🦥"],"otter":["🦦"],"skunk":["🦨"],"kangaroo":["🦘"],"badger":["🦡"],"paw":["🐾"],"prints":["🐾"],"turkey":["🦃","🇹🇷"],"chicken":["🐔"],"rooster":["🐓"],"hatch":["🐣"],"chick":["🐣","🐤","🐥"],"front":["🐥"],"bird":["🐦","🐦‍⬛"],"penguin":["🐧"],"dove":["🕊️"],"eagle":["🦅"],"duck":["🦆"],"swan":["🦢"],"owl":["🦉"],"dodo":["🦤"],"feather":["🪶"],"flamingo":["🦩"],"peacock":["🦚"],"parrot":["🦜"],"wing":["🪽"],"goose":["🪿"],"frog":["🐸"],"crocodile":["🐊"],"turtle":["🐢"],"lizard":["🦎"],"snake":["🐍"],"dragon":["🐲","🐉","🀄"],"sauropod":["🦕"],"rex":["🦖"],"spout":["🐳"],"whale":["🐳","🐋"],"dolphin":["🐬"],"seal":["🦭"],"fish":["🐟","🐠","🍥","🎣"],"tropical":["🐠","🍹"],"blowfish":["🐡"],"shark":["🦈"],"octopus":["🐙"],"shell":["🐚"],"coral":["🪸"],"jellyfish":["🪼"],"snail":["🐌"],"butterfly":["🦋"],"bug":["🐛"],"ant":["🐜"],"honeybee":["🐝"],"beetle":["🪲","🐞"],"lady":["🐞"],"cricket":["🦗","🏏"],"cockroach":["🪳"],"spider":["🕷️","🕸️"],"web":["🕸️"],"scorpion":["🦂"],"mosquito":["🦟"],"fly":["🪰","🛸","🥏"],"worm":["🪱"],"microbe":["🦠"],"bouquet":["💐"],"cherry":["🌸"],"blossom":["🌸","🌼"],"flower":["💮","🥀","🎴"],"rosette":["🏵️"],"rose":["🌹"],"wilted":["🥀"],"hibiscus":["🌺"],"sunflower":["🌻"],"tulip":["🌷"],"hyacinth":["🪻"],"seedle":["🌱"],"potted":["🪴"],"plant":["🪴"],"evergreen":["🌲"],"tree":["🌲","🌳","🌴","🎄","🎋"],"deciduous":["🌳"],"cactus":["🌵"],"sheaf":["🌾"],"rice":["🌾","🍘","🍙","🍚","🍛"],"herb":["🌿"],"shamrock":["☘️"],"four":["🍀","🕓","🕟"],"leaf":["🍀","🍁","🍂","🍃"],"clover":["🍀"],"maple":["🍁"],"fallen":["🍂"],"flutter":["🍃"],"wind":["🍃","🌬️","🎐"],"empty":["🪹"],"nest":["🪹","🪺","🪆"],"eggs":["🪺"],"mushroom":["🍄"],"grapes":["🍇"],"melon":["🍈"],"watermelon":["🍉"],"tangerine":["🍊"],"lemon":["🍋"],"banana":["🍌"],"pineapple":["🍍"],"mango":["🥭"],"apple":["🍎","🍏"],"pear":["🍐"],"peach":["🍑"],"cherries":["🍒"],"strawberry":["🍓"],"blueberries":["🫐"],"kiwi":["🥝"],"fruit":["🥝"],"tomato":["🍅"],"olive":["🫒"],"coconut":["🥥"],"avocado":["🥑"],"eggplant":["🍆"],"potato":["🥔","🍠"],"carrot":["🥕"],"corn":["🌽"],"pepper":["🌶️","🫑"],"bell":["🫑","🛎️","🔔","🔕"],"cucumber":["🥒"],"leafy":["🥬"],"broccoli":["🥦"],"garlic":["🧄"],"onion":["🧅"],"peanuts":["🥜"],"beans":["🫘"],"chestnut":["🌰"],"ginger":["🫚"],"root":["🫚"],"pea":["🫛"],"pod":["🫛"],"bread":["🍞","🥖"],"croissant":["🥐"],"baguette":["🥖"],"flatbread":["🫓","🥙"],"pretzel":["🥨"],"bagel":["🥯"],"pancakes":["🥞"],"waffle":["🧇"],"cheese":["🧀"],"wedge":["🧀"],"meat":["🍖","🥩"],"poultry":["🍗"],"cut":["🥩"],"bacon":["🥓"],"hamburger":["🍔"],"french":["🍟","🇬🇫","🇵🇫","🇹🇫"],"fries":["🍟"],"pizza":["🍕"],"sandwich":["🥪","🇬🇸"],"taco":["🌮"],"burrito":["🌯"],"tamale":["🫔"],"stuffed":["🥙"],"falafel":["🧆"],"egg":["🥚"],"shallow":["🥘"],"pan":["🥘"],"pot":["🍲","🍯"],"fondue":["🫕"],"bowl":["🥣","🍜","🎳"],"spoon":["🥣","🥄"],"salad":["🥗"],"popcorn":["🍿"],"butter":["🧈"],"salt":["🧂"],"canned":["🥫"],"bento":["🍱"],"box":["🍱","🥡","🧃","🥊","🗳️","🗃️","☑️"],"cracker":["🍘"],"cooked":["🍚"],"curry":["🍛"],"spaghetti":["🍝"],"roasted":["🍠"],"sweet":["🍠"],"oden":["🍢"],"sushi":["🍣"],"fried":["🍤"],"shrimp":["🍤","🦐"],"cake":["🍥","🥮","🎂"],"swirl":["🍥"],"moon":["🥮","🌑","🌒","🌓","🌔","🌕","🌖","🌗","🌘","🌙","🌚","🌛","🌜","🌝","🎑"],"dango":["🍡"],"dumple":["🥟"],"fortune":["🥠"],"cookie":["🥠","🍪"],"takeout":["🥡"],"crab":["🦀"],"lobster":["🦞"],"squid":["🦑"],"oyster":["🦪"],"soft":["🍦"],"ice":["🍦","🍧","🍨","🧊","🏒","⛸️"],"cream":["🍦","🍨"],"shaved":["🍧"],"doughnut":["🍩"],"birthday":["🎂"],"shortcake":["🍰"],"cupcake":["🧁"],"pie":["🥧"],"chocolate":["🍫"],"bar":["🍫","📊"],"candy":["🍬"],"lollipop":["🍭"],"custard":["🍮"],"honey":["🍯"],"bottle":["🍼","🍾","🧴"],"glass":["🥛","🍷","🍸","🥃","🔍","🔎"],"milk":["🥛"],"beverage":["☕","🧃"],"teapot":["🫖"],"teacup":["🍵"],"handle":["🍵"],"sake":["🍶"],"pop":["🍾"],"cork":["🍾"],"wine":["🍷"],"cocktail":["🍸"],"drink":["🍹"],"beer":["🍺","🍻"],"mug":["🍺"],"clink":["🍻","🥂"],"mugs":["🍻"],"glasses":["🥂","👓"],"tumbler":["🥃"],"pour":["🫗"],"liquid":["🫗"],"cup":["🥤"],"straw":["🥤"],"tea":["🧋"],"mate":["🧉"],"chopsticks":["🥢"],"fork":["🍽️","🍴"],"knife":["🍽️","🍴","🔪"],"plate":["🍽️"],"kitchen":["🔪"],"jar":["🫙"],"amphora":["🏺"],"globe":["🌍","🌎","🌏","🌐"],"show":["🌍","🌎","🌏"],"europe":["🌍"],"africa":["🌍","🇿🇦"],"americas":["🌎"],"asia":["🌏"],"australia":["🌏","🇦🇺"],"meridians":["🌐"],"world":["🗺️"],"map":["🗺️","🗾"],"japan":["🗾","🇯🇵"],"compass":["🧭"],"snow":["🏔️","🌨️","⛄"],"capped":["🏔️"],"volcano":["🌋"],"mount":["🗻"],"fuji":["🗻"],"camp":["🏕️"],"beach":["🏖️"],"umbrella":["🏖️","🌂","☂️","☔","⛱️"],"desert":["🏜️","🏝️"],"island":["🏝️","🇦🇨","🇧🇻","🇨🇵","🇨🇽","🇳🇫"],"national":["🏞️"],"park":["🏞️"],"stadium":["🏟️"],"classical":["🏛️"],"build":["🏛️","🏗️","🏢"],"brick":["🧱"],"rock":["🪨"],"wood":["🪵"],"hut":["🛖"],"houses":["🏘️"],"derelict":["🏚️"],"house":["🏚️","🏠","🏡"],"garden":["🏡"],"japanese":["🏣","🏯","🎎","🔰","🈁","🈂️","🈷️","🈶","🈯","🉐","🈹","🈚","🈲","🉑","🈸","🈴","🈳","㊗️","㊙️","🈺","🈵"],"post":["🏣","🏤"],"hospital":["🏥"],"bank":["🏦"],"hotel":["🏨","🏩"],"convenience":["🏪"],"store":["🏪","🏬"],"school":["🏫"],"department":["🏬"],"castle":["🏯","🏰"],"wed":["💒"],"tokyo":["🗼"],"tower":["🗼"],"statue":["🗽"],"liberty":["🗽"],"church":["⛪"],"mosque":["🕌"],"hindu":["🛕"],"temple":["🛕"],"synagogue":["🕍"],"shinto":["⛩️"],"shrine":["⛩️"],"kaaba":["🕋"],"fountain":["⛲","🖋️"],"tent":["⛺","🎪"],"foggy":["🌁"],"night":["🌃","🌉"],"stars":["🌃"],"cityscape":["🏙️","🌆"],"sunrise":["🌄","🌅"],"mountains":["🌄"],"dusk":["🌆"],"sunset":["🌇"],"bridge":["🌉"],"springs":["♨️"],"carousel":["🎠"],"playground":["🛝"],"slide":["🛝"],"ferris":["🎡"],"wheel":["🎡","🛞","☸️"],"roller":["🎢","🛼"],"coaster":["🎢"],"barber":["💈"],"pole":["💈","🎣"],"circus":["🎪"],"locomotive":["🚂"],"railway":["🚃","🚞","🛤️","🚟"],"car":["🚃","🚋","🚓","🚔","🏎️","🚨"],"high":["🚄","⚡","👠","🔊"],"speed":["🚄"],"train":["🚄","🚅","🚆"],"bullet":["🚅"],"metro":["🚇"],"rail":["🚈"],"station":["🚉"],"tram":["🚊","🚋"],"monorail":["🚝"],"bus":["🚌","🚍","🚏"],"trolleybus":["🚎"],"minibus":["🚐"],"ambulance":["🚑"],"engine":["🚒"],"taxi":["🚕","🚖"],"automobile":["🚗","🚘"],"sport":["🚙"],"utility":["🚙"],"vehicle":["🚙"],"pickup":["🛻"],"truck":["🛻","🚚"],"delivery":["🚚"],"articulated":["🚛"],"lorry":["🚛"],"tractor":["🚜"],"motorcycle":["🏍️"],"motor":["🛵","🛥️"],"scooter":["🛵","🛴"],"auto":["🛺"],"rickshaw":["🛺"],"bicycle":["🚲"],"kick":["🛴"],"skateboard":["🛹"],"skate":["🛼","⛸️"],"stop":["🚏","🛑","⏹️"],"motorway":["🛣️"],"track":["🛤️","⏭️","⏮️"],"oil":["🛢️"],"drum":["🛢️","🥁","🪘"],"fuel":["⛽"],"pump":["⛽"],"horizontal":["🚥"],"traffic":["🚥","🚦"],"vertical":["🚦","🔃"],"anchor":["⚓"],"ring":["🛟","💍"],"buoy":["🛟"],"sailboat":["⛵"],"canoe":["🛶"],"speedboat":["🚤"],"passenger":["🛳️"],"ship":["🛳️","🚢"],"ferry":["⛴️"],"airplane":["✈️","🛩️","🛫","🛬"],"small":["🛩️","🌤️","◾","◽","▪️","▫️","🔸","🔹"],"departure":["🛫"],"arrival":["🛬"],"parachute":["🪂"],"seat":["💺"],"helicopter":["🚁"],"suspension":["🚟"],"cableway":["🚠"],"aerial":["🚡"],"tramway":["🚡"],"satellite":["🛰️","📡"],"rocket":["🚀"],"saucer":["🛸"],"bellhop":["🛎️"],"luggage":["🧳","🛅"],"hourglass":["⌛","⏳"],"done":["⌛","⏳"],"not":["⏳","🈶"],"watch":["⌚"],"alarm":["⏰"],"clock":["⏰","⏲️","🕰️","🕛","🕐","🕑","🕒","🕓","🕔","🕕","🕖","🕗","🕘","🕙","🕚"],"stopwatch":["⏱️"],"timer":["⏲️"],"mantelpiece":["🕰️"],"twelve":["🕛","🕧"],"thirty":["🕧","🕜","🕝","🕞","🕟","🕠","🕡","🕢","🕣","🕤","🕥","🕦"],"one":["🕐","🕜","🩱","🔞"],"three":["🕒","🕞"],"five":["🕔","🕠"],"six":["🕕","🕡","🔯"],"seven":["🕖","🕢"],"eight":["🕗","🕣","✳️","✴️"],"nine":["🕘","🕤"],"ten":["🕙","🕥"],"eleven":["🕚","🕦"],"new":["🌑","🌚","🆕","🇳🇨","🇳🇿","🇵🇬"],"wax":["🌒","🌔"],"crescent":["🌒","🌘","🌙","☪️"],"first":["🌓","🌛"],"quarter":["🌓","🌗","🌛","🌜"],"gibbous":["🌔","🌖"],"full":["🌕","🌝"],"wane":["🌖","🌘"],"last":["🌗","🌜","⏮️"],"sun":["☀️","🌞","⛅","🌤️","🌥️","🌦️"],"ringed":["🪐"],"planet":["🪐"],"glow":["🌟"],"shoot":["🌠"],"milky":["🌌"],"way":["🌌"],"cloud":["☁️","⛅","⛈️","🌤️","🌥️","🌦️","🌧️","🌨️","🌩️"],"behind":["⛅","🌤️","🌥️","🌦️"],"lightning":["⛈️","🌩️"],"rain":["⛈️","🌦️","🌧️","☔"],"large":["🌥️","⬛","⬜","🔶","🔷"],"tornado":["🌪️"],"fog":["🌫️"],"cyclone":["🌀"],"rainbow":["🌈","🏳️‍🌈"],"drops":["☔"],"ground":["⛱️"],"voltage":["⚡"],"snowflake":["❄️"],"snowman":["☃️","⛄"],"comet":["☄️"],"droplet":["💧"],"jack":["🎃"],"lantern":["🎃","🏮"],"christmas":["🎄","🇨🇽"],"fireworks":["🎆"],"sparkler":["🎇"],"firecracker":["🧨"],"sparkles":["✨"],"popper":["🎉"],"confetti":["🎊"],"tanabata":["🎋"],"pine":["🎍"],"dolls":["🎎","🪆"],"carp":["🎏"],"streamer":["🎏"],"chime":["🎐"],"view":["🎑"],"ceremony":["🎑"],"envelope":["🧧","✉️","📨","📩"],"wrapped":["🎁"],"gift":["🎁"],"reminder":["🎗️"],"admission":["🎟️"],"tickets":["🎟️"],"ticket":["🎫"],"military":["🎖️","🪖"],"medal":["🎖️","🏅","🥇","🥈","🥉"],"trophy":["🏆"],"sports":["🏅"],"1st":["🥇"],"place":["🥇","🥈","🥉","🛐"],"2nd":["🥈"],"3rd":["🥉"],"soccer":["⚽"],"baseball":["⚾"],"softball":["🥎"],"basketball":["🏀"],"volleyball":["🏐"],"american":["🏈","🇦🇸"],"football":["🏈","🏉"],"rugby":["🏉"],"tennis":["🎾"],"disc":["🥏"],"game":["🏏","🎮","🎲"],"field":["🏑"],"hockey":["🏑","🏒"],"lacrosse":["🥍"],"ping":["🏓"],"pong":["🏓"],"badminton":["🏸"],"glove":["🥊"],"martial":["🥋"],"arts":["🥋","🎭"],"uniform":["🥋"],"goal":["🥅"],"net":["🥅"],"flag":["⛳","📫","📪","📬","📭","🏁","🚩","🏴","🏳️","🏳️‍🌈","🏳️‍⚧️","🏴‍☠️","🇦🇨","🇦🇩","🇦🇪","🇦🇫","🇦🇬","🇦🇮","🇦🇱","🇦🇲","🇦🇴","🇦🇶","🇦🇷","🇦🇸","🇦🇹","🇦🇺","🇦🇼","🇦🇽","🇦🇿","🇧🇦","🇧🇧","🇧🇩","🇧🇪","🇧🇫","🇧🇬","🇧🇭","🇧🇮","🇧🇯","🇧🇱","🇧🇲","🇧🇳","🇧🇴","🇧🇶","🇧🇷","🇧🇸","🇧🇹","🇧🇻","🇧🇼","🇧🇾","🇧🇿","🇨🇦","🇨🇨","🇨🇩","🇨🇫","🇨🇬","🇨🇭","🇨🇮","🇨🇰","🇨🇱","🇨🇲","🇨🇳","🇨🇴","🇨🇵","🇨🇷","🇨🇺","🇨🇻","🇨🇼","🇨🇽","🇨🇾","🇨🇿","🇩🇪","🇩🇬","🇩🇯","🇩🇰","🇩🇲","🇩🇴","🇩🇿","🇪🇦","🇪🇨","🇪🇪","🇪🇬","🇪🇭","🇪🇷","🇪🇸","🇪🇹","🇪🇺","🇫🇮","🇫🇯","🇫🇰","🇫🇲","🇫🇴","🇫🇷","🇬🇦","🇬🇧","🇬🇩","🇬🇪","🇬🇫","🇬🇬","🇬🇭","🇬🇮","🇬🇱","🇬🇲","🇬🇳","🇬🇵","🇬🇶","🇬🇷","🇬🇸","🇬🇹","🇬🇺","🇬🇼","🇬🇾","🇭🇰","🇭🇲","🇭🇳","🇭🇷","🇭🇹","🇭🇺","🇮🇨","🇮🇩","🇮🇪","🇮🇱","🇮🇲","🇮🇳","🇮🇴","🇮🇶","🇮🇷","🇮🇸","🇮🇹","🇯🇪","🇯🇲","🇯🇴","🇯🇵","🇰🇪","🇰🇬","🇰🇭","🇰🇮","🇰🇲","🇰🇳","🇰🇵","🇰🇷","🇰🇼","🇰🇾","🇰🇿","🇱🇦","🇱🇧","🇱🇨","🇱🇮","🇱🇰","🇱🇷","🇱🇸","🇱🇹","🇱🇺","🇱🇻","🇱🇾","🇲🇦","🇲🇨","🇲🇩","🇲🇪","🇲🇫","🇲🇬","🇲🇭","🇲🇰","🇲🇱","🇲🇲","🇲🇳","🇲🇴","🇲🇵","🇲🇶","🇲🇷","🇲🇸","🇲🇹","🇲🇺","🇲🇻","🇲🇼","🇲🇽","🇲🇾","🇲🇿","🇳🇦","🇳🇨","🇳🇪","🇳🇫","🇳🇬","🇳🇮","🇳🇱","🇳🇴","🇳🇵","🇳🇷","🇳🇺","🇳🇿","🇴🇲","🇵🇦","🇵🇪","🇵🇫","🇵🇬","🇵🇭","🇵🇰","🇵🇱","🇵🇲","🇵🇳","🇵🇷","🇵🇸","🇵🇹","🇵🇼","🇵🇾","🇶🇦","🇷🇪","🇷🇴","🇷🇸","🇷🇺","🇷🇼","🇸🇦","🇸🇧","🇸🇨","🇸🇩","🇸🇪","🇸🇬","🇸🇭","🇸🇮","🇸🇯","🇸🇰","🇸🇱","🇸🇲","🇸🇳","🇸🇴","🇸🇷","🇸🇸","🇸🇹","🇸🇻","🇸🇽","🇸🇾","🇸🇿","🇹🇦","🇹🇨","🇹🇩","🇹🇫","🇹🇬","🇹🇭","🇹🇯","🇹🇰","🇹🇱","🇹🇲","🇹🇳","🇹🇴","🇹🇷","🇹🇹","🇹🇻","🇹🇼","🇹🇿","🇺🇦","🇺🇬","🇺🇲","🇺🇳","🇺🇸","🇺🇾","🇺🇿","🇻🇦","🇻🇨","🇻🇪","🇻🇬","🇻🇮","🇻🇳","🇻🇺","🇼🇫","🇼🇸","🇽🇰","🇾🇪","🇾🇹","🇿🇦","🇿🇲","🇿🇼","🏴󠁧󠁢󠁥󠁮󠁧󠁿","🏴󠁧󠁢󠁳󠁣󠁴󠁿","🏴󠁧󠁢󠁷󠁬󠁳󠁿"],"dive":["🤿"],"shirt":["🎽","👕"],"skis":["🎿"],"sled":["🛷"],"curl":["🥌","📃"],"stone":["🥌","💎"],"bullseye":["🎯"],"yo":["🪀"],"kite":["🪁"],"pistol":["🔫"],"pool":["🎱"],"crystal":["🔮"],"magic":["🪄"],"wand":["🪄"],"video":["🎮","📹"],"joystick":["🕹️"],"slot":["🎰"],"machine":["🎰","📠"],"die":["🎲"],"puzzle":["🧩"],"piece":["🧩","🩱"],"teddy":["🧸"],"pinata":["🪅"],"mirror":["🪩","🪞"],"spade":["♠️"],"diamond":["♦️","🔶","🔷","🔸","🔹","💠"],"club":["♣️"],"chess":["♟️"],"pawn":["♟️"],"joker":["🃏"],"mahjong":["🀄"],"cards":["🎴"],"perform":["🎭"],"framed":["🖼️"],"picture":["🖼️"],"palette":["🎨"],"thread":["🧵"],"sew":["🪡"],"needle":["🪡"],"yarn":["🧶"],"knot":["🪢"],"goggles":["🥽"],"lab":["🥼"],"coat":["🥼","🧥"],"safety":["🦺","🧷"],"vest":["🦺"],"necktie":["👔"],"jeans":["👖"],"scarf":["🧣"],"gloves":["🧤"],"socks":["🧦"],"dress":["👗"],"kimono":["👘"],"sari":["🥻"],"swimsuit":["🩱"],"briefs":["🩲"],"shorts":["🩳"],"bikini":["👙"],"clothes":["👚"],"fold":["🪭"],"fan":["🪭"],"purse":["👛"],"handbag":["👜"],"clutch":["👝"],"bag":["👝","💰"],"shop":["🛍️","🛒"],"bags":["🛍️"],"backpack":["🎒"],"thong":["🩴"],"sandal":["🩴","👡"],"shoe":["👞","👟","🥿","👠"],"hike":["🥾"],"boot":["🥾","👢"],"flat":["🥿"],"heeled":["👠"],"ballet":["🩰"],"shoes":["🩰"],"pick":["🪮","⛏️","⚒️"],"top":["🎩","🔝"],"graduation":["🎓"],"cap":["🎓","🧢"],"billed":["🧢"],"helmet":["🪖","⛑️"],"rescue":["⛑️"],"prayer":["📿"],"beads":["📿"],"lipstick":["💄"],"gem":["💎"],"muted":["🔇"],"speaker":["🔇","🔈","🔉","🔊"],"low":["🔈","🪫"],"volume":["🔈","🔉","🔊"],"medium":["🔉","◼️","◻️","◾","◽"],"loudspeaker":["📢"],"megaphone":["📣"],"postal":["📯"],"horn":["📯"],"slash":["🔕"],"musical":["🎼","🎵","🎶","🎹"],"score":["🎼"],"note":["🎵"],"notes":["🎶"],"studio":["🎙️"],"microphone":["🎙️","🎤"],"level":["🎚️"],"slider":["🎚️"],"control":["🎛️","🛂"],"knobs":["🎛️"],"headphone":["🎧"],"radio":["📻","🔘"],"saxophone":["🎷"],"accordion":["🪗"],"guitar":["🎸"],"keyboard":["🎹","⌨️"],"trumpet":["🎺"],"violin":["🎻"],"banjo":["🪕"],"long":["🪘"],"maracas":["🪇"],"flute":["🪈"],"mobile":["📱","📲","📵","📴"],"phone":["📱","📲","📴"],"telephone":["☎️","📞"],"receiver":["📞"],"pager":["📟"],"fax":["📠"],"battery":["🔋","🪫"],"electric":["🔌"],"plug":["🔌"],"laptop":["💻"],"desktop":["🖥️"],"computer":["🖥️","🖱️","💽"],"printer":["🖨️"],"trackball":["🖲️"],"disk":["💽","💾","💿"],"floppy":["💾"],"optical":["💿"],"dvd":["📀"],"abacus":["🧮"],"movie":["🎥"],"camera":["🎥","📷","📸","📹"],"film":["🎞️","📽️"],"frames":["🎞️"],"projector":["📽️"],"clapper":["🎬"],"board":["🎬"],"television":["📺"],"flash":["📸"],"videocassette":["📼"],"magnify":["🔍","🔎"],"tilted":["🔍","🔎"],"candle":["🕯️"],"bulb":["💡"],"flashlight":["🔦"],"paper":["🏮","🧻"],"diya":["🪔"],"lamp":["🪔","🛋️"],"notebook":["📔","📓"],"decorative":["📔"],"cover":["📔"],"book":["📕","📖","📗","📘","📙"],"books":["📚"],"ledger":["📒"],"page":["📃","📄"],"scroll":["📜"],"newspaper":["📰","🗞️"],"rolled":["🗞️"],"bookmark":["📑","🔖"],"tabs":["📑"],"label":["🏷️"],"coin":["🪙"],"yen":["💴","💹"],"banknote":["💴","💵","💶","💷"],"dollar":["💵","💲"],"euro":["💶"],"pound":["💷"],"wings":["💸"],"credit":["💳"],"card":["💳","🗂️","📇","🗃️","🪪"],"receipt":["🧾"],"chart":["💹","📈","📉","📊"],"increase":["💹","📈"],"mail":["📧"],"income":["📨"],"outbox":["📤"],"tray":["📤","📥"],"inbox":["📥"],"package":["📦"],"mailbox":["📫","📪","📬","📭"],"lowered":["📪","📭"],"postbox":["📮"],"ballot":["🗳️"],"pencil":["✏️"],"nib":["✒️"],"pen":["🖋️","🖊️","🔏"],"paintbrush":["🖌️"],"crayon":["🖍️"],"memo":["📝"],"briefcase":["💼"],"file":["📁","📂","🗃️","🗄️"],"folder":["📁","📂"],"dividers":["🗂️"],"calendar":["📅","📆","🗓️"],"off":["📆","📴"],"notepad":["🗒️"],"decrease":["📉"],"clipboard":["📋"],"pushpin":["📌","📍"],"round":["📍"],"paperclip":["📎"],"linked":["🖇️"],"paperclips":["🖇️"],"straight":["📏"],"ruler":["📏","📐"],"triangular":["📐","🚩"],"scissors":["✂️"],"cabinet":["🗄️"],"wastebasket":["🗑️"],"locked":["🔒","🔏","🔐"],"unlocked":["🔓"],"key":["🔐","🔑","🗝️"],"hammer":["🔨","⚒️","🛠️"],"axe":["🪓"],"wrench":["🛠️","🔧"],"dagger":["🗡️"],"swords":["⚔️"],"bomb":["💣"],"boomerang":["🪃"],"shield":["🛡️"],"carpentry":["🪚"],"saw":["🪚"],"screwdriver":["🪛"],"nut":["🔩"],"bolt":["🔩"],"gear":["⚙️"],"clamp":["🗜️"],"balance":["⚖️"],"scale":["⚖️"],"link":["🔗"],"chains":["⛓️"],"hook":["🪝"],"toolbox":["🧰"],"magnet":["🧲"],"ladder":["🪜"],"alembic":["⚗️"],"test":["🧪"],"tube":["🧪"],"petri":["🧫"],"dish":["🧫"],"dna":["🧬"],"microscope":["🔬"],"telescope":["🔭"],"antenna":["📡","📶"],"syringe":["💉"],"drop":["🩸"],"blood":["🩸","🅰️","🆎","🅱️","🅾️"],"pill":["💊"],"adhesive":["🩹"],"crutch":["🩼"],"stethoscope":["🩺"],"ray":["🩻"],"door":["🚪"],"elevator":["🛗"],"window":["🪟"],"couch":["🛋️"],"chair":["🪑"],"toilet":["🚽"],"plunger":["🪠"],"shower":["🚿"],"bathtub":["🛁"],"trap":["🪤"],"razor":["🪒"],"lotion":["🧴"],"pin":["🧷"],"broom":["🧹"],"basket":["🧺"],"bucket":["🪣"],"soap":["🧼"],"bubbles":["🫧"],"toothbrush":["🪥"],"sponge":["🧽"],"extinguisher":["🧯"],"cart":["🛒"],"cigarette":["🚬"],"coffin":["⚰️"],"headstone":["🪦"],"funeral":["⚱️"],"urn":["⚱️"],"nazar":["🧿"],"amulet":["🧿"],"hamsa":["🪬"],"moai":["🗿"],"placard":["🪧"],"identification":["🪪"],"atm":["🏧"],"litter":["🚮","🚯"],"bin":["🚮"],"potable":["🚰","🚱"],"restroom":["🚻"],"closet":["🚾"],"passport":["🛂"],"customs":["🛃"],"baggage":["🛄"],"claim":["🛄"],"warn":["⚠️"],"children":["🚸"],"cross":["🚸","✝️","☦️","❌","❎"],"entry":["⛔"],"prohibited":["🚫","🈲"],"bicycles":["🚳"],"smoke":["🚭"],"non":["🚱"],"pedestrians":["🚷"],"phones":["📵"],"under":["🔞"],"eighteen":["🔞"],"radioactive":["☢️"],"biohazard":["☣️"],"curve":["↩️","↪️","⤴️","⤵️"],"clockwise":["🔃"],"arrows":["🔃","🔄"],"counterclockwise":["🔄"],"button":["🔄","🔀","🔁","🔂","▶️","⏩","⏭️","⏯️","◀️","⏪","⏮️","🔼","⏫","🔽","⏬","⏸️","⏹️","⏺️","⏏️","🔅","🔆","✅","❎","🅰️","🆎","🅱️","🆑","🆒","🆓","🆔","🆕","🆖","🅾️","🆗","🅿️","🆘","🆙","🆚","🈁","🈂️","🈷️","🈶","🈯","🉐","🈹","🈚","🈲","🉑","🈸","🈴","🈳","㊗️","㊙️","🈺","🈵","🔘","🔳","🔲"],"end":["🔚"],"soon":["🔜"],"worship":["🛐"],"atom":["⚛️"],"om":["🕉️"],"david":["✡️"],"dharma":["☸️"],"yin":["☯️"],"yang":["☯️"],"latin":["✝️","🔠","🔡","🔤"],"orthodox":["☦️"],"peace":["☮️"],"menorah":["🕎"],"pointed":["🔯","✴️","🔺","🔻"],"khanda":["🪯"],"aries":["♈"],"taurus":["♉"],"gemini":["♊"],"cancer":["♋"],"leo":["♌"],"virgo":["♍"],"libra":["♎"],"scorpio":["♏"],"sagittarius":["♐"],"capricorn":["♑"],"aquarius":["♒"],"pisces":["♓"],"ophiuchus":["⛎"],"shuffle":["🔀"],"tracks":["🔀"],"repeat":["🔁","🔂"],"single":["🔂"],"fast":["⏩","⏪","⏫","⏬"],"forward":["⏩"],"next":["⏭️"],"or":["⏯️"],"pause":["⏯️","⏸️"],"reverse":["◀️","⏪"],"upwards":["🔼"],"downwards":["🔽"],"record":["⏺️"],"eject":["⏏️"],"cinema":["🎦"],"dim":["🔅"],"bright":["🔆"],"bars":["📶"],"wireless":["🛜"],"vibration":["📳"],"mode":["📳"],"female":["♀️"],"male":["♂️"],"transgender":["⚧️","🏳️‍⚧️"],"multiply":["✖️"],"plus":["➕"],"minus":["➖"],"divide":["➗"],"heavy":["🟰","💲"],"equals":["🟰"],"infinity":["♾️"],"double":["‼️","➿"],"question":["⁉️","❓","❔"],"wavy":["〰️"],"currency":["💱"],"exchange":["💱"],"recycle":["♻️"],"fleur":["⚜️"],"de":["⚜️"],"lis":["⚜️"],"trident":["🔱"],"emblem":["🔱"],"name":["📛"],"badge":["📛"],"for":["🔰","🈺"],"beginner":["🔰"],"hollow":["⭕"],"circle":["⭕","🔴","🟠","🟡","🟢","🔵","🟣","🟤","⚫","⚪"],"check":["✅","☑️","✔️"],"loop":["➰","➿"],"part":["〽️"],"alternation":["〽️"],"spoked":["✳️"],"asterisk":["✳️"],"copyright":["©️"],"registered":["®️"],"trade":["™️"],"keycap":["#️⃣","*️⃣","0️⃣","1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣","🔟"],"input":["🔠","🔡","🔢","🔣","🔤"],"uppercase":["🔠"],"lowercase":["🔡"],"numbers":["🔢"],"letters":["🔤"],"type":["🅰️","🆎","🅱️","🅾️"],"ab":["🆎"],"cl":["🆑"],"cool":["🆒"],"free":["🆓","🈶","🈚"],"information":["ℹ️"],"id":["🆔"],"circled":["Ⓜ️"],"ng":["🆖"],"sos":["🆘"],"vs":["🆚"],"here":["🈁"],"charge":["🈂️","🈶","🈚"],"monthly":["🈷️"],"amount":["🈷️"],"reserved":["🈯"],"bargain":["🉐"],"discount":["🈹"],"acceptable":["🉑"],"application":["🈸"],"pass":["🈴"],"grade":["🈴"],"vacancy":["🈳","🈵"],"congratulations":["㊗️"],"secret":["㊙️"],"business":["🈺"],"square":["🟥","🟧","🟨","🟩","🟦","🟪","🟫","⬛","⬜","◼️","◻️","◾","◽","▪️","▫️","🔳","🔲"],"triangle":["🔺","🔻"],"dot":["💠"],"chequered":["🏁"],"flags":["🎌"],"pirate":["🏴‍☠️"],"ascension":["🇦🇨"],"andorra":["🇦🇩"],"united":["🇦🇪","🇬🇧","🇺🇳","🇺🇸"],"arab":["🇦🇪"],"emirates":["🇦🇪"],"afghanistan":["🇦🇫"],"antigua":["🇦🇬"],"barbuda":["🇦🇬"],"anguilla":["🇦🇮"],"albania":["🇦🇱"],"armenia":["🇦🇲"],"angola":["🇦🇴"],"antarctica":["🇦🇶"],"argentina":["🇦🇷"],"samoa":["🇦🇸","🇼🇸"],"austria":["🇦🇹"],"aruba":["🇦🇼"],"aland":["🇦🇽"],"islands":["🇦🇽","🇨🇨","🇨🇰","🇫🇰","🇫🇴","🇬🇸","🇭🇲","🇮🇨","🇰🇾","🇲🇭","🇲🇵","🇵🇳","🇸🇧","🇹🇨","🇺🇲","🇻🇬","🇻🇮"],"azerbaijan":["🇦🇿"],"bosnia":["🇧🇦"],"herzegovina":["🇧🇦"],"barbados":["🇧🇧"],"bangladesh":["🇧🇩"],"belgium":["🇧🇪"],"burkina":["🇧🇫"],"faso":["🇧🇫"],"bulgaria":["🇧🇬"],"bahrain":["🇧🇭"],"burundi":["🇧🇮"],"benin":["🇧🇯"],"st":["🇧🇱","🇰🇳","🇱🇨","🇲🇫","🇵🇲","🇸🇭","🇻🇨"],"barthelemy":["🇧🇱"],"bermuda":["🇧🇲"],"brunei":["🇧🇳"],"bolivia":["🇧🇴"],"caribbean":["🇧🇶"],"netherlands":["🇧🇶","🇳🇱"],"brazil":["🇧🇷"],"bahamas":["🇧🇸"],"bhutan":["🇧🇹"],"bouvet":["🇧🇻"],"botswana":["🇧🇼"],"belarus":["🇧🇾"],"belize":["🇧🇿"],"canada":["🇨🇦"],"cocos":["🇨🇨"],"keel":["🇨🇨"],"congo":["🇨🇩","🇨🇬"],"kinshasa":["🇨🇩"],"central":["🇨🇫"],"african":["🇨🇫"],"republic":["🇨🇫","🇩🇴"],"brazzaville":["🇨🇬"],"switzerland":["🇨🇭"],"cote":["🇨🇮"],"ivoire":["🇨🇮"],"chile":["🇨🇱"],"cameroon":["🇨🇲"],"china":["🇨🇳","🇭🇰","🇲🇴"],"colombia":["🇨🇴"],"clipperton":["🇨🇵"],"costa":["🇨🇷"],"rica":["🇨🇷"],"cuba":["🇨🇺"],"cape":["🇨🇻"],"verde":["🇨🇻"],"curacao":["🇨🇼"],"cyprus":["🇨🇾"],"czechia":["🇨🇿"],"germany":["🇩🇪"],"diego":["🇩🇬"],"garcia":["🇩🇬"],"djibouti":["🇩🇯"],"denmark":["🇩🇰"],"dominica":["🇩🇲"],"dominican":["🇩🇴"],"algeria":["🇩🇿"],"ceuta":["🇪🇦"],"melilla":["🇪🇦"],"ecuador":["🇪🇨"],"estonia":["🇪🇪"],"egypt":["🇪🇬"],"western":["🇪🇭"],"sahara":["🇪🇭"],"eritrea":["🇪🇷"],"spain":["🇪🇸"],"ethiopia":["🇪🇹"],"european":["🇪🇺"],"union":["🇪🇺"],"finland":["🇫🇮"],"fiji":["🇫🇯"],"falkland":["🇫🇰"],"micronesia":["🇫🇲"],"faroe":["🇫🇴"],"france":["🇫🇷"],"gabon":["🇬🇦"],"kingdom":["🇬🇧"],"grenada":["🇬🇩"],"georgia":["🇬🇪","🇬🇸"],"guiana":["🇬🇫"],"guernsey":["🇬🇬"],"ghana":["🇬🇭"],"gibraltar":["🇬🇮"],"greenland":["🇬🇱"],"gambia":["🇬🇲"],"guinea":["🇬🇳","🇬🇶","🇬🇼","🇵🇬"],"guadeloupe":["🇬🇵"],"equatorial":["🇬🇶"],"greece":["🇬🇷"],"south":["🇬🇸","🇰🇷","🇸🇸","🇿🇦"],"guatemala":["🇬🇹"],"guam":["🇬🇺"],"bissau":["🇬🇼"],"guyana":["🇬🇾"],"hong":["🇭🇰"],"kong":["🇭🇰"],"sar":["🇭🇰","🇲🇴"],"heard":["🇭🇲"],"mcdonald":["🇭🇲"],"honduras":["🇭🇳"],"croatia":["🇭🇷"],"haiti":["🇭🇹"],"hungary":["🇭🇺"],"canary":["🇮🇨"],"indonesia":["🇮🇩"],"ireland":["🇮🇪"],"israel":["🇮🇱"],"isle":["🇮🇲"],"india":["🇮🇳"],"british":["🇮🇴","🇻🇬"],"indian":["🇮🇴"],"ocean":["🇮🇴"],"territory":["🇮🇴"],"iraq":["🇮🇶"],"iran":["🇮🇷"],"iceland":["🇮🇸"],"italy":["🇮🇹"],"jersey":["🇯🇪"],"jamaica":["🇯🇲"],"jordan":["🇯🇴"],"kenya":["🇰🇪"],"kyrgyzstan":["🇰🇬"],"cambodia":["🇰🇭"],"kiribati":["🇰🇮"],"comoros":["🇰🇲"],"kitts":["🇰🇳"],"nevis":["🇰🇳"],"north":["🇰🇵","🇲🇰"],"korea":["🇰🇵","🇰🇷"],"kuwait":["🇰🇼"],"cayman":["🇰🇾"],"kazakhstan":["🇰🇿"],"laos":["🇱🇦"],"lebanon":["🇱🇧"],"lucia":["🇱🇨"],"liechtenstein":["🇱🇮"],"sri":["🇱🇰"],"lanka":["🇱🇰"],"liberia":["🇱🇷"],"lesotho":["🇱🇸"],"lithuania":["🇱🇹"],"luxembourg":["🇱🇺"],"latvia":["🇱🇻"],"libya":["🇱🇾"],"morocco":["🇲🇦"],"monaco":["🇲🇨"],"moldova":["🇲🇩"],"montenegro":["🇲🇪"],"martin":["🇲🇫"],"madagascar":["🇲🇬"],"marshall":["🇲🇭"],"macedonia":["🇲🇰"],"mali":["🇲🇱"],"myanmar":["🇲🇲"],"burma":["🇲🇲"],"mongolia":["🇲🇳"],"macao":["🇲🇴"],"northern":["🇲🇵"],"mariana":["🇲🇵"],"martinique":["🇲🇶"],"mauritania":["🇲🇷"],"montserrat":["🇲🇸"],"malta":["🇲🇹"],"mauritius":["🇲🇺"],"maldives":["🇲🇻"],"malawi":["🇲🇼"],"mexico":["🇲🇽"],"malaysia":["🇲🇾"],"mozambique":["🇲🇿"],"namibia":["🇳🇦"],"caledonia":["🇳🇨"],"niger":["🇳🇪"],"norfolk":["🇳🇫"],"nigeria":["🇳🇬"],"nicaragua":["🇳🇮"],"norway":["🇳🇴"],"nepal":["🇳🇵"],"nauru":["🇳🇷"],"niue":["🇳🇺"],"zealand":["🇳🇿"],"oman":["🇴🇲"],"panama":["🇵🇦"],"peru":["🇵🇪"],"polynesia":["🇵🇫"],"papua":["🇵🇬"],"philippines":["🇵🇭"],"pakistan":["🇵🇰"],"poland":["🇵🇱"],"pierre":["🇵🇲"],"miquelon":["🇵🇲"],"pitcairn":["🇵🇳"],"puerto":["🇵🇷"],"rico":["🇵🇷"],"palestinian":["🇵🇸"],"territories":["🇵🇸","🇹🇫"],"portugal":["🇵🇹"],"palau":["🇵🇼"],"paraguay":["🇵🇾"],"qatar":["🇶🇦"],"reunion":["🇷🇪"],"romania":["🇷🇴"],"serbia":["🇷🇸"],"russia":["🇷🇺"],"rwanda":["🇷🇼"],"saudi":["🇸🇦"],"arabia":["🇸🇦"],"solomon":["🇸🇧"],"seychelles":["🇸🇨"],"sudan":["🇸🇩","🇸🇸"],"sweden":["🇸🇪"],"singapore":["🇸🇬"],"helena":["🇸🇭"],"slovenia":["🇸🇮"],"svalbard":["🇸🇯"],"jan":["🇸🇯"],"mayen":["🇸🇯"],"slovakia":["🇸🇰"],"sierra":["🇸🇱"],"leone":["🇸🇱"],"san":["🇸🇲"],"marino":["🇸🇲"],"senegal":["🇸🇳"],"somalia":["🇸🇴"],"suriname":["🇸🇷"],"sao":["🇸🇹"],"tome":["🇸🇹"],"principe":["🇸🇹"],"el":["🇸🇻"],"salvador":["🇸🇻"],"sint":["🇸🇽"],"maarten":["🇸🇽"],"syria":["🇸🇾"],"eswatini":["🇸🇿"],"tristan":["🇹🇦"],"da":["🇹🇦"],"cunha":["🇹🇦"],"turks":["🇹🇨"],"caicos":["🇹🇨"],"chad":["🇹🇩"],"southern":["🇹🇫"],"togo":["🇹🇬"],"thailand":["🇹🇭"],"tajikistan":["🇹🇯"],"tokelau":["🇹🇰"],"timor":["🇹🇱"],"leste":["🇹🇱"],"turkmenistan":["🇹🇲"],"tunisia":["🇹🇳"],"tonga":["🇹🇴"],"trinidad":["🇹🇹"],"tobago":["🇹🇹"],"tuvalu":["🇹🇻"],"taiwan":["🇹🇼"],"tanzania":["🇹🇿"],"ukraine":["🇺🇦"],"uganda":["🇺🇬"],"us":["🇺🇲","🇻🇮"],"outly":["🇺🇲"],"nations":["🇺🇳"],"states":["🇺🇸"],"uruguay":["🇺🇾"],"uzbekistan":["🇺🇿"],"vatican":["🇻🇦"],"city":["🇻🇦"],"vincent":["🇻🇨"],"grenadines":["🇻🇨"],"venezuela":["🇻🇪"],"virgin":["🇻🇬","🇻🇮"],"vietnam":["🇻🇳"],"vanuatu":["🇻🇺"],"wallis":["🇼🇫"],"futuna":["🇼🇫"],"kosovo":["🇽🇰"],"yemen":["🇾🇪"],"mayotte":["🇾🇹"],"zambia":["🇿🇲"],"zimbabwe":["🇿🇼"],"england":["🏴󠁧󠁢󠁥󠁮󠁧󠁿"],"scotland":["🏴󠁧󠁢󠁳󠁣󠁴󠁿"],"wales":["🏴󠁧󠁢󠁷󠁬󠁳󠁿"]}
-},{}],113:[function(require,module,exports){
-arguments[4][65][0].apply(exports,arguments)
-},{"dup":65}],114:[function(require,module,exports){
+},{}],121:[function(require,module,exports){
 arguments[4][72][0].apply(exports,arguments)
-},{"dup":72}],115:[function(require,module,exports){
+},{"dup":72}],122:[function(require,module,exports){
+module.exports={"😀":"grinning-face","😃":"grinning-face-with-big-eyes","😄":"grinning-face-with-smiling-eyes","😁":"beaming-face-with-smiling-eyes","😆":"grinning-squinting-face","😅":"grinning-face-with-sweat","🤣":"rolling-on-the-floor-laughing","😂":"face-with-tears-of-joy","🙂":"slightly-smiling-face","🙃":"upside-down-face","🫠":"melting-face","😉":"winking-face","😊":"smiling-face-with-smiling-eyes","😇":"smiling-face-with-halo","🥰":"smiling-face-with-hearts","😍":"smiling-face-with-heart-eyes","🤩":"star-struck","😘":"face-blowing-a-kiss","😗":"kissing-face","☺️":"smiling-face","😚":"kissing-face-with-closed-eyes","😙":"kissing-face-with-smiling-eyes","🥲":"smiling-face-with-tear","😋":"face-savoring-food","😛":"face-with-tongue","😜":"winking-face-with-tongue","🤪":"zany-face","😝":"squinting-face-with-tongue","🤑":"money-mouth-face","🤗":"smiling-face-with-open-hands","🤭":"face-with-hand-over-mouth","🫢":"face-with-open-eyes-and-hand-over-mouth","🫣":"face-with-peeking-eye","🤫":"shushing-face","🤔":"thinking-face","🫡":"saluting-face","🤐":"zipper-mouth-face","🤨":"face-with-raised-eyebrow","😐":"neutral-face","😑":"expressionless-face","😶":"face-without-mouth","🫥":"dotted-line-face","😶‍🌫️":"face-in-clouds","😏":"smirking-face","😒":"unamused-face","🙄":"face-with-rolling-eyes","😬":"grimacing-face","😮‍💨":"face-exhaling","🤥":"lying-face","🫨":"shaking-face","😌":"relieved-face","😔":"pensive-face","😪":"sleepy-face","🤤":"drooling-face","😴":"sleeping-face","😷":"face-with-medical-mask","🤒":"face-with-thermometer","🤕":"face-with-head-bandage","🤢":"nauseated-face","🤮":"face-vomiting","🤧":"sneezing-face","🥵":"hot-face","🥶":"cold-face","🥴":"woozy-face","😵":"face-with-crossed-out-eyes","😵‍💫":"face-with-spiral-eyes","🤯":"exploding-head","🤠":"cowboy-hat-face","🥳":"partying-face","🥸":"disguised-face","😎":"smiling-face-with-sunglasses","🤓":"nerd-face","🧐":"face-with-monocle","😕":"confused-face","🫤":"face-with-diagonal-mouth","😟":"worried-face","🙁":"slightly-frowning-face","☹️":"frowning-face","😮":"face-with-open-mouth","😯":"hushed-face","😲":"astonished-face","😳":"flushed-face","🥺":"pleading-face","🥹":"face-holding-back-tears","😦":"frowning-face-with-open-mouth","😧":"anguished-face","😨":"fearful-face","😰":"anxious-face-with-sweat","😥":"sad-but-relieved-face","😢":"crying-face","😭":"loudly-crying-face","😱":"face-screaming-in-fear","😖":"confounded-face","😣":"persevering-face","😞":"disappointed-face","😓":"downcast-face-with-sweat","😩":"weary-face","😫":"tired-face","🥱":"yawning-face","😤":"face-with-steam-from-nose","😡":"enraged-face","😠":"angry-face","🤬":"face-with-symbols-on-mouth","😈":"smiling-face-with-horns","👿":"angry-face-with-horns","💀":"skull","☠️":"skull-and-crossbones","💩":"pile-of-poo","🤡":"clown-face","👹":"ogre","👺":"goblin","👻":"ghost","👽":"alien","👾":"alien-monster","🤖":"robot","😺":"grinning-cat","😸":"grinning-cat-with-smiling-eyes","😹":"cat-with-tears-of-joy","😻":"smiling-cat-with-heart-eyes","😼":"cat-with-wry-smile","😽":"kissing-cat","🙀":"weary-cat","😿":"crying-cat","😾":"pouting-cat","🙈":"see-no-evil-monkey","🙉":"hear-no-evil-monkey","🙊":"speak-no-evil-monkey","💌":"love-letter","💘":"heart-with-arrow","💝":"heart-with-ribbon","💖":"sparkling-heart","💗":"growing-heart","💓":"beating-heart","💞":"revolving-hearts","💕":"two-hearts","💟":"heart-decoration","❣️":"heart-exclamation","💔":"broken-heart","❤️‍🔥":"heart-on-fire","❤️‍🩹":"mending-heart","❤️":"red-heart","🩷":"pink-heart","🧡":"orange-heart","💛":"yellow-heart","💚":"green-heart","💙":"blue-heart","🩵":"light-blue-heart","💜":"purple-heart","🤎":"brown-heart","🖤":"black-heart","🩶":"grey-heart","🤍":"white-heart","💋":"kiss-mark","💯":"hundred-points","💢":"anger-symbol","💥":"collision","💫":"dizzy","💦":"sweat-droplets","💨":"dashing-away","🕳️":"hole","💬":"speech-balloon","👁️‍🗨️":"eye-in-speech-bubble","🗨️":"left-speech-bubble","🗯️":"right-anger-bubble","💭":"thought-balloon","💤":"zzz","👋":"waving-hand","🤚":"raised-back-of-hand","🖐️":"hand-with-fingers-splayed","✋":"raised-hand","🖖":"vulcan-salute","🫱":"rightwards-hand","🫲":"leftwards-hand","🫳":"palm-down-hand","🫴":"palm-up-hand","🫷":"leftwards-pushing-hand","🫸":"rightwards-pushing-hand","👌":"ok-hand","🤌":"pinched-fingers","🤏":"pinching-hand","✌️":"victory-hand","🤞":"crossed-fingers","🫰":"hand-with-index-finger-and-thumb-crossed","🤟":"love-you-gesture","🤘":"sign-of-the-horns","🤙":"call-me-hand","👈":"backhand-index-pointing-left","👉":"backhand-index-pointing-right","👆":"backhand-index-pointing-up","🖕":"middle-finger","👇":"backhand-index-pointing-down","☝️":"index-pointing-up","🫵":"index-pointing-at-the-viewer","👍":"thumbs-up","👎":"thumbs-down","✊":"raised-fist","👊":"oncoming-fist","🤛":"left-facing-fist","🤜":"right-facing-fist","👏":"clapping-hands","🙌":"raising-hands","🫶":"heart-hands","👐":"open-hands","🤲":"palms-up-together","🤝":"handshake","🙏":"folded-hands","✍️":"writing-hand","💅":"nail-polish","🤳":"selfie","💪":"flexed-biceps","🦾":"mechanical-arm","🦿":"mechanical-leg","🦵":"leg","🦶":"foot","👂":"ear","🦻":"ear-with-hearing-aid","👃":"nose","🧠":"brain","🫀":"anatomical-heart","🫁":"lungs","🦷":"tooth","🦴":"bone","👀":"eyes","👁️":"eye","👅":"tongue","👄":"mouth","🫦":"biting-lip","👶":"baby","🧒":"child","👦":"boy","👧":"girl","🧑":"person","👱":"person-blond-hair","👨":"man","🧔":"person-beard","🧔‍♂️":"man-beard","🧔‍♀️":"woman-beard","👨‍🦰":"man-red-hair","👨‍🦱":"man-curly-hair","👨‍🦳":"man-white-hair","👨‍🦲":"man-bald","👩":"woman","👩‍🦰":"woman-red-hair","🧑‍🦰":"person-red-hair","👩‍🦱":"woman-curly-hair","🧑‍🦱":"person-curly-hair","👩‍🦳":"woman-white-hair","🧑‍🦳":"person-white-hair","👩‍🦲":"woman-bald","🧑‍🦲":"person-bald","👱‍♀️":"woman-blond-hair","👱‍♂️":"man-blond-hair","🧓":"older-person","👴":"old-man","👵":"old-woman","🙍":"person-frowning","🙍‍♂️":"man-frowning","🙍‍♀️":"woman-frowning","🙎":"person-pouting","🙎‍♂️":"man-pouting","🙎‍♀️":"woman-pouting","🙅":"person-gesturing-no","🙅‍♂️":"man-gesturing-no","🙅‍♀️":"woman-gesturing-no","🙆":"person-gesturing-ok","🙆‍♂️":"man-gesturing-ok","🙆‍♀️":"woman-gesturing-ok","💁":"person-tipping-hand","💁‍♂️":"man-tipping-hand","💁‍♀️":"woman-tipping-hand","🙋":"person-raising-hand","🙋‍♂️":"man-raising-hand","🙋‍♀️":"woman-raising-hand","🧏":"deaf-person","🧏‍♂️":"deaf-man","🧏‍♀️":"deaf-woman","🙇":"person-bowing","🙇‍♂️":"man-bowing","🙇‍♀️":"woman-bowing","🤦":"person-facepalming","🤦‍♂️":"man-facepalming","🤦‍♀️":"woman-facepalming","🤷":"person-shrugging","🤷‍♂️":"man-shrugging","🤷‍♀️":"woman-shrugging","🧑‍⚕️":"health-worker","👨‍⚕️":"man-health-worker","👩‍⚕️":"woman-health-worker","🧑‍🎓":"student","👨‍🎓":"man-student","👩‍🎓":"woman-student","🧑‍🏫":"teacher","👨‍🏫":"man-teacher","👩‍🏫":"woman-teacher","🧑‍⚖️":"judge","👨‍⚖️":"man-judge","👩‍⚖️":"woman-judge","🧑‍🌾":"farmer","👨‍🌾":"man-farmer","👩‍🌾":"woman-farmer","🧑‍🍳":"cook","👨‍🍳":"man-cook","👩‍🍳":"woman-cook","🧑‍🔧":"mechanic","👨‍🔧":"man-mechanic","👩‍🔧":"woman-mechanic","🧑‍🏭":"factory-worker","👨‍🏭":"man-factory-worker","👩‍🏭":"woman-factory-worker","🧑‍💼":"office-worker","👨‍💼":"man-office-worker","👩‍💼":"woman-office-worker","🧑‍🔬":"scientist","👨‍🔬":"man-scientist","👩‍🔬":"woman-scientist","🧑‍💻":"technologist","👨‍💻":"man-technologist","👩‍💻":"woman-technologist","🧑‍🎤":"singer","👨‍🎤":"man-singer","👩‍🎤":"woman-singer","🧑‍🎨":"artist","👨‍🎨":"man-artist","👩‍🎨":"woman-artist","🧑‍✈️":"pilot","👨‍✈️":"man-pilot","👩‍✈️":"woman-pilot","🧑‍🚀":"astronaut","👨‍🚀":"man-astronaut","👩‍🚀":"woman-astronaut","🧑‍🚒":"firefighter","👨‍🚒":"man-firefighter","👩‍🚒":"woman-firefighter","👮":"police-officer","👮‍♂️":"man-police-officer","👮‍♀️":"woman-police-officer","🕵️":"detective","🕵️‍♂️":"man-detective","🕵️‍♀️":"woman-detective","💂":"guard","💂‍♂️":"man-guard","💂‍♀️":"woman-guard","🥷":"ninja","👷":"construction-worker","👷‍♂️":"man-construction-worker","👷‍♀️":"woman-construction-worker","🫅":"person-with-crown","🤴":"prince","👸":"princess","👳":"person-wearing-turban","👳‍♂️":"man-wearing-turban","👳‍♀️":"woman-wearing-turban","👲":"person-with-skullcap","🧕":"woman-with-headscarf","🤵":"person-in-tuxedo","🤵‍♂️":"man-in-tuxedo","🤵‍♀️":"woman-in-tuxedo","👰":"person-with-veil","👰‍♂️":"man-with-veil","👰‍♀️":"woman-with-veil","🤰":"pregnant-woman","🫃":"pregnant-man","🫄":"pregnant-person","🤱":"breast-feeding","👩‍🍼":"woman-feeding-baby","👨‍🍼":"man-feeding-baby","🧑‍🍼":"person-feeding-baby","👼":"baby-angel","🎅":"santa-claus","🤶":"mrs-claus","🧑‍🎄":"mx-claus","🦸":"superhero","🦸‍♂️":"man-superhero","🦸‍♀️":"woman-superhero","🦹":"supervillain","🦹‍♂️":"man-supervillain","🦹‍♀️":"woman-supervillain","🧙":"mage","🧙‍♂️":"man-mage","🧙‍♀️":"woman-mage","🧚":"fairy","🧚‍♂️":"man-fairy","🧚‍♀️":"woman-fairy","🧛":"vampire","🧛‍♂️":"man-vampire","🧛‍♀️":"woman-vampire","🧜":"merperson","🧜‍♂️":"merman","🧜‍♀️":"mermaid","🧝":"elf","🧝‍♂️":"man-elf","🧝‍♀️":"woman-elf","🧞":"genie","🧞‍♂️":"man-genie","🧞‍♀️":"woman-genie","🧟":"zombie","🧟‍♂️":"man-zombie","🧟‍♀️":"woman-zombie","🧌":"troll","💆":"person-getting-massage","💆‍♂️":"man-getting-massage","💆‍♀️":"woman-getting-massage","💇":"person-getting-haircut","💇‍♂️":"man-getting-haircut","💇‍♀️":"woman-getting-haircut","🚶":"person-walking","🚶‍♂️":"man-walking","🚶‍♀️":"woman-walking","🧍":"person-standing","🧍‍♂️":"man-standing","🧍‍♀️":"woman-standing","🧎":"person-kneeling","🧎‍♂️":"man-kneeling","🧎‍♀️":"woman-kneeling","🧑‍🦯":"person-with-white-cane","👨‍🦯":"man-with-white-cane","👩‍🦯":"woman-with-white-cane","🧑‍🦼":"person-in-motorized-wheelchair","👨‍🦼":"man-in-motorized-wheelchair","👩‍🦼":"woman-in-motorized-wheelchair","🧑‍🦽":"person-in-manual-wheelchair","👨‍🦽":"man-in-manual-wheelchair","👩‍🦽":"woman-in-manual-wheelchair","🏃":"person-running","🏃‍♂️":"man-running","🏃‍♀️":"woman-running","💃":"woman-dancing","🕺":"man-dancing","🕴️":"person-in-suit-levitating","👯":"people-with-bunny-ears","👯‍♂️":"men-with-bunny-ears","👯‍♀️":"women-with-bunny-ears","🧖":"person-in-steamy-room","🧖‍♂️":"man-in-steamy-room","🧖‍♀️":"woman-in-steamy-room","🧗":"person-climbing","🧗‍♂️":"man-climbing","🧗‍♀️":"woman-climbing","🤺":"person-fencing","🏇":"horse-racing","⛷️":"skier","🏂":"snowboarder","🏌️":"person-golfing","🏌️‍♂️":"man-golfing","🏌️‍♀️":"woman-golfing","🏄":"person-surfing","🏄‍♂️":"man-surfing","🏄‍♀️":"woman-surfing","🚣":"person-rowing-boat","🚣‍♂️":"man-rowing-boat","🚣‍♀️":"woman-rowing-boat","🏊":"person-swimming","🏊‍♂️":"man-swimming","🏊‍♀️":"woman-swimming","⛹️":"person-bouncing-ball","⛹️‍♂️":"man-bouncing-ball","⛹️‍♀️":"woman-bouncing-ball","🏋️":"person-lifting-weights","🏋️‍♂️":"man-lifting-weights","🏋️‍♀️":"woman-lifting-weights","🚴":"person-biking","🚴‍♂️":"man-biking","🚴‍♀️":"woman-biking","🚵":"person-mountain-biking","🚵‍♂️":"man-mountain-biking","🚵‍♀️":"woman-mountain-biking","🤸":"person-cartwheeling","🤸‍♂️":"man-cartwheeling","🤸‍♀️":"woman-cartwheeling","🤼":"people-wrestling","🤼‍♂️":"men-wrestling","🤼‍♀️":"women-wrestling","🤽":"person-playing-water-polo","🤽‍♂️":"man-playing-water-polo","🤽‍♀️":"woman-playing-water-polo","🤾":"person-playing-handball","🤾‍♂️":"man-playing-handball","🤾‍♀️":"woman-playing-handball","🤹":"person-juggling","🤹‍♂️":"man-juggling","🤹‍♀️":"woman-juggling","🧘":"person-in-lotus-position","🧘‍♂️":"man-in-lotus-position","🧘‍♀️":"woman-in-lotus-position","🛀":"person-taking-bath","🛌":"person-in-bed","🧑‍🤝‍🧑":"people-holding-hands","👭":"women-holding-hands","👫":"woman-and-man-holding-hands","👬":"men-holding-hands","💏":"kiss","👩‍❤️‍💋‍👨":"kiss-woman-man","👨‍❤️‍💋‍👨":"kiss-man-man","👩‍❤️‍💋‍👩":"kiss-woman-woman","💑":"couple-with-heart","👩‍❤️‍👨":"couple-with-heart-woman-man","👨‍❤️‍👨":"couple-with-heart-man-man","👩‍❤️‍👩":"couple-with-heart-woman-woman","👪":"family","👨‍👩‍👦":"family-man-woman-boy","👨‍👩‍👧":"family-man-woman-girl","👨‍👩‍👧‍👦":"family-man-woman-girl-boy","👨‍👩‍👦‍👦":"family-man-woman-boy-boy","👨‍👩‍👧‍👧":"family-man-woman-girl-girl","👨‍👨‍👦":"family-man-man-boy","👨‍👨‍👧":"family-man-man-girl","👨‍👨‍👧‍👦":"family-man-man-girl-boy","👨‍👨‍👦‍👦":"family-man-man-boy-boy","👨‍👨‍👧‍👧":"family-man-man-girl-girl","👩‍👩‍👦":"family-woman-woman-boy","👩‍👩‍👧":"family-woman-woman-girl","👩‍👩‍👧‍👦":"family-woman-woman-girl-boy","👩‍👩‍👦‍👦":"family-woman-woman-boy-boy","👩‍👩‍👧‍👧":"family-woman-woman-girl-girl","👨‍👦":"family-man-boy","👨‍👦‍👦":"family-man-boy-boy","👨‍👧":"family-man-girl","👨‍👧‍👦":"family-man-girl-boy","👨‍👧‍👧":"family-man-girl-girl","👩‍👦":"family-woman-boy","👩‍👦‍👦":"family-woman-boy-boy","👩‍👧":"family-woman-girl","👩‍👧‍👦":"family-woman-girl-boy","👩‍👧‍👧":"family-woman-girl-girl","🗣️":"speaking-head","👤":"bust-in-silhouette","👥":"busts-in-silhouette","🫂":"people-hugging","👣":"footprints","🐵":"monkey-face","🐒":"monkey","🦍":"gorilla","🦧":"orangutan","🐶":"dog-face","🐕":"dog","🦮":"guide-dog","🐕‍🦺":"service-dog","🐩":"poodle","🐺":"wolf","🦊":"fox","🦝":"raccoon","🐱":"cat-face","🐈":"cat","🐈‍⬛":"black-cat","🦁":"lion","🐯":"tiger-face","🐅":"tiger","🐆":"leopard","🐴":"horse-face","🫎":"moose","🫏":"donkey","🐎":"horse","🦄":"unicorn","🦓":"zebra","🦌":"deer","🦬":"bison","🐮":"cow-face","🐂":"ox","🐃":"water-buffalo","🐄":"cow","🐷":"pig-face","🐖":"pig","🐗":"boar","🐽":"pig-nose","🐏":"ram","🐑":"ewe","🐐":"goat","🐪":"camel","🐫":"two-hump-camel","🦙":"llama","🦒":"giraffe","🐘":"elephant","🦣":"mammoth","🦏":"rhinoceros","🦛":"hippopotamus","🐭":"mouse-face","🐁":"mouse","🐀":"rat","🐹":"hamster","🐰":"rabbit-face","🐇":"rabbit","🐿️":"chipmunk","🦫":"beaver","🦔":"hedgehog","🦇":"bat","🐻":"bear","🐻‍❄️":"polar-bear","🐨":"koala","🐼":"panda","🦥":"sloth","🦦":"otter","🦨":"skunk","🦘":"kangaroo","🦡":"badger","🐾":"paw-prints","🦃":"turkey","🐔":"chicken","🐓":"rooster","🐣":"hatching-chick","🐤":"baby-chick","🐥":"front-facing-baby-chick","🐦":"bird","🐧":"penguin","🕊️":"dove","🦅":"eagle","🦆":"duck","🦢":"swan","🦉":"owl","🦤":"dodo","🪶":"feather","🦩":"flamingo","🦚":"peacock","🦜":"parrot","🪽":"wing","🐦‍⬛":"black-bird","🪿":"goose","🐸":"frog","🐊":"crocodile","🐢":"turtle","🦎":"lizard","🐍":"snake","🐲":"dragon-face","🐉":"dragon","🦕":"sauropod","🦖":"t-rex","🐳":"spouting-whale","🐋":"whale","🐬":"dolphin","🦭":"seal","🐟":"fish","🐠":"tropical-fish","🐡":"blowfish","🦈":"shark","🐙":"octopus","🐚":"spiral-shell","🪸":"coral","🪼":"jellyfish","🐌":"snail","🦋":"butterfly","🐛":"bug","🐜":"ant","🐝":"honeybee","🪲":"beetle","🐞":"lady-beetle","🦗":"cricket","🪳":"cockroach","🕷️":"spider","🕸️":"spider-web","🦂":"scorpion","🦟":"mosquito","🪰":"fly","🪱":"worm","🦠":"microbe","💐":"bouquet","🌸":"cherry-blossom","💮":"white-flower","🪷":"lotus","🏵️":"rosette","🌹":"rose","🥀":"wilted-flower","🌺":"hibiscus","🌻":"sunflower","🌼":"blossom","🌷":"tulip","🪻":"hyacinth","🌱":"seedling","🪴":"potted-plant","🌲":"evergreen-tree","🌳":"deciduous-tree","🌴":"palm-tree","🌵":"cactus","🌾":"sheaf-of-rice","🌿":"herb","☘️":"shamrock","🍀":"four-leaf-clover","🍁":"maple-leaf","🍂":"fallen-leaf","🍃":"leaf-fluttering-in-wind","🪹":"empty-nest","🪺":"nest-with-eggs","🍄":"mushroom","🍇":"grapes","🍈":"melon","🍉":"watermelon","🍊":"tangerine","🍋":"lemon","🍌":"banana","🍍":"pineapple","🥭":"mango","🍎":"red-apple","🍏":"green-apple","🍐":"pear","🍑":"peach","🍒":"cherries","🍓":"strawberry","🫐":"blueberries","🥝":"kiwi-fruit","🍅":"tomato","🫒":"olive","🥥":"coconut","🥑":"avocado","🍆":"eggplant","🥔":"potato","🥕":"carrot","🌽":"ear-of-corn","🌶️":"hot-pepper","🫑":"bell-pepper","🥒":"cucumber","🥬":"leafy-green","🥦":"broccoli","🧄":"garlic","🧅":"onion","🥜":"peanuts","🫘":"beans","🌰":"chestnut","🫚":"ginger-root","🫛":"pea-pod","🍞":"bread","🥐":"croissant","🥖":"baguette-bread","🫓":"flatbread","🥨":"pretzel","🥯":"bagel","🥞":"pancakes","🧇":"waffle","🧀":"cheese-wedge","🍖":"meat-on-bone","🍗":"poultry-leg","🥩":"cut-of-meat","🥓":"bacon","🍔":"hamburger","🍟":"french-fries","🍕":"pizza","🌭":"hot-dog","🥪":"sandwich","🌮":"taco","🌯":"burrito","🫔":"tamale","🥙":"stuffed-flatbread","🧆":"falafel","🥚":"egg","🍳":"cooking","🥘":"shallow-pan-of-food","🍲":"pot-of-food","🫕":"fondue","🥣":"bowl-with-spoon","🥗":"green-salad","🍿":"popcorn","🧈":"butter","🧂":"salt","🥫":"canned-food","🍱":"bento-box","🍘":"rice-cracker","🍙":"rice-ball","🍚":"cooked-rice","🍛":"curry-rice","🍜":"steaming-bowl","🍝":"spaghetti","🍠":"roasted-sweet-potato","🍢":"oden","🍣":"sushi","🍤":"fried-shrimp","🍥":"fish-cake-with-swirl","🥮":"moon-cake","🍡":"dango","🥟":"dumpling","🥠":"fortune-cookie","🥡":"takeout-box","🦀":"crab","🦞":"lobster","🦐":"shrimp","🦑":"squid","🦪":"oyster","🍦":"soft-ice-cream","🍧":"shaved-ice","🍨":"ice-cream","🍩":"doughnut","🍪":"cookie","🎂":"birthday-cake","🍰":"shortcake","🧁":"cupcake","🥧":"pie","🍫":"chocolate-bar","🍬":"candy","🍭":"lollipop","🍮":"custard","🍯":"honey-pot","🍼":"baby-bottle","🥛":"glass-of-milk","☕":"hot-beverage","🫖":"teapot","🍵":"teacup-without-handle","🍶":"sake","🍾":"bottle-with-popping-cork","🍷":"wine-glass","🍸":"cocktail-glass","🍹":"tropical-drink","🍺":"beer-mug","🍻":"clinking-beer-mugs","🥂":"clinking-glasses","🥃":"tumbler-glass","🫗":"pouring-liquid","🥤":"cup-with-straw","🧋":"bubble-tea","🧃":"beverage-box","🧉":"mate","🧊":"ice","🥢":"chopsticks","🍽️":"fork-and-knife-with-plate","🍴":"fork-and-knife","🥄":"spoon","🔪":"kitchen-knife","🫙":"jar","🏺":"amphora","🌍":"globe-showing-europe-africa","🌎":"globe-showing-americas","🌏":"globe-showing-asia-australia","🌐":"globe-with-meridians","🗺️":"world-map","🗾":"map-of-japan","🧭":"compass","🏔️":"snow-capped-mountain","⛰️":"mountain","🌋":"volcano","🗻":"mount-fuji","🏕️":"camping","🏖️":"beach-with-umbrella","🏜️":"desert","🏝️":"desert-island","🏞️":"national-park","🏟️":"stadium","🏛️":"classical-building","🏗️":"building-construction","🧱":"brick","🪨":"rock","🪵":"wood","🛖":"hut","🏘️":"houses","🏚️":"derelict-house","🏠":"house","🏡":"house-with-garden","🏢":"office-building","🏣":"japanese-post-office","🏤":"post-office","🏥":"hospital","🏦":"bank","🏨":"hotel","🏩":"love-hotel","🏪":"convenience-store","🏫":"school","🏬":"department-store","🏭":"factory","🏯":"japanese-castle","🏰":"castle","💒":"wedding","🗼":"tokyo-tower","🗽":"statue-of-liberty","⛪":"church","🕌":"mosque","🛕":"hindu-temple","🕍":"synagogue","⛩️":"shinto-shrine","🕋":"kaaba","⛲":"fountain","⛺":"tent","🌁":"foggy","🌃":"night-with-stars","🏙️":"cityscape","🌄":"sunrise-over-mountains","🌅":"sunrise","🌆":"cityscape-at-dusk","🌇":"sunset","🌉":"bridge-at-night","♨️":"hot-springs","🎠":"carousel-horse","🛝":"playground-slide","🎡":"ferris-wheel","🎢":"roller-coaster","💈":"barber-pole","🎪":"circus-tent","🚂":"locomotive","🚃":"railway-car","🚄":"high-speed-train","🚅":"bullet-train","🚆":"train","🚇":"metro","🚈":"light-rail","🚉":"station","🚊":"tram","🚝":"monorail","🚞":"mountain-railway","🚋":"tram-car","🚌":"bus","🚍":"oncoming-bus","🚎":"trolleybus","🚐":"minibus","🚑":"ambulance","🚒":"fire-engine","🚓":"police-car","🚔":"oncoming-police-car","🚕":"taxi","🚖":"oncoming-taxi","🚗":"automobile","🚘":"oncoming-automobile","🚙":"sport-utility-vehicle","🛻":"pickup-truck","🚚":"delivery-truck","🚛":"articulated-lorry","🚜":"tractor","🏎️":"racing-car","🏍️":"motorcycle","🛵":"motor-scooter","🦽":"manual-wheelchair","🦼":"motorized-wheelchair","🛺":"auto-rickshaw","🚲":"bicycle","🛴":"kick-scooter","🛹":"skateboard","🛼":"roller-skate","🚏":"bus-stop","🛣️":"motorway","🛤️":"railway-track","🛢️":"oil-drum","⛽":"fuel-pump","🛞":"wheel","🚨":"police-car-light","🚥":"horizontal-traffic-light","🚦":"vertical-traffic-light","🛑":"stop-sign","🚧":"construction","⚓":"anchor","🛟":"ring-buoy","⛵":"sailboat","🛶":"canoe","🚤":"speedboat","🛳️":"passenger-ship","⛴️":"ferry","🛥️":"motor-boat","🚢":"ship","✈️":"airplane","🛩️":"small-airplane","🛫":"airplane-departure","🛬":"airplane-arrival","🪂":"parachute","💺":"seat","🚁":"helicopter","🚟":"suspension-railway","🚠":"mountain-cableway","🚡":"aerial-tramway","🛰️":"satellite","🚀":"rocket","🛸":"flying-saucer","🛎️":"bellhop-bell","🧳":"luggage","⌛":"hourglass-done","⏳":"hourglass-not-done","⌚":"watch","⏰":"alarm-clock","⏱️":"stopwatch","⏲️":"timer-clock","🕰️":"mantelpiece-clock","🕛":"twelve-o-clock","🕧":"twelve-thirty","🕐":"one-o-clock","🕜":"one-thirty","🕑":"two-o-clock","🕝":"two-thirty","🕒":"three-o-clock","🕞":"three-thirty","🕓":"four-o-clock","🕟":"four-thirty","🕔":"five-o-clock","🕠":"five-thirty","🕕":"six-o-clock","🕡":"six-thirty","🕖":"seven-o-clock","🕢":"seven-thirty","🕗":"eight-o-clock","🕣":"eight-thirty","🕘":"nine-o-clock","🕤":"nine-thirty","🕙":"ten-o-clock","🕥":"ten-thirty","🕚":"eleven-o-clock","🕦":"eleven-thirty","🌑":"new-moon","🌒":"waxing-crescent-moon","🌓":"first-quarter-moon","🌔":"waxing-gibbous-moon","🌕":"full-moon","🌖":"waning-gibbous-moon","🌗":"last-quarter-moon","🌘":"waning-crescent-moon","🌙":"crescent-moon","🌚":"new-moon-face","🌛":"first-quarter-moon-face","🌜":"last-quarter-moon-face","🌡️":"thermometer","☀️":"sun","🌝":"full-moon-face","🌞":"sun-with-face","🪐":"ringed-planet","⭐":"star","🌟":"glowing-star","🌠":"shooting-star","🌌":"milky-way","☁️":"cloud","⛅":"sun-behind-cloud","⛈️":"cloud-with-lightning-and-rain","🌤️":"sun-behind-small-cloud","🌥️":"sun-behind-large-cloud","🌦️":"sun-behind-rain-cloud","🌧️":"cloud-with-rain","🌨️":"cloud-with-snow","🌩️":"cloud-with-lightning","🌪️":"tornado","🌫️":"fog","🌬️":"wind-face","🌀":"cyclone","🌈":"rainbow","🌂":"closed-umbrella","☂️":"umbrella","☔":"umbrella-with-rain-drops","⛱️":"umbrella-on-ground","⚡":"high-voltage","❄️":"snowflake","☃️":"snowman","⛄":"snowman-without-snow","☄️":"comet","🔥":"fire","💧":"droplet","🌊":"water-wave","🎃":"jack-o-lantern","🎄":"christmas-tree","🎆":"fireworks","🎇":"sparkler","🧨":"firecracker","✨":"sparkles","🎈":"balloon","🎉":"party-popper","🎊":"confetti-ball","🎋":"tanabata-tree","🎍":"pine-decoration","🎎":"japanese-dolls","🎏":"carp-streamer","🎐":"wind-chime","🎑":"moon-viewing-ceremony","🧧":"red-envelope","🎀":"ribbon","🎁":"wrapped-gift","🎗️":"reminder-ribbon","🎟️":"admission-tickets","🎫":"ticket","🎖️":"military-medal","🏆":"trophy","🏅":"sports-medal","🥇":"1st-place-medal","🥈":"2nd-place-medal","🥉":"3rd-place-medal","⚽":"soccer-ball","⚾":"baseball","🥎":"softball","🏀":"basketball","🏐":"volleyball","🏈":"american-football","🏉":"rugby-football","🎾":"tennis","🥏":"flying-disc","🎳":"bowling","🏏":"cricket-game","🏑":"field-hockey","🏒":"ice-hockey","🥍":"lacrosse","🏓":"ping-pong","🏸":"badminton","🥊":"boxing-glove","🥋":"martial-arts-uniform","🥅":"goal-net","⛳":"flag-in-hole","⛸️":"ice-skate","🎣":"fishing-pole","🤿":"diving-mask","🎽":"running-shirt","🎿":"skis","🛷":"sled","🥌":"curling-stone","🎯":"bullseye","🪀":"yo-yo","🪁":"kite","🔫":"water-pistol","🎱":"pool-8-ball","🔮":"crystal-ball","🪄":"magic-wand","🎮":"video-game","🕹️":"joystick","🎰":"slot-machine","🎲":"game-die","🧩":"puzzle-piece","🧸":"teddy-bear","🪅":"pinata","🪩":"mirror-ball","🪆":"nesting-dolls","♠️":"spade-suit","♥️":"heart-suit","♦️":"diamond-suit","♣️":"club-suit","♟️":"chess-pawn","🃏":"joker","🀄":"mahjong-red-dragon","🎴":"flower-playing-cards","🎭":"performing-arts","🖼️":"framed-picture","🎨":"artist-palette","🧵":"thread","🪡":"sewing-needle","🧶":"yarn","🪢":"knot","👓":"glasses","🕶️":"sunglasses","🥽":"goggles","🥼":"lab-coat","🦺":"safety-vest","👔":"necktie","👕":"t-shirt","👖":"jeans","🧣":"scarf","🧤":"gloves","🧥":"coat","🧦":"socks","👗":"dress","👘":"kimono","🥻":"sari","🩱":"one-piece-swimsuit","🩲":"briefs","🩳":"shorts","👙":"bikini","👚":"woman-s-clothes","🪭":"folding-hand-fan","👛":"purse","👜":"handbag","👝":"clutch-bag","🛍️":"shopping-bags","🎒":"backpack","🩴":"thong-sandal","👞":"man-s-shoe","👟":"running-shoe","🥾":"hiking-boot","🥿":"flat-shoe","👠":"high-heeled-shoe","👡":"woman-s-sandal","🩰":"ballet-shoes","👢":"woman-s-boot","🪮":"hair-pick","👑":"crown","👒":"woman-s-hat","🎩":"top-hat","🎓":"graduation-cap","🧢":"billed-cap","🪖":"military-helmet","⛑️":"rescue-worker-s-helmet","📿":"prayer-beads","💄":"lipstick","💍":"ring","💎":"gem-stone","🔇":"muted-speaker","🔈":"speaker-low-volume","🔉":"speaker-medium-volume","🔊":"speaker-high-volume","📢":"loudspeaker","📣":"megaphone","📯":"postal-horn","🔔":"bell","🔕":"bell-with-slash","🎼":"musical-score","🎵":"musical-note","🎶":"musical-notes","🎙️":"studio-microphone","🎚️":"level-slider","🎛️":"control-knobs","🎤":"microphone","🎧":"headphone","📻":"radio","🎷":"saxophone","🪗":"accordion","🎸":"guitar","🎹":"musical-keyboard","🎺":"trumpet","🎻":"violin","🪕":"banjo","🥁":"drum","🪘":"long-drum","🪇":"maracas","🪈":"flute","📱":"mobile-phone","📲":"mobile-phone-with-arrow","☎️":"telephone","📞":"telephone-receiver","📟":"pager","📠":"fax-machine","🔋":"battery","🪫":"low-battery","🔌":"electric-plug","💻":"laptop","🖥️":"desktop-computer","🖨️":"printer","⌨️":"keyboard","🖱️":"computer-mouse","🖲️":"trackball","💽":"computer-disk","💾":"floppy-disk","💿":"optical-disk","📀":"dvd","🧮":"abacus","🎥":"movie-camera","🎞️":"film-frames","📽️":"film-projector","🎬":"clapper-board","📺":"television","📷":"camera","📸":"camera-with-flash","📹":"video-camera","📼":"videocassette","🔍":"magnifying-glass-tilted-left","🔎":"magnifying-glass-tilted-right","🕯️":"candle","💡":"light-bulb","🔦":"flashlight","🏮":"red-paper-lantern","🪔":"diya-lamp","📔":"notebook-with-decorative-cover","📕":"closed-book","📖":"open-book","📗":"green-book","📘":"blue-book","📙":"orange-book","📚":"books","📓":"notebook","📒":"ledger","📃":"page-with-curl","📜":"scroll","📄":"page-facing-up","📰":"newspaper","🗞️":"rolled-up-newspaper","📑":"bookmark-tabs","🔖":"bookmark","🏷️":"label","💰":"money-bag","🪙":"coin","💴":"yen-banknote","💵":"dollar-banknote","💶":"euro-banknote","💷":"pound-banknote","💸":"money-with-wings","💳":"credit-card","🧾":"receipt","💹":"chart-increasing-with-yen","✉️":"envelope","📧":"e-mail","📨":"incoming-envelope","📩":"envelope-with-arrow","📤":"outbox-tray","📥":"inbox-tray","📦":"package","📫":"closed-mailbox-with-raised-flag","📪":"closed-mailbox-with-lowered-flag","📬":"open-mailbox-with-raised-flag","📭":"open-mailbox-with-lowered-flag","📮":"postbox","🗳️":"ballot-box-with-ballot","✏️":"pencil","✒️":"black-nib","🖋️":"fountain-pen","🖊️":"pen","🖌️":"paintbrush","🖍️":"crayon","📝":"memo","💼":"briefcase","📁":"file-folder","📂":"open-file-folder","🗂️":"card-index-dividers","📅":"calendar","📆":"tear-off-calendar","🗒️":"spiral-notepad","🗓️":"spiral-calendar","📇":"card-index","📈":"chart-increasing","📉":"chart-decreasing","📊":"bar-chart","📋":"clipboard","📌":"pushpin","📍":"round-pushpin","📎":"paperclip","🖇️":"linked-paperclips","📏":"straight-ruler","📐":"triangular-ruler","✂️":"scissors","🗃️":"card-file-box","🗄️":"file-cabinet","🗑️":"wastebasket","🔒":"locked","🔓":"unlocked","🔏":"locked-with-pen","🔐":"locked-with-key","🔑":"key","🗝️":"old-key","🔨":"hammer","🪓":"axe","⛏️":"pick","⚒️":"hammer-and-pick","🛠️":"hammer-and-wrench","🗡️":"dagger","⚔️":"crossed-swords","💣":"bomb","🪃":"boomerang","🏹":"bow-and-arrow","🛡️":"shield","🪚":"carpentry-saw","🔧":"wrench","🪛":"screwdriver","🔩":"nut-and-bolt","⚙️":"gear","🗜️":"clamp","⚖️":"balance-scale","🦯":"white-cane","🔗":"link","⛓️":"chains","🪝":"hook","🧰":"toolbox","🧲":"magnet","🪜":"ladder","⚗️":"alembic","🧪":"test-tube","🧫":"petri-dish","🧬":"dna","🔬":"microscope","🔭":"telescope","📡":"satellite-antenna","💉":"syringe","🩸":"drop-of-blood","💊":"pill","🩹":"adhesive-bandage","🩼":"crutch","🩺":"stethoscope","🩻":"x-ray","🚪":"door","🛗":"elevator","🪞":"mirror","🪟":"window","🛏️":"bed","🛋️":"couch-and-lamp","🪑":"chair","🚽":"toilet","🪠":"plunger","🚿":"shower","🛁":"bathtub","🪤":"mouse-trap","🪒":"razor","🧴":"lotion-bottle","🧷":"safety-pin","🧹":"broom","🧺":"basket","🧻":"roll-of-paper","🪣":"bucket","🧼":"soap","🫧":"bubbles","🪥":"toothbrush","🧽":"sponge","🧯":"fire-extinguisher","🛒":"shopping-cart","🚬":"cigarette","⚰️":"coffin","🪦":"headstone","⚱️":"funeral-urn","🧿":"nazar-amulet","🪬":"hamsa","🗿":"moai","🪧":"placard","🪪":"identification-card","🏧":"atm-sign","🚮":"litter-in-bin-sign","🚰":"potable-water","♿":"wheelchair-symbol","🚹":"men-s-room","🚺":"women-s-room","🚻":"restroom","🚼":"baby-symbol","🚾":"water-closet","🛂":"passport-control","🛃":"customs","🛄":"baggage-claim","🛅":"left-luggage","⚠️":"warning","🚸":"children-crossing","⛔":"no-entry","🚫":"prohibited","🚳":"no-bicycles","🚭":"no-smoking","🚯":"no-littering","🚱":"non-potable-water","🚷":"no-pedestrians","📵":"no-mobile-phones","🔞":"no-one-under-eighteen","☢️":"radioactive","☣️":"biohazard","⬆️":"up-arrow","↗️":"up-right-arrow","➡️":"right-arrow","↘️":"down-right-arrow","⬇️":"down-arrow","↙️":"down-left-arrow","⬅️":"left-arrow","↖️":"up-left-arrow","↕️":"up-down-arrow","↔️":"left-right-arrow","↩️":"right-arrow-curving-left","↪️":"left-arrow-curving-right","⤴️":"right-arrow-curving-up","⤵️":"right-arrow-curving-down","🔃":"clockwise-vertical-arrows","🔄":"counterclockwise-arrows-button","🔙":"back-arrow","🔚":"end-arrow","🔛":"on-arrow","🔜":"soon-arrow","🔝":"top-arrow","🛐":"place-of-worship","⚛️":"atom-symbol","🕉️":"om","✡️":"star-of-david","☸️":"wheel-of-dharma","☯️":"yin-yang","✝️":"latin-cross","☦️":"orthodox-cross","☪️":"star-and-crescent","☮️":"peace-symbol","🕎":"menorah","🔯":"dotted-six-pointed-star","🪯":"khanda","♈":"aries","♉":"taurus","♊":"gemini","♋":"cancer","♌":"leo","♍":"virgo","♎":"libra","♏":"scorpio","♐":"sagittarius","♑":"capricorn","♒":"aquarius","♓":"pisces","⛎":"ophiuchus","🔀":"shuffle-tracks-button","🔁":"repeat-button","🔂":"repeat-single-button","▶️":"play-button","⏩":"fast-forward-button","⏭️":"next-track-button","⏯️":"play-or-pause-button","◀️":"reverse-button","⏪":"fast-reverse-button","⏮️":"last-track-button","🔼":"upwards-button","⏫":"fast-up-button","🔽":"downwards-button","⏬":"fast-down-button","⏸️":"pause-button","⏹️":"stop-button","⏺️":"record-button","⏏️":"eject-button","🎦":"cinema","🔅":"dim-button","🔆":"bright-button","📶":"antenna-bars","🛜":"wireless","📳":"vibration-mode","📴":"mobile-phone-off","♀️":"female-sign","♂️":"male-sign","⚧️":"transgender-symbol","✖️":"multiply","➕":"plus","➖":"minus","➗":"divide","🟰":"heavy-equals-sign","♾️":"infinity","‼️":"double-exclamation-mark","⁉️":"exclamation-question-mark","❓":"red-question-mark","❔":"white-question-mark","❕":"white-exclamation-mark","❗":"red-exclamation-mark","〰️":"wavy-dash","💱":"currency-exchange","💲":"heavy-dollar-sign","⚕️":"medical-symbol","♻️":"recycling-symbol","⚜️":"fleur-de-lis","🔱":"trident-emblem","📛":"name-badge","🔰":"japanese-symbol-for-beginner","⭕":"hollow-red-circle","✅":"check-mark-button","☑️":"check-box-with-check","✔️":"check-mark","❌":"cross-mark","❎":"cross-mark-button","➰":"curly-loop","➿":"double-curly-loop","〽️":"part-alternation-mark","✳️":"eight-spoked-asterisk","✴️":"eight-pointed-star","❇️":"sparkle","©️":"copyright","®️":"registered","™️":"trade-mark","#️⃣":"keycap-#","*️⃣":"keycap-*","0️⃣":"keycap-0","1️⃣":"keycap-1","2️⃣":"keycap-2","3️⃣":"keycap-3","4️⃣":"keycap-4","5️⃣":"keycap-5","6️⃣":"keycap-6","7️⃣":"keycap-7","8️⃣":"keycap-8","9️⃣":"keycap-9","🔟":"keycap-10","🔠":"input-latin-uppercase","🔡":"input-latin-lowercase","🔢":"input-numbers","🔣":"input-symbols","🔤":"input-latin-letters","🅰️":"a-button-blood-type","🆎":"ab-button-blood-type","🅱️":"b-button-blood-type","🆑":"cl-button","🆒":"cool-button","🆓":"free-button","ℹ️":"information","🆔":"id-button","Ⓜ️":"circled-m","🆕":"new-button","🆖":"ng-button","🅾️":"o-button-blood-type","🆗":"ok-button","🅿️":"p-button","🆘":"sos-button","🆙":"up-button","🆚":"vs-button","🈁":"japanese-here-button","🈂️":"japanese-service-charge-button","🈷️":"japanese-monthly-amount-button","🈶":"japanese-not-free-of-charge-button","🈯":"japanese-reserved-button","🉐":"japanese-bargain-button","🈹":"japanese-discount-button","🈚":"japanese-free-of-charge-button","🈲":"japanese-prohibited-button","🉑":"japanese-acceptable-button","🈸":"japanese-application-button","🈴":"japanese-passing-grade-button","🈳":"japanese-vacancy-button","㊗️":"japanese-congratulations-button","㊙️":"japanese-secret-button","🈺":"japanese-open-for-business-button","🈵":"japanese-no-vacancy-button","🔴":"red-circle","🟠":"orange-circle","🟡":"yellow-circle","🟢":"green-circle","🔵":"blue-circle","🟣":"purple-circle","🟤":"brown-circle","⚫":"black-circle","⚪":"white-circle","🟥":"red-square","🟧":"orange-square","🟨":"yellow-square","🟩":"green-square","🟦":"blue-square","🟪":"purple-square","🟫":"brown-square","⬛":"black-large-square","⬜":"white-large-square","◼️":"black-medium-square","◻️":"white-medium-square","◾":"black-medium-small-square","◽":"white-medium-small-square","▪️":"black-small-square","▫️":"white-small-square","🔶":"large-orange-diamond","🔷":"large-blue-diamond","🔸":"small-orange-diamond","🔹":"small-blue-diamond","🔺":"red-triangle-pointed-up","🔻":"red-triangle-pointed-down","💠":"diamond-with-a-dot","🔘":"radio-button","🔳":"white-square-button","🔲":"black-square-button","🏁":"chequered-flag","🚩":"triangular-flag","🎌":"crossed-flags","🏴":"black-flag","🏳️":"white-flag","🏳️‍🌈":"rainbow-flag","🏳️‍⚧️":"transgender-flag","🏴‍☠️":"pirate-flag","🇦🇨":"flag-ascension-island","🇦🇩":"flag-andorra","🇦🇪":"flag-united-arab-emirates","🇦🇫":"flag-afghanistan","🇦🇬":"flag-antigua-&-barbuda","🇦🇮":"flag-anguilla","🇦🇱":"flag-albania","🇦🇲":"flag-armenia","🇦🇴":"flag-angola","🇦🇶":"flag-antarctica","🇦🇷":"flag-argentina","🇦🇸":"flag-american-samoa","🇦🇹":"flag-austria","🇦🇺":"flag-australia","🇦🇼":"flag-aruba","🇦🇽":"flag-aland-islands","🇦🇿":"flag-azerbaijan","🇧🇦":"flag-bosnia-&-herzegovina","🇧🇧":"flag-barbados","🇧🇩":"flag-bangladesh","🇧🇪":"flag-belgium","🇧🇫":"flag-burkina-faso","🇧🇬":"flag-bulgaria","🇧🇭":"flag-bahrain","🇧🇮":"flag-burundi","🇧🇯":"flag-benin","🇧🇱":"flag-st-barthelemy","🇧🇲":"flag-bermuda","🇧🇳":"flag-brunei","🇧🇴":"flag-bolivia","🇧🇶":"flag-caribbean-netherlands","🇧🇷":"flag-brazil","🇧🇸":"flag-bahamas","🇧🇹":"flag-bhutan","🇧🇻":"flag-bouvet-island","🇧🇼":"flag-botswana","🇧🇾":"flag-belarus","🇧🇿":"flag-belize","🇨🇦":"flag-canada","🇨🇨":"flag-cocos-keeling-islands","🇨🇩":"flag-congo-kinshasa","🇨🇫":"flag-central-african-republic","🇨🇬":"flag-congo-brazzaville","🇨🇭":"flag-switzerland","🇨🇮":"flag-cote-d-ivoire","🇨🇰":"flag-cook-islands","🇨🇱":"flag-chile","🇨🇲":"flag-cameroon","🇨🇳":"flag-china","🇨🇴":"flag-colombia","🇨🇵":"flag-clipperton-island","🇨🇷":"flag-costa-rica","🇨🇺":"flag-cuba","🇨🇻":"flag-cape-verde","🇨🇼":"flag-curacao","🇨🇽":"flag-christmas-island","🇨🇾":"flag-cyprus","🇨🇿":"flag-czechia","🇩🇪":"flag-germany","🇩🇬":"flag-diego-garcia","🇩🇯":"flag-djibouti","🇩🇰":"flag-denmark","🇩🇲":"flag-dominica","🇩🇴":"flag-dominican-republic","🇩🇿":"flag-algeria","🇪🇦":"flag-ceuta-&-melilla","🇪🇨":"flag-ecuador","🇪🇪":"flag-estonia","🇪🇬":"flag-egypt","🇪🇭":"flag-western-sahara","🇪🇷":"flag-eritrea","🇪🇸":"flag-spain","🇪🇹":"flag-ethiopia","🇪🇺":"flag-european-union","🇫🇮":"flag-finland","🇫🇯":"flag-fiji","🇫🇰":"flag-falkland-islands","🇫🇲":"flag-micronesia","🇫🇴":"flag-faroe-islands","🇫🇷":"flag-france","🇬🇦":"flag-gabon","🇬🇧":"flag-united-kingdom","🇬🇩":"flag-grenada","🇬🇪":"flag-georgia","🇬🇫":"flag-french-guiana","🇬🇬":"flag-guernsey","🇬🇭":"flag-ghana","🇬🇮":"flag-gibraltar","🇬🇱":"flag-greenland","🇬🇲":"flag-gambia","🇬🇳":"flag-guinea","🇬🇵":"flag-guadeloupe","🇬🇶":"flag-equatorial-guinea","🇬🇷":"flag-greece","🇬🇸":"flag-south-georgia-&-south-sandwich-islands","🇬🇹":"flag-guatemala","🇬🇺":"flag-guam","🇬🇼":"flag-guinea-bissau","🇬🇾":"flag-guyana","🇭🇰":"flag-hong-kong-sar-china","🇭🇲":"flag-heard-&-mcdonald-islands","🇭🇳":"flag-honduras","🇭🇷":"flag-croatia","🇭🇹":"flag-haiti","🇭🇺":"flag-hungary","🇮🇨":"flag-canary-islands","🇮🇩":"flag-indonesia","🇮🇪":"flag-ireland","🇮🇱":"flag-israel","🇮🇲":"flag-isle-of-man","🇮🇳":"flag-india","🇮🇴":"flag-british-indian-ocean-territory","🇮🇶":"flag-iraq","🇮🇷":"flag-iran","🇮🇸":"flag-iceland","🇮🇹":"flag-italy","🇯🇪":"flag-jersey","🇯🇲":"flag-jamaica","🇯🇴":"flag-jordan","🇯🇵":"flag-japan","🇰🇪":"flag-kenya","🇰🇬":"flag-kyrgyzstan","🇰🇭":"flag-cambodia","🇰🇮":"flag-kiribati","🇰🇲":"flag-comoros","🇰🇳":"flag-st-kitts-&-nevis","🇰🇵":"flag-north-korea","🇰🇷":"flag-south-korea","🇰🇼":"flag-kuwait","🇰🇾":"flag-cayman-islands","🇰🇿":"flag-kazakhstan","🇱🇦":"flag-laos","🇱🇧":"flag-lebanon","🇱🇨":"flag-st-lucia","🇱🇮":"flag-liechtenstein","🇱🇰":"flag-sri-lanka","🇱🇷":"flag-liberia","🇱🇸":"flag-lesotho","🇱🇹":"flag-lithuania","🇱🇺":"flag-luxembourg","🇱🇻":"flag-latvia","🇱🇾":"flag-libya","🇲🇦":"flag-morocco","🇲🇨":"flag-monaco","🇲🇩":"flag-moldova","🇲🇪":"flag-montenegro","🇲🇫":"flag-st-martin","🇲🇬":"flag-madagascar","🇲🇭":"flag-marshall-islands","🇲🇰":"flag-north-macedonia","🇲🇱":"flag-mali","🇲🇲":"flag-myanmar-burma","🇲🇳":"flag-mongolia","🇲🇴":"flag-macao-sar-china","🇲🇵":"flag-northern-mariana-islands","🇲🇶":"flag-martinique","🇲🇷":"flag-mauritania","🇲🇸":"flag-montserrat","🇲🇹":"flag-malta","🇲🇺":"flag-mauritius","🇲🇻":"flag-maldives","🇲🇼":"flag-malawi","🇲🇽":"flag-mexico","🇲🇾":"flag-malaysia","🇲🇿":"flag-mozambique","🇳🇦":"flag-namibia","🇳🇨":"flag-new-caledonia","🇳🇪":"flag-niger","🇳🇫":"flag-norfolk-island","🇳🇬":"flag-nigeria","🇳🇮":"flag-nicaragua","🇳🇱":"flag-netherlands","🇳🇴":"flag-norway","🇳🇵":"flag-nepal","🇳🇷":"flag-nauru","🇳🇺":"flag-niue","🇳🇿":"flag-new-zealand","🇴🇲":"flag-oman","🇵🇦":"flag-panama","🇵🇪":"flag-peru","🇵🇫":"flag-french-polynesia","🇵🇬":"flag-papua-new-guinea","🇵🇭":"flag-philippines","🇵🇰":"flag-pakistan","🇵🇱":"flag-poland","🇵🇲":"flag-st-pierre-&-miquelon","🇵🇳":"flag-pitcairn-islands","🇵🇷":"flag-puerto-rico","🇵🇸":"flag-palestinian-territories","🇵🇹":"flag-portugal","🇵🇼":"flag-palau","🇵🇾":"flag-paraguay","🇶🇦":"flag-qatar","🇷🇪":"flag-reunion","🇷🇴":"flag-romania","🇷🇸":"flag-serbia","🇷🇺":"flag-russia","🇷🇼":"flag-rwanda","🇸🇦":"flag-saudi-arabia","🇸🇧":"flag-solomon-islands","🇸🇨":"flag-seychelles","🇸🇩":"flag-sudan","🇸🇪":"flag-sweden","🇸🇬":"flag-singapore","🇸🇭":"flag-st-helena","🇸🇮":"flag-slovenia","🇸🇯":"flag-svalbard-&-jan-mayen","🇸🇰":"flag-slovakia","🇸🇱":"flag-sierra-leone","🇸🇲":"flag-san-marino","🇸🇳":"flag-senegal","🇸🇴":"flag-somalia","🇸🇷":"flag-suriname","🇸🇸":"flag-south-sudan","🇸🇹":"flag-sao-tome-&-principe","🇸🇻":"flag-el-salvador","🇸🇽":"flag-sint-maarten","🇸🇾":"flag-syria","🇸🇿":"flag-eswatini","🇹🇦":"flag-tristan-da-cunha","🇹🇨":"flag-turks-&-caicos-islands","🇹🇩":"flag-chad","🇹🇫":"flag-french-southern-territories","🇹🇬":"flag-togo","🇹🇭":"flag-thailand","🇹🇯":"flag-tajikistan","🇹🇰":"flag-tokelau","🇹🇱":"flag-timor-leste","🇹🇲":"flag-turkmenistan","🇹🇳":"flag-tunisia","🇹🇴":"flag-tonga","🇹🇷":"flag-turkey","🇹🇹":"flag-trinidad-&-tobago","🇹🇻":"flag-tuvalu","🇹🇼":"flag-taiwan","🇹🇿":"flag-tanzania","🇺🇦":"flag-ukraine","🇺🇬":"flag-uganda","🇺🇲":"flag-us-outlying-islands","🇺🇳":"flag-united-nations","🇺🇸":"flag-united-states","🇺🇾":"flag-uruguay","🇺🇿":"flag-uzbekistan","🇻🇦":"flag-vatican-city","🇻🇨":"flag-st-vincent-&-grenadines","🇻🇪":"flag-venezuela","🇻🇬":"flag-british-virgin-islands","🇻🇮":"flag-us-virgin-islands","🇻🇳":"flag-vietnam","🇻🇺":"flag-vanuatu","🇼🇫":"flag-wallis-&-futuna","🇼🇸":"flag-samoa","🇽🇰":"flag-kosovo","🇾🇪":"flag-yemen","🇾🇹":"flag-mayotte","🇿🇦":"flag-south-africa","🇿🇲":"flag-zambia","🇿🇼":"flag-zimbabwe","🏴󠁧󠁢󠁥󠁮󠁧󠁿":"flag-england","🏴󠁧󠁢󠁳󠁣󠁴󠁿":"flag-scotland","🏴󠁧󠁢󠁷󠁬󠁳󠁿":"flag-wales"}
+},{}],123:[function(require,module,exports){
+module.exports={"10":["🔟"],"grin":["😀","😃","😄","😆","😅","😺","😸"],"face":["😀","😃","😄","😁","😆","😅","😂","🙂","🙃","🫠","😉","😊","😇","🥰","😍","😘","😗","☺️","😚","😙","🥲","😋","😛","😜","🤪","😝","🤑","🤗","🤭","🫢","🫣","🤫","🤔","🫡","🤐","🤨","😐","😑","😶","🫥","😶‍🌫️","😏","😒","🙄","😬","😮‍💨","🤥","🫨","😌","😔","😪","🤤","😴","😷","🤒","🤕","🤢","🤮","🤧","🥵","🥶","🥴","😵","😵‍💫","🤠","🥳","🥸","😎","🤓","🧐","😕","🫤","😟","🙁","☹️","😮","😯","😲","😳","🥺","🥹","😦","😧","😨","😰","😥","😢","😭","😱","😖","😣","😞","😓","😩","😫","🥱","😤","😡","😠","🤬","😈","👿","🤡","🤛","🤜","🐵","🐶","🐱","🐯","🐴","🐮","🐷","🐭","🐰","🐥","🐲","🌚","🌛","🌜","🌝","🌞","🌬️","📄"],"big":["😃"],"eyes":["😃","😄","😁","😊","😍","😚","😙","🫢","🙄","😵","😵‍💫","😸","😻","👀"],"smile":["😄","😁","🙂","😊","😇","🥰","😍","☺️","😙","🥲","🤗","😎","😈","😸","😻","😼"],"beam":["😁"],"squint":["😆","😝"],"sweat":["😅","😰","😓","💦"],"roll":["🤣","🙄","🧻"],"on":["🤣","🤬","❤️‍🔥","🍖","⛱️","🔛"],"the":["🤣","🤘","🫵"],"floor":["🤣"],"laugh":["🤣"],"tears":["😂","🥹","😹"],"joy":["😂","😹"],"slightly":["🙂","🙁"],"upside":["🙃"],"down":["🙃","🫳","👇","👎","↘️","⬇️","↙️","↕️","⤵️","⏬","🔻"],"melt":["🫠"],"wink":["😉","😜"],"halo":["😇"],"hearts":["🥰","💞","💕"],"heart":["😍","😻","💘","💝","💖","💗","💓","💟","❣️","💔","❤️‍🔥","❤️‍🩹","❤️","🩷","🧡","💛","💚","💙","🩵","💜","🤎","🖤","🩶","🤍","🫶","🫀","💑","👩‍❤️‍👨","👨‍❤️‍👨","👩‍❤️‍👩","♥️"],"star":["🤩","⭐","🌟","🌠","✡️","☪️","🔯","✴️"],"struck":["🤩"],"blow":["😘"],"kiss":["😘","😗","😚","😙","😽","💋","💏","👩‍❤️‍💋‍👨","👨‍❤️‍💋‍👨","👩‍❤️‍💋‍👩"],"closed":["😚","🌂","📕","📫","📪"],"tear":["🥲","📆"],"savore":["😋"],"food":["😋","🥘","🍲","🥫"],"tongue":["😛","😜","😝","👅"],"zany":["🤪"],"money":["🤑","💰","💸"],"mouth":["🤑","🤭","🫢","🤐","😶","🫤","😮","😦","🤬","👄"],"open":["🤗","🫢","😮","😦","👐","📖","📬","📭","📂","🈺"],"hands":["🤗","👏","🙌","🫶","👐","🙏","🧑‍🤝‍🧑","👭","👫","👬"],"hand":["🤭","🫢","👋","🤚","🖐️","✋","🫱","🫲","🫳","🫴","🫷","🫸","👌","🤏","✌️","🫰","🤙","✍️","💁","💁‍♂️","💁‍♀️","🙋","🙋‍♂️","🙋‍♀️","🪭"],"over":["🤭","🫢","🌄"],"and":["🫢","☠️","🫰","👫","🍽️","🍴","⛈️","⚒️","🛠️","🏹","🔩","🛋️","☪️"],"peek":["🫣"],"eye":["🫣","👁️‍🗨️","👁️"],"shush":["🤫"],"think":["🤔"],"salute":["🫡","🖖"],"zipper":["🤐"],"raised":["🤨","🤚","✋","✊","📫","📬"],"eyebrow":["🤨"],"neutral":["😐"],"expressionless":["😑"],"without":["😶","🍵","⛄"],"dotted":["🫥","🔯"],"line":["🫥"],"in":["😶‍🌫️","😱","👁️‍🗨️","🤵","🤵‍♂️","🤵‍♀️","🧑‍🦼","👨‍🦼","👩‍🦼","🧑‍🦽","👨‍🦽","👩‍🦽","🕴️","🧖","🧖‍♂️","🧖‍♀️","🧘","🧘‍♂️","🧘‍♀️","🛌","👤","👥","🍃","⛳","🚮"],"clouds":["😶‍🌫️"],"smirk":["😏"],"unamused":["😒"],"grimace":["😬"],"exhale":["😮‍💨"],"lying":["🤥"],"shake":["🫨"],"relieved":["😌","😥"],"pensive":["😔"],"sleepy":["😪"],"drool":["🤤"],"sleep":["😴"],"medical":["😷","⚕️"],"mask":["😷","🤿"],"thermometer":["🤒","🌡️"],"head":["🤕","🤯","🗣️"],"bandage":["🤕","🩹"],"nauseated":["🤢"],"vomite":["🤮"],"sneez":["🤧"],"hot":["🥵","🌶️","🌭","☕","♨️"],"cold":["🥶"],"woozy":["🥴"],"crossed":["😵","🤞","🫰","⚔️","🎌"],"out":["😵"],"spiral":["😵‍💫","🐚","🗒️","🗓️"],"explode":["🤯"],"cowboy":["🤠"],"hat":["🤠","👒","🎩"],"party":["🥳","🎉"],"disguised":["🥸"],"sunglasses":["😎","🕶️"],"nerd":["🤓"],"monocle":["🧐"],"confused":["😕"],"diagonal":["🫤"],"worried":["😟"],"frown":["🙁","☹️","😦","🙍","🙍‍♂️","🙍‍♀️"],"hushed":["😯"],"astonished":["😲"],"flushed":["😳"],"plead":["🥺"],"hold":["🥹","🧑‍🤝‍🧑","👭","👫","👬"],"back":["🥹","🤚","🔙"],"anguished":["😧"],"fearful":["😨"],"anxious":["😰"],"sad":["😥"],"but":["😥"],"cry":["😢","😭","😿"],"loudly":["😭"],"scream":["😱"],"fear":["😱"],"confounded":["😖"],"persever":["😣"],"disappointed":["😞"],"downcast":["😓"],"weary":["😩","🙀"],"tired":["😫"],"yawn":["🥱"],"steam":["😤","🍜"],"from":["😤"],"nose":["😤","👃","🐽"],"enraged":["😡"],"angry":["😠","👿"],"symbols":["🤬","🔣"],"horns":["😈","👿","🤘"],"skull":["💀","☠️"],"crossbones":["☠️"],"pile":["💩"],"poo":["💩"],"clown":["🤡"],"ogre":["👹"],"goblin":["👺"],"ghost":["👻"],"alien":["👽","👾"],"monster":["👾"],"robot":["🤖"],"cat":["😺","😸","😹","😻","😼","😽","🙀","😿","😾","🐱","🐈","🐈‍⬛"],"wry":["😼"],"pout":["😾","🙎","🙎‍♂️","🙎‍♀️"],"see":["🙈"],"no":["🙈","🙉","🙊","🙅","🙅‍♂️","🙅‍♀️","⛔","🚳","🚭","🚯","🚷","📵","🔞","🈵"],"evil":["🙈","🙉","🙊"],"monkey":["🙈","🙉","🙊","🐵","🐒"],"hear":["🙉","🦻"],"speak":["🙊","🗣️"],"love":["💌","🤟","🏩"],"letter":["💌"],"arrow":["💘","📲","📩","🏹","⬆️","↗️","➡️","↘️","⬇️","↙️","⬅️","↖️","↕️","↔️","↩️","↪️","⤴️","⤵️","🔙","🔚","🔛","🔜","🔝"],"ribbon":["💝","🎀","🎗️"],"sparkle":["💖","❇️"],"grow":["💗"],"beat":["💓"],"revolve":["💞"],"two":["💕","🐫","🕑","🕝"],"decoration":["💟","🎍"],"exclamation":["❣️","‼️","⁉️","❕","❗"],"broken":["💔"],"fire":["❤️‍🔥","🚒","🔥","🧯"],"mend":["❤️‍🩹"],"red":["❤️","👨‍🦰","👩‍🦰","🧑‍🦰","🍎","🧧","🀄","🏮","❓","❗","⭕","🔴","🟥","🔺","🔻"],"pink":["🩷"],"orange":["🧡","📙","🟠","🟧","🔶","🔸"],"yellow":["💛","🟡","🟨"],"green":["💚","🍏","🥬","🥗","📗","🟢","🟩"],"blue":["💙","🩵","📘","🔵","🟦","🔷","🔹"],"light":["🩵","🚈","🚨","🚥","🚦","💡"],"purple":["💜","🟣","🟪"],"brown":["🤎","🟤","🟫"],"black":["🖤","🐈‍⬛","🐦‍⬛","✒️","⚫","⬛","◼️","◾","▪️","🔲","🏴"],"grey":["🩶"],"white":["🤍","👨‍🦳","👩‍🦳","🧑‍🦳","🧑‍🦯","👨‍🦯","👩‍🦯","💮","🦯","❔","❕","⚪","⬜","◻️","◽","▫️","🔳","🏳️"],"mark":["💋","‼️","⁉️","❓","❔","❕","❗","✅","✔️","❌","❎","〽️","™️"],"hundred":["💯"],"points":["💯"],"anger":["💢","🗯️"],"symbol":["💢","♿","🚼","⚛️","☮️","⚧️","⚕️","♻️","🔰"],"collision":["💥"],"dizzy":["💫"],"droplets":["💦"],"dash":["💨","〰️"],"away":["💨"],"hole":["🕳️","⛳"],"speech":["💬","👁️‍🗨️","🗨️"],"balloon":["💬","💭","🎈"],"bubble":["👁️‍🗨️","🗨️","🗯️","🧋"],"left":["🗨️","👈","🤛","🔍","🛅","↙️","⬅️","↖️","↔️","↩️","↪️"],"right":["🗯️","👉","🤜","🔎","↗️","➡️","↘️","↔️","↩️","↪️","⤴️","⤵️"],"thought":["💭"],"zzz":["💤"],"wave":["👋","🌊"],"fingers":["🖐️","🤌","🤞"],"splayed":["🖐️"],"vulcan":["🖖"],"rightwards":["🫱","🫸"],"leftwards":["🫲","🫷"],"palm":["🫳","🫴","🌴"],"up":["🫴","👆","☝️","👍","🤲","📄","🗞️","⬆️","↗️","↖️","↕️","⤴️","⏫","🆙","🔺"],"push":["🫷","🫸"],"ok":["👌","🙆","🙆‍♂️","🙆‍♀️","🆗"],"pinched":["🤌"],"pinch":["🤏"],"victory":["✌️"],"index":["🫰","👈","👉","👆","👇","☝️","🫵","🗂️","📇"],"finger":["🫰","🖕"],"thumb":["🫰"],"you":["🤟"],"gesture":["🤟","🙅","🙅‍♂️","🙅‍♀️","🙆","🙆‍♂️","🙆‍♀️"],"sign":["🤘","🛑","🏧","🚮","♀️","♂️","🟰","💲"],"call":["🤙"],"me":["🤙"],"backhand":["👈","👉","👆","👇"],"point":["👈","👉","👆","👇","☝️","🫵"],"middle":["🖕"],"at":["🫵","🌆","🌉"],"viewer":["🫵"],"thumbs":["👍","👎"],"fist":["✊","👊","🤛","🤜"],"oncome":["👊","🚍","🚔","🚖","🚘"],"clap":["👏"],"raise":["🙌","🙋","🙋‍♂️","🙋‍♀️"],"palms":["🤲"],"together":["🤲"],"handshake":["🤝"],"folded":["🙏"],"write":["✍️"],"nail":["💅"],"polish":["💅"],"selfie":["🤳"],"flexed":["💪"],"biceps":["💪"],"mechanical":["🦾","🦿"],"arm":["🦾"],"leg":["🦿","🦵","🍗"],"foot":["🦶"],"ear":["👂","🦻","🌽"],"aid":["🦻"],"brain":["🧠"],"anatomical":["🫀"],"lungs":["🫁"],"tooth":["🦷"],"bone":["🦴","🍖"],"bite":["🫦"],"lip":["🫦"],"baby":["👶","👩‍🍼","👨‍🍼","🧑‍🍼","👼","🐤","🐥","🍼","🚼"],"child":["🧒"],"boy":["👦","👨‍👩‍👦","👨‍👩‍👧‍👦","👨‍👩‍👦‍👦","👨‍👨‍👦","👨‍👨‍👧‍👦","👨‍👨‍👦‍👦","👩‍👩‍👦","👩‍👩‍👧‍👦","👩‍👩‍👦‍👦","👨‍👦","👨‍👦‍👦","👨‍👧‍👦","👩‍👦","👩‍👦‍👦","👩‍👧‍👦"],"girl":["👧","👨‍👩‍👧","👨‍👩‍👧‍👦","👨‍👩‍👧‍👧","👨‍👨‍👧","👨‍👨‍👧‍👦","👨‍👨‍👧‍👧","👩‍👩‍👧","👩‍👩‍👧‍👦","👩‍👩‍👧‍👧","👨‍👧","👨‍👧‍👦","👨‍👧‍👧","👩‍👧","👩‍👧‍👦","👩‍👧‍👧"],"person":["🧑","👱","🧔","🧑‍🦰","🧑‍🦱","🧑‍🦳","🧑‍🦲","🧓","🙍","🙎","🙅","🙆","💁","🙋","🧏","🙇","🤦","🤷","🫅","👳","👲","🤵","👰","🫄","🧑‍🍼","💆","💇","🚶","🧍","🧎","🧑‍🦯","🧑‍🦼","🧑‍🦽","🏃","🕴️","🧖","🧗","🤺","🏌️","🏄","🚣","🏊","⛹️","🏋️","🚴","🚵","🤸","🤽","🤾","🤹","🧘","🛀","🛌"],"blond":["👱","👱‍♀️","👱‍♂️"],"hair":["👱","👨‍🦰","👨‍🦱","👨‍🦳","👩‍🦰","🧑‍🦰","👩‍🦱","🧑‍🦱","👩‍🦳","🧑‍🦳","👱‍♀️","👱‍♂️","🪮"],"man":["👨","🧔‍♂️","👨‍🦰","👨‍🦱","👨‍🦳","👨‍🦲","👱‍♂️","👴","🙍‍♂️","🙎‍♂️","🙅‍♂️","🙆‍♂️","💁‍♂️","🙋‍♂️","🧏‍♂️","🙇‍♂️","🤦‍♂️","🤷‍♂️","👨‍⚕️","👨‍🎓","👨‍🏫","👨‍⚖️","👨‍🌾","👨‍🍳","👨‍🔧","👨‍🏭","👨‍💼","👨‍🔬","👨‍💻","👨‍🎤","👨‍🎨","👨‍✈️","👨‍🚀","👨‍🚒","👮‍♂️","🕵️‍♂️","💂‍♂️","👷‍♂️","👳‍♂️","🤵‍♂️","👰‍♂️","🫃","👨‍🍼","🦸‍♂️","🦹‍♂️","🧙‍♂️","🧚‍♂️","🧛‍♂️","🧝‍♂️","🧞‍♂️","🧟‍♂️","💆‍♂️","💇‍♂️","🚶‍♂️","🧍‍♂️","🧎‍♂️","👨‍🦯","👨‍🦼","👨‍🦽","🏃‍♂️","🕺","🧖‍♂️","🧗‍♂️","🏌️‍♂️","🏄‍♂️","🚣‍♂️","🏊‍♂️","⛹️‍♂️","🏋️‍♂️","🚴‍♂️","🚵‍♂️","🤸‍♂️","🤽‍♂️","🤾‍♂️","🤹‍♂️","🧘‍♂️","👫","👩‍❤️‍💋‍👨","👨‍❤️‍💋‍👨","👩‍❤️‍👨","👨‍❤️‍👨","👨‍👩‍👦","👨‍👩‍👧","👨‍👩‍👧‍👦","👨‍👩‍👦‍👦","👨‍👩‍👧‍👧","👨‍👨‍👦","👨‍👨‍👧","👨‍👨‍👧‍👦","👨‍👨‍👦‍👦","👨‍👨‍👧‍👧","👨‍👦","👨‍👦‍👦","👨‍👧","👨‍👧‍👦","👨‍👧‍👧","👞","🇮🇲"],"beard":["🧔","🧔‍♂️","🧔‍♀️"],"woman":["🧔‍♀️","👩","👩‍🦰","👩‍🦱","👩‍🦳","👩‍🦲","👱‍♀️","👵","🙍‍♀️","🙎‍♀️","🙅‍♀️","🙆‍♀️","💁‍♀️","🙋‍♀️","🧏‍♀️","🙇‍♀️","🤦‍♀️","🤷‍♀️","👩‍⚕️","👩‍🎓","👩‍🏫","👩‍⚖️","👩‍🌾","👩‍🍳","👩‍🔧","👩‍🏭","👩‍💼","👩‍🔬","👩‍💻","👩‍🎤","👩‍🎨","👩‍✈️","👩‍🚀","👩‍🚒","👮‍♀️","🕵️‍♀️","💂‍♀️","👷‍♀️","👳‍♀️","🧕","🤵‍♀️","👰‍♀️","🤰","👩‍🍼","🦸‍♀️","🦹‍♀️","🧙‍♀️","🧚‍♀️","🧛‍♀️","🧝‍♀️","🧞‍♀️","🧟‍♀️","💆‍♀️","💇‍♀️","🚶‍♀️","🧍‍♀️","🧎‍♀️","👩‍🦯","👩‍🦼","👩‍🦽","🏃‍♀️","💃","🧖‍♀️","🧗‍♀️","🏌️‍♀️","🏄‍♀️","🚣‍♀️","🏊‍♀️","⛹️‍♀️","🏋️‍♀️","🚴‍♀️","🚵‍♀️","🤸‍♀️","🤽‍♀️","🤾‍♀️","🤹‍♀️","🧘‍♀️","👫","👩‍❤️‍💋‍👨","👩‍❤️‍💋‍👩","👩‍❤️‍👨","👩‍❤️‍👩","👨‍👩‍👦","👨‍👩‍👧","👨‍👩‍👧‍👦","👨‍👩‍👦‍👦","👨‍👩‍👧‍👧","👩‍👩‍👦","👩‍👩‍👧","👩‍👩‍👧‍👦","👩‍👩‍👦‍👦","👩‍👩‍👧‍👧","👩‍👦","👩‍👦‍👦","👩‍👧","👩‍👧‍👦","👩‍👧‍👧","👚","👡","👢","👒"],"curly":["👨‍🦱","👩‍🦱","🧑‍🦱","➰","➿"],"bald":["👨‍🦲","👩‍🦲","🧑‍🦲"],"older":["🧓"],"old":["👴","👵","🗝️"],"tip":["💁","💁‍♂️","💁‍♀️"],"deaf":["🧏","🧏‍♂️","🧏‍♀️"],"bow":["🙇","🙇‍♂️","🙇‍♀️","🏹"],"facepalm":["🤦","🤦‍♂️","🤦‍♀️"],"shrug":["🤷","🤷‍♂️","🤷‍♀️"],"health":["🧑‍⚕️","👨‍⚕️","👩‍⚕️"],"worker":["🧑‍⚕️","👨‍⚕️","👩‍⚕️","🧑‍🏭","👨‍🏭","👩‍🏭","🧑‍💼","👨‍💼","👩‍💼","👷","👷‍♂️","👷‍♀️","⛑️"],"student":["🧑‍🎓","👨‍🎓","👩‍🎓"],"teacher":["🧑‍🏫","👨‍🏫","👩‍🏫"],"judge":["🧑‍⚖️","👨‍⚖️","👩‍⚖️"],"farmer":["🧑‍🌾","👨‍🌾","👩‍🌾"],"cook":["🧑‍🍳","👨‍🍳","👩‍🍳","🍳","🇨🇰"],"mechanic":["🧑‍🔧","👨‍🔧","👩‍🔧"],"factory":["🧑‍🏭","👨‍🏭","👩‍🏭","🏭"],"office":["🧑‍💼","👨‍💼","👩‍💼","🏢","🏣","🏤"],"scientist":["🧑‍🔬","👨‍🔬","👩‍🔬"],"technologist":["🧑‍💻","👨‍💻","👩‍💻"],"singer":["🧑‍🎤","👨‍🎤","👩‍🎤"],"artist":["🧑‍🎨","👨‍🎨","👩‍🎨","🎨"],"pilot":["🧑‍✈️","👨‍✈️","👩‍✈️"],"astronaut":["🧑‍🚀","👨‍🚀","👩‍🚀"],"firefighter":["🧑‍🚒","👨‍🚒","👩‍🚒"],"police":["👮","👮‍♂️","👮‍♀️","🚓","🚔","🚨"],"officer":["👮","👮‍♂️","👮‍♀️"],"detective":["🕵️","🕵️‍♂️","🕵️‍♀️"],"guard":["💂","💂‍♂️","💂‍♀️"],"ninja":["🥷"],"construction":["👷","👷‍♂️","👷‍♀️","🏗️","🚧"],"crown":["🫅","👑"],"prince":["🤴"],"princess":["👸"],"wear":["👳","👳‍♂️","👳‍♀️"],"turban":["👳","👳‍♂️","👳‍♀️"],"skullcap":["👲"],"headscarf":["🧕"],"tuxedo":["🤵","🤵‍♂️","🤵‍♀️"],"veil":["👰","👰‍♂️","👰‍♀️"],"pregnant":["🤰","🫃","🫄"],"breast":["🤱"],"feed":["🤱","👩‍🍼","👨‍🍼","🧑‍🍼"],"angel":["👼"],"santa":["🎅"],"claus":["🎅","🤶","🧑‍🎄"],"mrs":["🤶"],"mx":["🧑‍🎄"],"superhero":["🦸","🦸‍♂️","🦸‍♀️"],"supervillain":["🦹","🦹‍♂️","🦹‍♀️"],"mage":["🧙","🧙‍♂️","🧙‍♀️"],"fairy":["🧚","🧚‍♂️","🧚‍♀️"],"vampire":["🧛","🧛‍♂️","🧛‍♀️"],"merperson":["🧜"],"merman":["🧜‍♂️"],"mermaid":["🧜‍♀️"],"elf":["🧝","🧝‍♂️","🧝‍♀️"],"genie":["🧞","🧞‍♂️","🧞‍♀️"],"zombie":["🧟","🧟‍♂️","🧟‍♀️"],"troll":["🧌"],"gett":["💆","💆‍♂️","💆‍♀️","💇","💇‍♂️","💇‍♀️"],"massage":["💆","💆‍♂️","💆‍♀️"],"haircut":["💇","💇‍♂️","💇‍♀️"],"walk":["🚶","🚶‍♂️","🚶‍♀️"],"stand":["🧍","🧍‍♂️","🧍‍♀️"],"kneel":["🧎","🧎‍♂️","🧎‍♀️"],"cane":["🧑‍🦯","👨‍🦯","👩‍🦯","🦯"],"motorized":["🧑‍🦼","👨‍🦼","👩‍🦼","🦼"],"wheelchair":["🧑‍🦼","👨‍🦼","👩‍🦼","🧑‍🦽","👨‍🦽","👩‍🦽","🦽","🦼","♿"],"manual":["🧑‍🦽","👨‍🦽","👩‍🦽","🦽"],"run":["🏃","🏃‍♂️","🏃‍♀️","🎽","👟"],"dance":["💃","🕺"],"suit":["🕴️","♠️","♥️","♦️","♣️"],"levitate":["🕴️"],"people":["👯","🤼","🧑‍🤝‍🧑","🫂"],"bunny":["👯","👯‍♂️","👯‍♀️"],"ears":["👯","👯‍♂️","👯‍♀️"],"men":["👯‍♂️","🤼‍♂️","👬","🚹"],"women":["👯‍♀️","🤼‍♀️","👭","🚺"],"steamy":["🧖","🧖‍♂️","🧖‍♀️"],"room":["🧖","🧖‍♂️","🧖‍♀️","🚹","🚺"],"climb":["🧗","🧗‍♂️","🧗‍♀️"],"fence":["🤺"],"horse":["🏇","🐴","🐎","🎠"],"race":["🏇","🏎️"],"skier":["⛷️"],"snowboarder":["🏂"],"golf":["🏌️","🏌️‍♂️","🏌️‍♀️"],"surf":["🏄","🏄‍♂️","🏄‍♀️"],"row":["🚣","🚣‍♂️","🚣‍♀️"],"boat":["🚣","🚣‍♂️","🚣‍♀️","🛥️"],"swim":["🏊","🏊‍♂️","🏊‍♀️"],"bounce":["⛹️","⛹️‍♂️","⛹️‍♀️"],"ball":["⛹️","⛹️‍♂️","⛹️‍♀️","🍙","🎊","⚽","🎱","🔮","🪩"],"lift":["🏋️","🏋️‍♂️","🏋️‍♀️"],"weights":["🏋️","🏋️‍♂️","🏋️‍♀️"],"bike":["🚴","🚴‍♂️","🚴‍♀️","🚵","🚵‍♂️","🚵‍♀️"],"mountain":["🚵","🚵‍♂️","🚵‍♀️","🏔️","⛰️","🚞","🚠"],"cartwheel":["🤸","🤸‍♂️","🤸‍♀️"],"wrestle":["🤼","🤼‍♂️","🤼‍♀️"],"play":["🤽","🤽‍♂️","🤽‍♀️","🤾","🤾‍♂️","🤾‍♀️","🎴","▶️","⏯️"],"water":["🤽","🤽‍♂️","🤽‍♀️","🐃","🌊","🔫","🚰","🚾","🚱"],"polo":["🤽","🤽‍♂️","🤽‍♀️"],"handball":["🤾","🤾‍♂️","🤾‍♀️"],"juggle":["🤹","🤹‍♂️","🤹‍♀️"],"lotus":["🧘","🧘‍♂️","🧘‍♀️","🪷"],"position":["🧘","🧘‍♂️","🧘‍♀️"],"take":["🛀"],"bath":["🛀"],"bed":["🛌","🛏️"],"couple":["💑","👩‍❤️‍👨","👨‍❤️‍👨","👩‍❤️‍👩"],"family":["👪","👨‍👩‍👦","👨‍👩‍👧","👨‍👩‍👧‍👦","👨‍👩‍👦‍👦","👨‍👩‍👧‍👧","👨‍👨‍👦","👨‍👨‍👧","👨‍👨‍👧‍👦","👨‍👨‍👦‍👦","👨‍👨‍👧‍👧","👩‍👩‍👦","👩‍👩‍👧","👩‍👩‍👧‍👦","👩‍👩‍👦‍👦","👩‍👩‍👧‍👧","👨‍👦","👨‍👦‍👦","👨‍👧","👨‍👧‍👦","👨‍👧‍👧","👩‍👦","👩‍👦‍👦","👩‍👧","👩‍👧‍👦","👩‍👧‍👧"],"bust":["👤"],"silhouette":["👤","👥"],"busts":["👥"],"hug":["🫂"],"footprints":["👣"],"gorilla":["🦍"],"orangutan":["🦧"],"dog":["🐶","🐕","🦮","🐕‍🦺","🌭"],"guide":["🦮"],"service":["🐕‍🦺","🈂️"],"poodle":["🐩"],"wolf":["🐺"],"fox":["🦊"],"raccoon":["🦝"],"lion":["🦁"],"tiger":["🐯","🐅"],"leopard":["🐆"],"moose":["🫎"],"donkey":["🫏"],"unicorn":["🦄"],"zebra":["🦓"],"deer":["🦌"],"bison":["🦬"],"cow":["🐮","🐄"],"ox":["🐂"],"buffalo":["🐃"],"pig":["🐷","🐖","🐽"],"boar":["🐗"],"ram":["🐏"],"ewe":["🐑"],"goat":["🐐"],"camel":["🐪","🐫"],"hump":["🐫"],"llama":["🦙"],"giraffe":["🦒"],"elephant":["🐘"],"mammoth":["🦣"],"rhinoceros":["🦏"],"hippopotamus":["🦛"],"mouse":["🐭","🐁","🖱️","🪤"],"rat":["🐀"],"hamster":["🐹"],"rabbit":["🐰","🐇"],"chipmunk":["🐿️"],"beaver":["🦫"],"hedgehog":["🦔"],"bat":["🦇"],"bear":["🐻","🐻‍❄️","🧸"],"polar":["🐻‍❄️"],"koala":["🐨"],"panda":["🐼"],"sloth":["🦥"],"otter":["🦦"],"skunk":["🦨"],"kangaroo":["🦘"],"badger":["🦡"],"paw":["🐾"],"prints":["🐾"],"turkey":["🦃","🇹🇷"],"chicken":["🐔"],"rooster":["🐓"],"hatch":["🐣"],"chick":["🐣","🐤","🐥"],"front":["🐥"],"bird":["🐦","🐦‍⬛"],"penguin":["🐧"],"dove":["🕊️"],"eagle":["🦅"],"duck":["🦆"],"swan":["🦢"],"owl":["🦉"],"dodo":["🦤"],"feather":["🪶"],"flamingo":["🦩"],"peacock":["🦚"],"parrot":["🦜"],"wing":["🪽"],"goose":["🪿"],"frog":["🐸"],"crocodile":["🐊"],"turtle":["🐢"],"lizard":["🦎"],"snake":["🐍"],"dragon":["🐲","🐉","🀄"],"sauropod":["🦕"],"rex":["🦖"],"spout":["🐳"],"whale":["🐳","🐋"],"dolphin":["🐬"],"seal":["🦭"],"fish":["🐟","🐠","🍥","🎣"],"tropical":["🐠","🍹"],"blowfish":["🐡"],"shark":["🦈"],"octopus":["🐙"],"shell":["🐚"],"coral":["🪸"],"jellyfish":["🪼"],"snail":["🐌"],"butterfly":["🦋"],"bug":["🐛"],"ant":["🐜"],"honeybee":["🐝"],"beetle":["🪲","🐞"],"lady":["🐞"],"cricket":["🦗","🏏"],"cockroach":["🪳"],"spider":["🕷️","🕸️"],"web":["🕸️"],"scorpion":["🦂"],"mosquito":["🦟"],"fly":["🪰","🛸","🥏"],"worm":["🪱"],"microbe":["🦠"],"bouquet":["💐"],"cherry":["🌸"],"blossom":["🌸","🌼"],"flower":["💮","🥀","🎴"],"rosette":["🏵️"],"rose":["🌹"],"wilted":["🥀"],"hibiscus":["🌺"],"sunflower":["🌻"],"tulip":["🌷"],"hyacinth":["🪻"],"seedle":["🌱"],"potted":["🪴"],"plant":["🪴"],"evergreen":["🌲"],"tree":["🌲","🌳","🌴","🎄","🎋"],"deciduous":["🌳"],"cactus":["🌵"],"sheaf":["🌾"],"rice":["🌾","🍘","🍙","🍚","🍛"],"herb":["🌿"],"shamrock":["☘️"],"four":["🍀","🕓","🕟"],"leaf":["🍀","🍁","🍂","🍃"],"clover":["🍀"],"maple":["🍁"],"fallen":["🍂"],"flutter":["🍃"],"wind":["🍃","🌬️","🎐"],"empty":["🪹"],"nest":["🪹","🪺","🪆"],"eggs":["🪺"],"mushroom":["🍄"],"grapes":["🍇"],"melon":["🍈"],"watermelon":["🍉"],"tangerine":["🍊"],"lemon":["🍋"],"banana":["🍌"],"pineapple":["🍍"],"mango":["🥭"],"apple":["🍎","🍏"],"pear":["🍐"],"peach":["🍑"],"cherries":["🍒"],"strawberry":["🍓"],"blueberries":["🫐"],"kiwi":["🥝"],"fruit":["🥝"],"tomato":["🍅"],"olive":["🫒"],"coconut":["🥥"],"avocado":["🥑"],"eggplant":["🍆"],"potato":["🥔","🍠"],"carrot":["🥕"],"corn":["🌽"],"pepper":["🌶️","🫑"],"bell":["🫑","🛎️","🔔","🔕"],"cucumber":["🥒"],"leafy":["🥬"],"broccoli":["🥦"],"garlic":["🧄"],"onion":["🧅"],"peanuts":["🥜"],"beans":["🫘"],"chestnut":["🌰"],"ginger":["🫚"],"root":["🫚"],"pea":["🫛"],"pod":["🫛"],"bread":["🍞","🥖"],"croissant":["🥐"],"baguette":["🥖"],"flatbread":["🫓","🥙"],"pretzel":["🥨"],"bagel":["🥯"],"pancakes":["🥞"],"waffle":["🧇"],"cheese":["🧀"],"wedge":["🧀"],"meat":["🍖","🥩"],"poultry":["🍗"],"cut":["🥩"],"bacon":["🥓"],"hamburger":["🍔"],"french":["🍟","🇬🇫","🇵🇫","🇹🇫"],"fries":["🍟"],"pizza":["🍕"],"sandwich":["🥪","🇬🇸"],"taco":["🌮"],"burrito":["🌯"],"tamale":["🫔"],"stuffed":["🥙"],"falafel":["🧆"],"egg":["🥚"],"shallow":["🥘"],"pan":["🥘"],"pot":["🍲","🍯"],"fondue":["🫕"],"bowl":["🥣","🍜","🎳"],"spoon":["🥣","🥄"],"salad":["🥗"],"popcorn":["🍿"],"butter":["🧈"],"salt":["🧂"],"canned":["🥫"],"bento":["🍱"],"box":["🍱","🥡","🧃","🥊","🗳️","🗃️","☑️"],"cracker":["🍘"],"cooked":["🍚"],"curry":["🍛"],"spaghetti":["🍝"],"roasted":["🍠"],"sweet":["🍠"],"oden":["🍢"],"sushi":["🍣"],"fried":["🍤"],"shrimp":["🍤","🦐"],"cake":["🍥","🥮","🎂"],"swirl":["🍥"],"moon":["🥮","🌑","🌒","🌓","🌔","🌕","🌖","🌗","🌘","🌙","🌚","🌛","🌜","🌝","🎑"],"dango":["🍡"],"dumple":["🥟"],"fortune":["🥠"],"cookie":["🥠","🍪"],"takeout":["🥡"],"crab":["🦀"],"lobster":["🦞"],"squid":["🦑"],"oyster":["🦪"],"soft":["🍦"],"ice":["🍦","🍧","🍨","🧊","🏒","⛸️"],"cream":["🍦","🍨"],"shaved":["🍧"],"doughnut":["🍩"],"birthday":["🎂"],"shortcake":["🍰"],"cupcake":["🧁"],"pie":["🥧"],"chocolate":["🍫"],"bar":["🍫","📊"],"candy":["🍬"],"lollipop":["🍭"],"custard":["🍮"],"honey":["🍯"],"bottle":["🍼","🍾","🧴"],"glass":["🥛","🍷","🍸","🥃","🔍","🔎"],"milk":["🥛"],"beverage":["☕","🧃"],"teapot":["🫖"],"teacup":["🍵"],"handle":["🍵"],"sake":["🍶"],"pop":["🍾"],"cork":["🍾"],"wine":["🍷"],"cocktail":["🍸"],"drink":["🍹"],"beer":["🍺","🍻"],"mug":["🍺"],"clink":["🍻","🥂"],"mugs":["🍻"],"glasses":["🥂","👓"],"tumbler":["🥃"],"pour":["🫗"],"liquid":["🫗"],"cup":["🥤"],"straw":["🥤"],"tea":["🧋"],"mate":["🧉"],"chopsticks":["🥢"],"fork":["🍽️","🍴"],"knife":["🍽️","🍴","🔪"],"plate":["🍽️"],"kitchen":["🔪"],"jar":["🫙"],"amphora":["🏺"],"globe":["🌍","🌎","🌏","🌐"],"show":["🌍","🌎","🌏"],"europe":["🌍"],"africa":["🌍","🇿🇦"],"americas":["🌎"],"asia":["🌏"],"australia":["🌏","🇦🇺"],"meridians":["🌐"],"world":["🗺️"],"map":["🗺️","🗾"],"japan":["🗾","🇯🇵"],"compass":["🧭"],"snow":["🏔️","🌨️","⛄"],"capped":["🏔️"],"volcano":["🌋"],"mount":["🗻"],"fuji":["🗻"],"camp":["🏕️"],"beach":["🏖️"],"umbrella":["🏖️","🌂","☂️","☔","⛱️"],"desert":["🏜️","🏝️"],"island":["🏝️","🇦🇨","🇧🇻","🇨🇵","🇨🇽","🇳🇫"],"national":["🏞️"],"park":["🏞️"],"stadium":["🏟️"],"classical":["🏛️"],"build":["🏛️","🏗️","🏢"],"brick":["🧱"],"rock":["🪨"],"wood":["🪵"],"hut":["🛖"],"houses":["🏘️"],"derelict":["🏚️"],"house":["🏚️","🏠","🏡"],"garden":["🏡"],"japanese":["🏣","🏯","🎎","🔰","🈁","🈂️","🈷️","🈶","🈯","🉐","🈹","🈚","🈲","🉑","🈸","🈴","🈳","㊗️","㊙️","🈺","🈵"],"post":["🏣","🏤"],"hospital":["🏥"],"bank":["🏦"],"hotel":["🏨","🏩"],"convenience":["🏪"],"store":["🏪","🏬"],"school":["🏫"],"department":["🏬"],"castle":["🏯","🏰"],"wed":["💒"],"tokyo":["🗼"],"tower":["🗼"],"statue":["🗽"],"liberty":["🗽"],"church":["⛪"],"mosque":["🕌"],"hindu":["🛕"],"temple":["🛕"],"synagogue":["🕍"],"shinto":["⛩️"],"shrine":["⛩️"],"kaaba":["🕋"],"fountain":["⛲","🖋️"],"tent":["⛺","🎪"],"foggy":["🌁"],"night":["🌃","🌉"],"stars":["🌃"],"cityscape":["🏙️","🌆"],"sunrise":["🌄","🌅"],"mountains":["🌄"],"dusk":["🌆"],"sunset":["🌇"],"bridge":["🌉"],"springs":["♨️"],"carousel":["🎠"],"playground":["🛝"],"slide":["🛝"],"ferris":["🎡"],"wheel":["🎡","🛞","☸️"],"roller":["🎢","🛼"],"coaster":["🎢"],"barber":["💈"],"pole":["💈","🎣"],"circus":["🎪"],"locomotive":["🚂"],"railway":["🚃","🚞","🛤️","🚟"],"car":["🚃","🚋","🚓","🚔","🏎️","🚨"],"high":["🚄","⚡","👠","🔊"],"speed":["🚄"],"train":["🚄","🚅","🚆"],"bullet":["🚅"],"metro":["🚇"],"rail":["🚈"],"station":["🚉"],"tram":["🚊","🚋"],"monorail":["🚝"],"bus":["🚌","🚍","🚏"],"trolleybus":["🚎"],"minibus":["🚐"],"ambulance":["🚑"],"engine":["🚒"],"taxi":["🚕","🚖"],"automobile":["🚗","🚘"],"sport":["🚙"],"utility":["🚙"],"vehicle":["🚙"],"pickup":["🛻"],"truck":["🛻","🚚"],"delivery":["🚚"],"articulated":["🚛"],"lorry":["🚛"],"tractor":["🚜"],"motorcycle":["🏍️"],"motor":["🛵","🛥️"],"scooter":["🛵","🛴"],"auto":["🛺"],"rickshaw":["🛺"],"bicycle":["🚲"],"kick":["🛴"],"skateboard":["🛹"],"skate":["🛼","⛸️"],"stop":["🚏","🛑","⏹️"],"motorway":["🛣️"],"track":["🛤️","⏭️","⏮️"],"oil":["🛢️"],"drum":["🛢️","🥁","🪘"],"fuel":["⛽"],"pump":["⛽"],"horizontal":["🚥"],"traffic":["🚥","🚦"],"vertical":["🚦","🔃"],"anchor":["⚓"],"ring":["🛟","💍"],"buoy":["🛟"],"sailboat":["⛵"],"canoe":["🛶"],"speedboat":["🚤"],"passenger":["🛳️"],"ship":["🛳️","🚢"],"ferry":["⛴️"],"airplane":["✈️","🛩️","🛫","🛬"],"small":["🛩️","🌤️","◾","◽","▪️","▫️","🔸","🔹"],"departure":["🛫"],"arrival":["🛬"],"parachute":["🪂"],"seat":["💺"],"helicopter":["🚁"],"suspension":["🚟"],"cableway":["🚠"],"aerial":["🚡"],"tramway":["🚡"],"satellite":["🛰️","📡"],"rocket":["🚀"],"saucer":["🛸"],"bellhop":["🛎️"],"luggage":["🧳","🛅"],"hourglass":["⌛","⏳"],"done":["⌛","⏳"],"not":["⏳","🈶"],"watch":["⌚"],"alarm":["⏰"],"clock":["⏰","⏲️","🕰️","🕛","🕐","🕑","🕒","🕓","🕔","🕕","🕖","🕗","🕘","🕙","🕚"],"stopwatch":["⏱️"],"timer":["⏲️"],"mantelpiece":["🕰️"],"twelve":["🕛","🕧"],"thirty":["🕧","🕜","🕝","🕞","🕟","🕠","🕡","🕢","🕣","🕤","🕥","🕦"],"one":["🕐","🕜","🩱","🔞"],"three":["🕒","🕞"],"five":["🕔","🕠"],"six":["🕕","🕡","🔯"],"seven":["🕖","🕢"],"eight":["🕗","🕣","✳️","✴️"],"nine":["🕘","🕤"],"ten":["🕙","🕥"],"eleven":["🕚","🕦"],"new":["🌑","🌚","🆕","🇳🇨","🇳🇿","🇵🇬"],"wax":["🌒","🌔"],"crescent":["🌒","🌘","🌙","☪️"],"first":["🌓","🌛"],"quarter":["🌓","🌗","🌛","🌜"],"gibbous":["🌔","🌖"],"full":["🌕","🌝"],"wane":["🌖","🌘"],"last":["🌗","🌜","⏮️"],"sun":["☀️","🌞","⛅","🌤️","🌥️","🌦️"],"ringed":["🪐"],"planet":["🪐"],"glow":["🌟"],"shoot":["🌠"],"milky":["🌌"],"way":["🌌"],"cloud":["☁️","⛅","⛈️","🌤️","🌥️","🌦️","🌧️","🌨️","🌩️"],"behind":["⛅","🌤️","🌥️","🌦️"],"lightning":["⛈️","🌩️"],"rain":["⛈️","🌦️","🌧️","☔"],"large":["🌥️","⬛","⬜","🔶","🔷"],"tornado":["🌪️"],"fog":["🌫️"],"cyclone":["🌀"],"rainbow":["🌈","🏳️‍🌈"],"drops":["☔"],"ground":["⛱️"],"voltage":["⚡"],"snowflake":["❄️"],"snowman":["☃️","⛄"],"comet":["☄️"],"droplet":["💧"],"jack":["🎃"],"lantern":["🎃","🏮"],"christmas":["🎄","🇨🇽"],"fireworks":["🎆"],"sparkler":["🎇"],"firecracker":["🧨"],"sparkles":["✨"],"popper":["🎉"],"confetti":["🎊"],"tanabata":["🎋"],"pine":["🎍"],"dolls":["🎎","🪆"],"carp":["🎏"],"streamer":["🎏"],"chime":["🎐"],"view":["🎑"],"ceremony":["🎑"],"envelope":["🧧","✉️","📨","📩"],"wrapped":["🎁"],"gift":["🎁"],"reminder":["🎗️"],"admission":["🎟️"],"tickets":["🎟️"],"ticket":["🎫"],"military":["🎖️","🪖"],"medal":["🎖️","🏅","🥇","🥈","🥉"],"trophy":["🏆"],"sports":["🏅"],"1st":["🥇"],"place":["🥇","🥈","🥉","🛐"],"2nd":["🥈"],"3rd":["🥉"],"soccer":["⚽"],"baseball":["⚾"],"softball":["🥎"],"basketball":["🏀"],"volleyball":["🏐"],"american":["🏈","🇦🇸"],"football":["🏈","🏉"],"rugby":["🏉"],"tennis":["🎾"],"disc":["🥏"],"game":["🏏","🎮","🎲"],"field":["🏑"],"hockey":["🏑","🏒"],"lacrosse":["🥍"],"ping":["🏓"],"pong":["🏓"],"badminton":["🏸"],"glove":["🥊"],"martial":["🥋"],"arts":["🥋","🎭"],"uniform":["🥋"],"goal":["🥅"],"net":["🥅"],"flag":["⛳","📫","📪","📬","📭","🏁","🚩","🏴","🏳️","🏳️‍🌈","🏳️‍⚧️","🏴‍☠️","🇦🇨","🇦🇩","🇦🇪","🇦🇫","🇦🇬","🇦🇮","🇦🇱","🇦🇲","🇦🇴","🇦🇶","🇦🇷","🇦🇸","🇦🇹","🇦🇺","🇦🇼","🇦🇽","🇦🇿","🇧🇦","🇧🇧","🇧🇩","🇧🇪","🇧🇫","🇧🇬","🇧🇭","🇧🇮","🇧🇯","🇧🇱","🇧🇲","🇧🇳","🇧🇴","🇧🇶","🇧🇷","🇧🇸","🇧🇹","🇧🇻","🇧🇼","🇧🇾","🇧🇿","🇨🇦","🇨🇨","🇨🇩","🇨🇫","🇨🇬","🇨🇭","🇨🇮","🇨🇰","🇨🇱","🇨🇲","🇨🇳","🇨🇴","🇨🇵","🇨🇷","🇨🇺","🇨🇻","🇨🇼","🇨🇽","🇨🇾","🇨🇿","🇩🇪","🇩🇬","🇩🇯","🇩🇰","🇩🇲","🇩🇴","🇩🇿","🇪🇦","🇪🇨","🇪🇪","🇪🇬","🇪🇭","🇪🇷","🇪🇸","🇪🇹","🇪🇺","🇫🇮","🇫🇯","🇫🇰","🇫🇲","🇫🇴","🇫🇷","🇬🇦","🇬🇧","🇬🇩","🇬🇪","🇬🇫","🇬🇬","🇬🇭","🇬🇮","🇬🇱","🇬🇲","🇬🇳","🇬🇵","🇬🇶","🇬🇷","🇬🇸","🇬🇹","🇬🇺","🇬🇼","🇬🇾","🇭🇰","🇭🇲","🇭🇳","🇭🇷","🇭🇹","🇭🇺","🇮🇨","🇮🇩","🇮🇪","🇮🇱","🇮🇲","🇮🇳","🇮🇴","🇮🇶","🇮🇷","🇮🇸","🇮🇹","🇯🇪","🇯🇲","🇯🇴","🇯🇵","🇰🇪","🇰🇬","🇰🇭","🇰🇮","🇰🇲","🇰🇳","🇰🇵","🇰🇷","🇰🇼","🇰🇾","🇰🇿","🇱🇦","🇱🇧","🇱🇨","🇱🇮","🇱🇰","🇱🇷","🇱🇸","🇱🇹","🇱🇺","🇱🇻","🇱🇾","🇲🇦","🇲🇨","🇲🇩","🇲🇪","🇲🇫","🇲🇬","🇲🇭","🇲🇰","🇲🇱","🇲🇲","🇲🇳","🇲🇴","🇲🇵","🇲🇶","🇲🇷","🇲🇸","🇲🇹","🇲🇺","🇲🇻","🇲🇼","🇲🇽","🇲🇾","🇲🇿","🇳🇦","🇳🇨","🇳🇪","🇳🇫","🇳🇬","🇳🇮","🇳🇱","🇳🇴","🇳🇵","🇳🇷","🇳🇺","🇳🇿","🇴🇲","🇵🇦","🇵🇪","🇵🇫","🇵🇬","🇵🇭","🇵🇰","🇵🇱","🇵🇲","🇵🇳","🇵🇷","🇵🇸","🇵🇹","🇵🇼","🇵🇾","🇶🇦","🇷🇪","🇷🇴","🇷🇸","🇷🇺","🇷🇼","🇸🇦","🇸🇧","🇸🇨","🇸🇩","🇸🇪","🇸🇬","🇸🇭","🇸🇮","🇸🇯","🇸🇰","🇸🇱","🇸🇲","🇸🇳","🇸🇴","🇸🇷","🇸🇸","🇸🇹","🇸🇻","🇸🇽","🇸🇾","🇸🇿","🇹🇦","🇹🇨","🇹🇩","🇹🇫","🇹🇬","🇹🇭","🇹🇯","🇹🇰","🇹🇱","🇹🇲","🇹🇳","🇹🇴","🇹🇷","🇹🇹","🇹🇻","🇹🇼","🇹🇿","🇺🇦","🇺🇬","🇺🇲","🇺🇳","🇺🇸","🇺🇾","🇺🇿","🇻🇦","🇻🇨","🇻🇪","🇻🇬","🇻🇮","🇻🇳","🇻🇺","🇼🇫","🇼🇸","🇽🇰","🇾🇪","🇾🇹","🇿🇦","🇿🇲","🇿🇼","🏴󠁧󠁢󠁥󠁮󠁧󠁿","🏴󠁧󠁢󠁳󠁣󠁴󠁿","🏴󠁧󠁢󠁷󠁬󠁳󠁿"],"dive":["🤿"],"shirt":["🎽","👕"],"skis":["🎿"],"sled":["🛷"],"curl":["🥌","📃"],"stone":["🥌","💎"],"bullseye":["🎯"],"yo":["🪀"],"kite":["🪁"],"pistol":["🔫"],"pool":["🎱"],"crystal":["🔮"],"magic":["🪄"],"wand":["🪄"],"video":["🎮","📹"],"joystick":["🕹️"],"slot":["🎰"],"machine":["🎰","📠"],"die":["🎲"],"puzzle":["🧩"],"piece":["🧩","🩱"],"teddy":["🧸"],"pinata":["🪅"],"mirror":["🪩","🪞"],"spade":["♠️"],"diamond":["♦️","🔶","🔷","🔸","🔹","💠"],"club":["♣️"],"chess":["♟️"],"pawn":["♟️"],"joker":["🃏"],"mahjong":["🀄"],"cards":["🎴"],"perform":["🎭"],"framed":["🖼️"],"picture":["🖼️"],"palette":["🎨"],"thread":["🧵"],"sew":["🪡"],"needle":["🪡"],"yarn":["🧶"],"knot":["🪢"],"goggles":["🥽"],"lab":["🥼"],"coat":["🥼","🧥"],"safety":["🦺","🧷"],"vest":["🦺"],"necktie":["👔"],"jeans":["👖"],"scarf":["🧣"],"gloves":["🧤"],"socks":["🧦"],"dress":["👗"],"kimono":["👘"],"sari":["🥻"],"swimsuit":["🩱"],"briefs":["🩲"],"shorts":["🩳"],"bikini":["👙"],"clothes":["👚"],"fold":["🪭"],"fan":["🪭"],"purse":["👛"],"handbag":["👜"],"clutch":["👝"],"bag":["👝","💰"],"shop":["🛍️","🛒"],"bags":["🛍️"],"backpack":["🎒"],"thong":["🩴"],"sandal":["🩴","👡"],"shoe":["👞","👟","🥿","👠"],"hike":["🥾"],"boot":["🥾","👢"],"flat":["🥿"],"heeled":["👠"],"ballet":["🩰"],"shoes":["🩰"],"pick":["🪮","⛏️","⚒️"],"top":["🎩","🔝"],"graduation":["🎓"],"cap":["🎓","🧢"],"billed":["🧢"],"helmet":["🪖","⛑️"],"rescue":["⛑️"],"prayer":["📿"],"beads":["📿"],"lipstick":["💄"],"gem":["💎"],"muted":["🔇"],"speaker":["🔇","🔈","🔉","🔊"],"low":["🔈","🪫"],"volume":["🔈","🔉","🔊"],"medium":["🔉","◼️","◻️","◾","◽"],"loudspeaker":["📢"],"megaphone":["📣"],"postal":["📯"],"horn":["📯"],"slash":["🔕"],"musical":["🎼","🎵","🎶","🎹"],"score":["🎼"],"note":["🎵"],"notes":["🎶"],"studio":["🎙️"],"microphone":["🎙️","🎤"],"level":["🎚️"],"slider":["🎚️"],"control":["🎛️","🛂"],"knobs":["🎛️"],"headphone":["🎧"],"radio":["📻","🔘"],"saxophone":["🎷"],"accordion":["🪗"],"guitar":["🎸"],"keyboard":["🎹","⌨️"],"trumpet":["🎺"],"violin":["🎻"],"banjo":["🪕"],"long":["🪘"],"maracas":["🪇"],"flute":["🪈"],"mobile":["📱","📲","📵","📴"],"phone":["📱","📲","📴"],"telephone":["☎️","📞"],"receiver":["📞"],"pager":["📟"],"fax":["📠"],"battery":["🔋","🪫"],"electric":["🔌"],"plug":["🔌"],"laptop":["💻"],"desktop":["🖥️"],"computer":["🖥️","🖱️","💽"],"printer":["🖨️"],"trackball":["🖲️"],"disk":["💽","💾","💿"],"floppy":["💾"],"optical":["💿"],"dvd":["📀"],"abacus":["🧮"],"movie":["🎥"],"camera":["🎥","📷","📸","📹"],"film":["🎞️","📽️"],"frames":["🎞️"],"projector":["📽️"],"clapper":["🎬"],"board":["🎬"],"television":["📺"],"flash":["📸"],"videocassette":["📼"],"magnify":["🔍","🔎"],"tilted":["🔍","🔎"],"candle":["🕯️"],"bulb":["💡"],"flashlight":["🔦"],"paper":["🏮","🧻"],"diya":["🪔"],"lamp":["🪔","🛋️"],"notebook":["📔","📓"],"decorative":["📔"],"cover":["📔"],"book":["📕","📖","📗","📘","📙"],"books":["📚"],"ledger":["📒"],"page":["📃","📄"],"scroll":["📜"],"newspaper":["📰","🗞️"],"rolled":["🗞️"],"bookmark":["📑","🔖"],"tabs":["📑"],"label":["🏷️"],"coin":["🪙"],"yen":["💴","💹"],"banknote":["💴","💵","💶","💷"],"dollar":["💵","💲"],"euro":["💶"],"pound":["💷"],"wings":["💸"],"credit":["💳"],"card":["💳","🗂️","📇","🗃️","🪪"],"receipt":["🧾"],"chart":["💹","📈","📉","📊"],"increase":["💹","📈"],"mail":["📧"],"income":["📨"],"outbox":["📤"],"tray":["📤","📥"],"inbox":["📥"],"package":["📦"],"mailbox":["📫","📪","📬","📭"],"lowered":["📪","📭"],"postbox":["📮"],"ballot":["🗳️"],"pencil":["✏️"],"nib":["✒️"],"pen":["🖋️","🖊️","🔏"],"paintbrush":["🖌️"],"crayon":["🖍️"],"memo":["📝"],"briefcase":["💼"],"file":["📁","📂","🗃️","🗄️"],"folder":["📁","📂"],"dividers":["🗂️"],"calendar":["📅","📆","🗓️"],"off":["📆","📴"],"notepad":["🗒️"],"decrease":["📉"],"clipboard":["📋"],"pushpin":["📌","📍"],"round":["📍"],"paperclip":["📎"],"linked":["🖇️"],"paperclips":["🖇️"],"straight":["📏"],"ruler":["📏","📐"],"triangular":["📐","🚩"],"scissors":["✂️"],"cabinet":["🗄️"],"wastebasket":["🗑️"],"locked":["🔒","🔏","🔐"],"unlocked":["🔓"],"key":["🔐","🔑","🗝️"],"hammer":["🔨","⚒️","🛠️"],"axe":["🪓"],"wrench":["🛠️","🔧"],"dagger":["🗡️"],"swords":["⚔️"],"bomb":["💣"],"boomerang":["🪃"],"shield":["🛡️"],"carpentry":["🪚"],"saw":["🪚"],"screwdriver":["🪛"],"nut":["🔩"],"bolt":["🔩"],"gear":["⚙️"],"clamp":["🗜️"],"balance":["⚖️"],"scale":["⚖️"],"link":["🔗"],"chains":["⛓️"],"hook":["🪝"],"toolbox":["🧰"],"magnet":["🧲"],"ladder":["🪜"],"alembic":["⚗️"],"test":["🧪"],"tube":["🧪"],"petri":["🧫"],"dish":["🧫"],"dna":["🧬"],"microscope":["🔬"],"telescope":["🔭"],"antenna":["📡","📶"],"syringe":["💉"],"drop":["🩸"],"blood":["🩸","🅰️","🆎","🅱️","🅾️"],"pill":["💊"],"adhesive":["🩹"],"crutch":["🩼"],"stethoscope":["🩺"],"ray":["🩻"],"door":["🚪"],"elevator":["🛗"],"window":["🪟"],"couch":["🛋️"],"chair":["🪑"],"toilet":["🚽"],"plunger":["🪠"],"shower":["🚿"],"bathtub":["🛁"],"trap":["🪤"],"razor":["🪒"],"lotion":["🧴"],"pin":["🧷"],"broom":["🧹"],"basket":["🧺"],"bucket":["🪣"],"soap":["🧼"],"bubbles":["🫧"],"toothbrush":["🪥"],"sponge":["🧽"],"extinguisher":["🧯"],"cart":["🛒"],"cigarette":["🚬"],"coffin":["⚰️"],"headstone":["🪦"],"funeral":["⚱️"],"urn":["⚱️"],"nazar":["🧿"],"amulet":["🧿"],"hamsa":["🪬"],"moai":["🗿"],"placard":["🪧"],"identification":["🪪"],"atm":["🏧"],"litter":["🚮","🚯"],"bin":["🚮"],"potable":["🚰","🚱"],"restroom":["🚻"],"closet":["🚾"],"passport":["🛂"],"customs":["🛃"],"baggage":["🛄"],"claim":["🛄"],"warn":["⚠️"],"children":["🚸"],"cross":["🚸","✝️","☦️","❌","❎"],"entry":["⛔"],"prohibited":["🚫","🈲"],"bicycles":["🚳"],"smoke":["🚭"],"non":["🚱"],"pedestrians":["🚷"],"phones":["📵"],"under":["🔞"],"eighteen":["🔞"],"radioactive":["☢️"],"biohazard":["☣️"],"curve":["↩️","↪️","⤴️","⤵️"],"clockwise":["🔃"],"arrows":["🔃","🔄"],"counterclockwise":["🔄"],"button":["🔄","🔀","🔁","🔂","▶️","⏩","⏭️","⏯️","◀️","⏪","⏮️","🔼","⏫","🔽","⏬","⏸️","⏹️","⏺️","⏏️","🔅","🔆","✅","❎","🅰️","🆎","🅱️","🆑","🆒","🆓","🆔","🆕","🆖","🅾️","🆗","🅿️","🆘","🆙","🆚","🈁","🈂️","🈷️","🈶","🈯","🉐","🈹","🈚","🈲","🉑","🈸","🈴","🈳","㊗️","㊙️","🈺","🈵","🔘","🔳","🔲"],"end":["🔚"],"soon":["🔜"],"worship":["🛐"],"atom":["⚛️"],"om":["🕉️"],"david":["✡️"],"dharma":["☸️"],"yin":["☯️"],"yang":["☯️"],"latin":["✝️","🔠","🔡","🔤"],"orthodox":["☦️"],"peace":["☮️"],"menorah":["🕎"],"pointed":["🔯","✴️","🔺","🔻"],"khanda":["🪯"],"aries":["♈"],"taurus":["♉"],"gemini":["♊"],"cancer":["♋"],"leo":["♌"],"virgo":["♍"],"libra":["♎"],"scorpio":["♏"],"sagittarius":["♐"],"capricorn":["♑"],"aquarius":["♒"],"pisces":["♓"],"ophiuchus":["⛎"],"shuffle":["🔀"],"tracks":["🔀"],"repeat":["🔁","🔂"],"single":["🔂"],"fast":["⏩","⏪","⏫","⏬"],"forward":["⏩"],"next":["⏭️"],"or":["⏯️"],"pause":["⏯️","⏸️"],"reverse":["◀️","⏪"],"upwards":["🔼"],"downwards":["🔽"],"record":["⏺️"],"eject":["⏏️"],"cinema":["🎦"],"dim":["🔅"],"bright":["🔆"],"bars":["📶"],"wireless":["🛜"],"vibration":["📳"],"mode":["📳"],"female":["♀️"],"male":["♂️"],"transgender":["⚧️","🏳️‍⚧️"],"multiply":["✖️"],"plus":["➕"],"minus":["➖"],"divide":["➗"],"heavy":["🟰","💲"],"equals":["🟰"],"infinity":["♾️"],"double":["‼️","➿"],"question":["⁉️","❓","❔"],"wavy":["〰️"],"currency":["💱"],"exchange":["💱"],"recycle":["♻️"],"fleur":["⚜️"],"de":["⚜️"],"lis":["⚜️"],"trident":["🔱"],"emblem":["🔱"],"name":["📛"],"badge":["📛"],"for":["🔰","🈺"],"beginner":["🔰"],"hollow":["⭕"],"circle":["⭕","🔴","🟠","🟡","🟢","🔵","🟣","🟤","⚫","⚪"],"check":["✅","☑️","✔️"],"loop":["➰","➿"],"part":["〽️"],"alternation":["〽️"],"spoked":["✳️"],"asterisk":["✳️"],"copyright":["©️"],"registered":["®️"],"trade":["™️"],"keycap":["#️⃣","*️⃣","0️⃣","1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣","🔟"],"input":["🔠","🔡","🔢","🔣","🔤"],"uppercase":["🔠"],"lowercase":["🔡"],"numbers":["🔢"],"letters":["🔤"],"type":["🅰️","🆎","🅱️","🅾️"],"ab":["🆎"],"cl":["🆑"],"cool":["🆒"],"free":["🆓","🈶","🈚"],"information":["ℹ️"],"id":["🆔"],"circled":["Ⓜ️"],"ng":["🆖"],"sos":["🆘"],"vs":["🆚"],"here":["🈁"],"charge":["🈂️","🈶","🈚"],"monthly":["🈷️"],"amount":["🈷️"],"reserved":["🈯"],"bargain":["🉐"],"discount":["🈹"],"acceptable":["🉑"],"application":["🈸"],"pass":["🈴"],"grade":["🈴"],"vacancy":["🈳","🈵"],"congratulations":["㊗️"],"secret":["㊙️"],"business":["🈺"],"square":["🟥","🟧","🟨","🟩","🟦","🟪","🟫","⬛","⬜","◼️","◻️","◾","◽","▪️","▫️","🔳","🔲"],"triangle":["🔺","🔻"],"dot":["💠"],"chequered":["🏁"],"flags":["🎌"],"pirate":["🏴‍☠️"],"ascension":["🇦🇨"],"andorra":["🇦🇩"],"united":["🇦🇪","🇬🇧","🇺🇳","🇺🇸"],"arab":["🇦🇪"],"emirates":["🇦🇪"],"afghanistan":["🇦🇫"],"antigua":["🇦🇬"],"barbuda":["🇦🇬"],"anguilla":["🇦🇮"],"albania":["🇦🇱"],"armenia":["🇦🇲"],"angola":["🇦🇴"],"antarctica":["🇦🇶"],"argentina":["🇦🇷"],"samoa":["🇦🇸","🇼🇸"],"austria":["🇦🇹"],"aruba":["🇦🇼"],"aland":["🇦🇽"],"islands":["🇦🇽","🇨🇨","🇨🇰","🇫🇰","🇫🇴","🇬🇸","🇭🇲","🇮🇨","🇰🇾","🇲🇭","🇲🇵","🇵🇳","🇸🇧","🇹🇨","🇺🇲","🇻🇬","🇻🇮"],"azerbaijan":["🇦🇿"],"bosnia":["🇧🇦"],"herzegovina":["🇧🇦"],"barbados":["🇧🇧"],"bangladesh":["🇧🇩"],"belgium":["🇧🇪"],"burkina":["🇧🇫"],"faso":["🇧🇫"],"bulgaria":["🇧🇬"],"bahrain":["🇧🇭"],"burundi":["🇧🇮"],"benin":["🇧🇯"],"st":["🇧🇱","🇰🇳","🇱🇨","🇲🇫","🇵🇲","🇸🇭","🇻🇨"],"barthelemy":["🇧🇱"],"bermuda":["🇧🇲"],"brunei":["🇧🇳"],"bolivia":["🇧🇴"],"caribbean":["🇧🇶"],"netherlands":["🇧🇶","🇳🇱"],"brazil":["🇧🇷"],"bahamas":["🇧🇸"],"bhutan":["🇧🇹"],"bouvet":["🇧🇻"],"botswana":["🇧🇼"],"belarus":["🇧🇾"],"belize":["🇧🇿"],"canada":["🇨🇦"],"cocos":["🇨🇨"],"keel":["🇨🇨"],"congo":["🇨🇩","🇨🇬"],"kinshasa":["🇨🇩"],"central":["🇨🇫"],"african":["🇨🇫"],"republic":["🇨🇫","🇩🇴"],"brazzaville":["🇨🇬"],"switzerland":["🇨🇭"],"cote":["🇨🇮"],"ivoire":["🇨🇮"],"chile":["🇨🇱"],"cameroon":["🇨🇲"],"china":["🇨🇳","🇭🇰","🇲🇴"],"colombia":["🇨🇴"],"clipperton":["🇨🇵"],"costa":["🇨🇷"],"rica":["🇨🇷"],"cuba":["🇨🇺"],"cape":["🇨🇻"],"verde":["🇨🇻"],"curacao":["🇨🇼"],"cyprus":["🇨🇾"],"czechia":["🇨🇿"],"germany":["🇩🇪"],"diego":["🇩🇬"],"garcia":["🇩🇬"],"djibouti":["🇩🇯"],"denmark":["🇩🇰"],"dominica":["🇩🇲"],"dominican":["🇩🇴"],"algeria":["🇩🇿"],"ceuta":["🇪🇦"],"melilla":["🇪🇦"],"ecuador":["🇪🇨"],"estonia":["🇪🇪"],"egypt":["🇪🇬"],"western":["🇪🇭"],"sahara":["🇪🇭"],"eritrea":["🇪🇷"],"spain":["🇪🇸"],"ethiopia":["🇪🇹"],"european":["🇪🇺"],"union":["🇪🇺"],"finland":["🇫🇮"],"fiji":["🇫🇯"],"falkland":["🇫🇰"],"micronesia":["🇫🇲"],"faroe":["🇫🇴"],"france":["🇫🇷"],"gabon":["🇬🇦"],"kingdom":["🇬🇧"],"grenada":["🇬🇩"],"georgia":["🇬🇪","🇬🇸"],"guiana":["🇬🇫"],"guernsey":["🇬🇬"],"ghana":["🇬🇭"],"gibraltar":["🇬🇮"],"greenland":["🇬🇱"],"gambia":["🇬🇲"],"guinea":["🇬🇳","🇬🇶","🇬🇼","🇵🇬"],"guadeloupe":["🇬🇵"],"equatorial":["🇬🇶"],"greece":["🇬🇷"],"south":["🇬🇸","🇰🇷","🇸🇸","🇿🇦"],"guatemala":["🇬🇹"],"guam":["🇬🇺"],"bissau":["🇬🇼"],"guyana":["🇬🇾"],"hong":["🇭🇰"],"kong":["🇭🇰"],"sar":["🇭🇰","🇲🇴"],"heard":["🇭🇲"],"mcdonald":["🇭🇲"],"honduras":["🇭🇳"],"croatia":["🇭🇷"],"haiti":["🇭🇹"],"hungary":["🇭🇺"],"canary":["🇮🇨"],"indonesia":["🇮🇩"],"ireland":["🇮🇪"],"israel":["🇮🇱"],"isle":["🇮🇲"],"india":["🇮🇳"],"british":["🇮🇴","🇻🇬"],"indian":["🇮🇴"],"ocean":["🇮🇴"],"territory":["🇮🇴"],"iraq":["🇮🇶"],"iran":["🇮🇷"],"iceland":["🇮🇸"],"italy":["🇮🇹"],"jersey":["🇯🇪"],"jamaica":["🇯🇲"],"jordan":["🇯🇴"],"kenya":["🇰🇪"],"kyrgyzstan":["🇰🇬"],"cambodia":["🇰🇭"],"kiribati":["🇰🇮"],"comoros":["🇰🇲"],"kitts":["🇰🇳"],"nevis":["🇰🇳"],"north":["🇰🇵","🇲🇰"],"korea":["🇰🇵","🇰🇷"],"kuwait":["🇰🇼"],"cayman":["🇰🇾"],"kazakhstan":["🇰🇿"],"laos":["🇱🇦"],"lebanon":["🇱🇧"],"lucia":["🇱🇨"],"liechtenstein":["🇱🇮"],"sri":["🇱🇰"],"lanka":["🇱🇰"],"liberia":["🇱🇷"],"lesotho":["🇱🇸"],"lithuania":["🇱🇹"],"luxembourg":["🇱🇺"],"latvia":["🇱🇻"],"libya":["🇱🇾"],"morocco":["🇲🇦"],"monaco":["🇲🇨"],"moldova":["🇲🇩"],"montenegro":["🇲🇪"],"martin":["🇲🇫"],"madagascar":["🇲🇬"],"marshall":["🇲🇭"],"macedonia":["🇲🇰"],"mali":["🇲🇱"],"myanmar":["🇲🇲"],"burma":["🇲🇲"],"mongolia":["🇲🇳"],"macao":["🇲🇴"],"northern":["🇲🇵"],"mariana":["🇲🇵"],"martinique":["🇲🇶"],"mauritania":["🇲🇷"],"montserrat":["🇲🇸"],"malta":["🇲🇹"],"mauritius":["🇲🇺"],"maldives":["🇲🇻"],"malawi":["🇲🇼"],"mexico":["🇲🇽"],"malaysia":["🇲🇾"],"mozambique":["🇲🇿"],"namibia":["🇳🇦"],"caledonia":["🇳🇨"],"niger":["🇳🇪"],"norfolk":["🇳🇫"],"nigeria":["🇳🇬"],"nicaragua":["🇳🇮"],"norway":["🇳🇴"],"nepal":["🇳🇵"],"nauru":["🇳🇷"],"niue":["🇳🇺"],"zealand":["🇳🇿"],"oman":["🇴🇲"],"panama":["🇵🇦"],"peru":["🇵🇪"],"polynesia":["🇵🇫"],"papua":["🇵🇬"],"philippines":["🇵🇭"],"pakistan":["🇵🇰"],"poland":["🇵🇱"],"pierre":["🇵🇲"],"miquelon":["🇵🇲"],"pitcairn":["🇵🇳"],"puerto":["🇵🇷"],"rico":["🇵🇷"],"palestinian":["🇵🇸"],"territories":["🇵🇸","🇹🇫"],"portugal":["🇵🇹"],"palau":["🇵🇼"],"paraguay":["🇵🇾"],"qatar":["🇶🇦"],"reunion":["🇷🇪"],"romania":["🇷🇴"],"serbia":["🇷🇸"],"russia":["🇷🇺"],"rwanda":["🇷🇼"],"saudi":["🇸🇦"],"arabia":["🇸🇦"],"solomon":["🇸🇧"],"seychelles":["🇸🇨"],"sudan":["🇸🇩","🇸🇸"],"sweden":["🇸🇪"],"singapore":["🇸🇬"],"helena":["🇸🇭"],"slovenia":["🇸🇮"],"svalbard":["🇸🇯"],"jan":["🇸🇯"],"mayen":["🇸🇯"],"slovakia":["🇸🇰"],"sierra":["🇸🇱"],"leone":["🇸🇱"],"san":["🇸🇲"],"marino":["🇸🇲"],"senegal":["🇸🇳"],"somalia":["🇸🇴"],"suriname":["🇸🇷"],"sao":["🇸🇹"],"tome":["🇸🇹"],"principe":["🇸🇹"],"el":["🇸🇻"],"salvador":["🇸🇻"],"sint":["🇸🇽"],"maarten":["🇸🇽"],"syria":["🇸🇾"],"eswatini":["🇸🇿"],"tristan":["🇹🇦"],"da":["🇹🇦"],"cunha":["🇹🇦"],"turks":["🇹🇨"],"caicos":["🇹🇨"],"chad":["🇹🇩"],"southern":["🇹🇫"],"togo":["🇹🇬"],"thailand":["🇹🇭"],"tajikistan":["🇹🇯"],"tokelau":["🇹🇰"],"timor":["🇹🇱"],"leste":["🇹🇱"],"turkmenistan":["🇹🇲"],"tunisia":["🇹🇳"],"tonga":["🇹🇴"],"trinidad":["🇹🇹"],"tobago":["🇹🇹"],"tuvalu":["🇹🇻"],"taiwan":["🇹🇼"],"tanzania":["🇹🇿"],"ukraine":["🇺🇦"],"uganda":["🇺🇬"],"us":["🇺🇲","🇻🇮"],"outly":["🇺🇲"],"nations":["🇺🇳"],"states":["🇺🇸"],"uruguay":["🇺🇾"],"uzbekistan":["🇺🇿"],"vatican":["🇻🇦"],"city":["🇻🇦"],"vincent":["🇻🇨"],"grenadines":["🇻🇨"],"venezuela":["🇻🇪"],"virgin":["🇻🇬","🇻🇮"],"vietnam":["🇻🇳"],"vanuatu":["🇻🇺"],"wallis":["🇼🇫"],"futuna":["🇼🇫"],"kosovo":["🇽🇰"],"yemen":["🇾🇪"],"mayotte":["🇾🇹"],"zambia":["🇿🇲"],"zimbabwe":["🇿🇼"],"england":["🏴󠁧󠁢󠁥󠁮󠁧󠁿"],"scotland":["🏴󠁧󠁢󠁳󠁣󠁴󠁿"],"wales":["🏴󠁧󠁢󠁷󠁬󠁳󠁿"]}
+},{}],124:[function(require,module,exports){
+arguments[4][76][0].apply(exports,arguments)
+},{"dup":76}],125:[function(require,module,exports){
+arguments[4][83][0].apply(exports,arguments)
+},{"dup":83}],126:[function(require,module,exports){
 /*
 	String Kit
 
@@ -43509,7 +45616,7 @@ module.exports = function( str ) {
 
 
 
-},{"./json-data/latinize-map.json":113}],116:[function(require,module,exports){
+},{"./json-data/latinize-map.json":124}],127:[function(require,module,exports){
 /*
 	String Kit
 
@@ -43871,7 +45978,7 @@ unicode.isEmojiModifierCodePoint = code =>
 	code === 0xfe0f ;	// VARIATION SELECTOR-16 [VS16] {emoji variation selector}
 
 
-},{"./json-data/unicode-emoji-width-ranges.json":114}],117:[function(require,module,exports){
+},{"./json-data/unicode-emoji-width-ranges.json":125}],128:[function(require,module,exports){
 module.exports={
   "name": "svg-kit",
   "version": "0.8.2",
@@ -43915,7 +46022,7 @@ module.exports={
     "title": "SVG Kit",
     "years": [
       2017,
-      2023
+      2024
     ],
     "owner": "Cédric Ronvel"
   },
@@ -43924,9 +46031,9 @@ module.exports={
   }
 }
 
-},{}],118:[function(require,module,exports){
+},{}],129:[function(require,module,exports){
 
-},{}],119:[function(require,module,exports){
+},{}],130:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -44078,7 +46185,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],120:[function(require,module,exports){
+},{}],131:[function(require,module,exports){
 (function (Buffer){(function (){
 /*!
  * The buffer module from node.js, for the browser.
@@ -45859,7 +47966,7 @@ function numberIsNaN (obj) {
 }
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"base64-js":119,"buffer":120,"ieee754":121}],121:[function(require,module,exports){
+},{"base64-js":130,"buffer":131,"ieee754":132}],132:[function(require,module,exports){
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
@@ -45946,7 +48053,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],122:[function(require,module,exports){
+},{}],133:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -45969,7 +48076,7 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],123:[function(require,module,exports){
+},{}],134:[function(require,module,exports){
 (function (process){(function (){
 // 'path' module extracted from Node.js v8.11.1 (only the posix part)
 // transplited with Babel
@@ -46502,7 +48609,7 @@ posix.posix = posix;
 module.exports = posix;
 
 }).call(this)}).call(this,require('_process'))
-},{"_process":124}],124:[function(require,module,exports){
+},{"_process":135}],135:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -46688,7 +48795,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],125:[function(require,module,exports){
+},{}],136:[function(require,module,exports){
 (function (setImmediate,clearImmediate){(function (){
 var nextTick = require('process/browser.js').nextTick;
 var apply = Function.prototype.apply;
@@ -46767,5 +48874,5 @@ exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate :
   delete immediateIds[id];
 };
 }).call(this)}).call(this,require("timers").setImmediate,require("timers").clearImmediate)
-},{"process/browser.js":124,"timers":125}]},{},[7])(7)
+},{"process/browser.js":135,"timers":136}]},{},[7])(7)
 });

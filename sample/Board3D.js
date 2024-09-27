@@ -7,6 +7,52 @@ var svgKit = GAMEGUI.svgKit ;
 
 
 
+function createPathBasedTileVg( id = null ) {
+	var vg = new svgKit.VG( {
+		//invertY: true
+	} ) ;
+
+	var vgPath = new svgKit.VGPath( {
+		style: {
+			fill: '%lighter blue' ,
+			stroke: '%red-violet' ,
+			strokeWidth: 5
+		}
+	} ) ;
+	vgPath.moveTo( { x: 0 , y: -80 } ) ;
+	vgPath.lineTo( { x: 150 , y: -60 } ) ;
+	vgPath.curveTo( { x: 150 , y: 140 , cx1: 250 , cy1: 40 , cx2: 50 , cy2: 40 } ) ;
+	vgPath.arcTo( { x: 0 , y: 140 , rx: 125 , ry: 130 } ) ;
+	vgPath.qCurveTo( { x: -150 , y: 160 , cx: -50 , cy: 40 } ) ;
+	vgPath.vLineTo( 0 ) ;
+	vgPath.hLineTo( -20 ) ;
+	vgPath.close() ;
+	vg.addEntity( vgPath ) ;
+	console.warn( "VGPath:" , vgPath ) ;
+	console.warn( "Path:" , vgPath.path ) ;
+
+	var polygon = vgPath.path.toPolygon( {
+		step: 10 ,
+		forceKeyPoints: true ,
+		angleThresholdDeg: 15
+	} )[ 0 ] ;
+
+	let boundingBox = vgPath.boundingBox ;
+	boundingBox.shrink( 2 , 1 ) ;	// We have to shrink the boundingBox by 2 pixels each side to avoid aliasing on the boundary of the shape (1 pixel is not enough)
+	vg.viewBox.set( boundingBox ) ;
+
+	vg.set( {
+		data: {
+			// set the correct origin for the future tile
+			extrusionShape: polygon.points
+		}
+	} ) ;
+
+	return vg ;
+}
+
+
+
 function createTileVg( id = null ) {
 	let radius = 100 ;
 
@@ -22,8 +68,8 @@ function createTileVg( id = null ) {
 			strokeWidth: 4
 		} ,
 		build: {
-			x: radius ,
-			y: radius ,
+			x: 0 ,
+			y: 0 ,
 			radius ,
 			angleDeg: 90 ,
 			sides: 6
@@ -32,7 +78,7 @@ function createTileVg( id = null ) {
 	vg.addEntity( hexTile ) ;
 
 	// We will set the VG viewbox to the polygon bounding box
-	let boundingBox = hexTile.getBoundingBox() ;
+	let boundingBox = hexTile.boundingBox ;
 	boundingBox.shrink( 2 , 1 ) ;	// We have to shrink the boundingBox by 2 pixels each side to avoid aliasing on the boundary of the shape (1 pixel is not enough)
 	vg.viewBox.set( boundingBox ) ;
 	console.warn( vg ) ;
@@ -42,8 +88,8 @@ function createTileVg( id = null ) {
 
 	var hexClip = new svgKit.VGConvexPolygon( {
 		build: {
-			x: radius ,
-			y: radius ,
+			x: 0 ,
+			y: 0 ,
 			radius: radius * 0.95 ,
 			angleDeg: 90 ,
 			sides: 6
@@ -52,8 +98,8 @@ function createTileVg( id = null ) {
 	hexClippedImage.addClippingEntity( hexClip ) ;
 
 	var image = new svgKit.VGImage( {
-		x: 0 ,
-		y: 0 ,
+		x: - radius ,
+		y: - radius ,
 		width: radius * 2 ,
 		height: radius * 2 ,
 		url: './marble.webp'
@@ -61,8 +107,8 @@ function createTileVg( id = null ) {
 	hexClippedImage.addEntity( image ) ;
 
 	var tileName = new svgKit.VGFlowingText( {
-		x: 0.5 * radius ,
-		y: 0.35 * radius ,
+		x: - 0.5 * radius ,
+		y: - 0.65 * radius ,
 		width: 1.5 * radius ,
 		height: radius ,
 		//clip: false ,
@@ -82,7 +128,7 @@ function createTileVg( id = null ) {
 	vg.set( {
 		data: {
 			// set the correct origin for the future tile
-			extrusionShape: hexTile.points.map( point => ( { x: point.x - radius , y: point.y - radius } ) )
+			extrusionShape: hexTile.convexPolygon.points
 		}
 	} ) ;
 
@@ -111,7 +157,7 @@ function createTileSideVg() {
 	vg.addEntity( side ) ;
 
 	// We will set the VG viewbox to the polygon bounding box
-	let boundingBox = side.getBoundingBox() ;
+	let boundingBox = side.boundingBox ;
 	boundingBox.shrink( 1 , 1 ) ;
 	vg.viewBox.set( boundingBox ) ;
 
@@ -139,7 +185,8 @@ async function createTile3d( scene , id = null ) {
 	var shapeScale = 0.02 ,
 		thickness = 1 ;
 
-	var tileVg = createTileVg( id ) ;
+	//var tileVg = createTileVg( id ) ;
+	var tileVg = createPathBasedTileVg( id ) ;
 	var tileSideVg = createTileSideVg() ;
 
 	// Shape profile in XZ plane
@@ -322,9 +369,9 @@ async function createScene() {
 
 
 
-	let board3d = await createBoard3d( scene ) ;
+	//let board3d = await createBoard3d( scene ) ;
 
-	//let tile3d = await createTile3d( scene , 0 ) ;
+	let tile3d = await createTile3d( scene , 0 ) ;
 
 	/*
 	for ( let i = 0 ; i < 1 ; i ++ ) {
