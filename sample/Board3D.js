@@ -7,54 +7,6 @@ var svgKit = GAMEGUI.svgKit ;
 
 
 
-function createPathBasedTileVg( id = null ) {
-	var vg = new svgKit.VG( {
-		//invertY: true
-	} ) ;
-
-	var vgPath = new svgKit.VGPath( {
-		style: {
-			fill: '%lighter blue' ,
-			stroke: '%red-violet' ,
-			strokeWidth: 5
-		}
-	} ) ;
-	vgPath.moveTo( { x: 0 , y: -80 } ) ;
-	vgPath.lineTo( { x: 150 , y: -60 } ) ;
-	vgPath.curveTo( { x: 150 , y: 140 , cx1: 250 , cy1: 40 , cx2: 50 , cy2: 40 } ) ;
-	vgPath.arcTo( { x: 0 , y: 140 , rx: 125 , ry: 130 } ) ;
-	vgPath.qCurveTo( { x: -150 , y: 160 , cx: -50 , cy: 40 } ) ;
-	vgPath.vLineTo( 0 ) ;
-	vgPath.hLineTo( -20 ) ;
-	vgPath.close() ;
-	vg.addEntity( vgPath ) ;
-	console.warn( "VGPath:" , vgPath ) ;
-	console.warn( "Path:" , vgPath.path ) ;
-
-	var polygon = vgPath.path.toPolygon( {
-		step: 10 ,
-		//step: 5 ,
-		forceKeyPoints: true ,
-		angleThresholdDeg: 15
-		//angleThresholdDeg: 5
-	} )[ 0 ] ;
-
-	let boundingBox = vgPath.boundingBox ;
-	boundingBox.shrink( 2 , 1 ) ;	// We have to shrink the boundingBox by 2 pixels each side to avoid aliasing on the boundary of the shape (1 pixel is not enough)
-	vg.viewBox.set( boundingBox ) ;
-
-	vg.set( {
-		data: {
-			// set the correct origin for the future tile
-			extrusionShape: polygon.points
-		}
-	} ) ;
-
-	return vg ;
-}
-
-
-
 function createTileVg( id = null ) {
 	let radius = 100 ;
 
@@ -139,6 +91,54 @@ function createTileVg( id = null ) {
 
 
 
+function createPathBasedTileVg( id = null ) {
+	var vg = new svgKit.VG( {
+		//invertY: true
+	} ) ;
+
+	var vgPath = new svgKit.VGPath( {
+		style: {
+			fill: '%lighter blue' ,
+			stroke: '%red-violet' ,
+			strokeWidth: 8
+		}
+	} ) ;
+	vgPath.moveTo( { x: 0 , y: -80 } ) ;
+	vgPath.lineTo( { x: 150 , y: -60 } ) ;
+	vgPath.curveTo( { x: 150 , y: 140 , cx1: 250 , cy1: 40 , cx2: 50 , cy2: 40 } ) ;
+	vgPath.arcTo( { x: 0 , y: 140 , rx: 125 , ry: 130 } ) ;
+	vgPath.qCurveTo( { x: -150 , y: 160 , cx: -50 , cy: 40 } ) ;
+	vgPath.vLineTo( 0 ) ;
+	vgPath.hLineTo( -20 ) ;
+	vgPath.close() ;
+	vg.addEntity( vgPath ) ;
+	console.warn( "VGPath:" , vgPath ) ;
+	console.warn( "Path:" , vgPath.path ) ;
+
+	var polygon = vgPath.path.toPolygon( {
+		step: 10 ,
+		//step: 5 ,
+		forceKeyPoints: true ,
+		angleThresholdDeg: 15
+		//angleThresholdDeg: 5
+	} )[ 0 ] ;
+
+	let boundingBox = vgPath.boundingBox ;
+	boundingBox.shrink( 2 , 1 ) ;	// We have to shrink the boundingBox by 2 pixels each side to avoid aliasing on the boundary of the shape (1 pixel is not enough)
+	vg.viewBox.set( boundingBox ) ;
+
+	vg.set( {
+		data: {
+			// set the correct origin for the future tile
+			extrusionShape: polygon.points
+		}
+	} ) ;
+
+	return vg ;
+}
+
+
+
 function createTileSideVg() {
 	var vg = new svgKit.VG( {
 		//viewBox: { x: 0 , y: 0 , width: 2 * radius , height: 2 * radius }
@@ -157,6 +157,18 @@ function createTileSideVg() {
 		}
 	} ) ;
 	vg.addEntity( side ) ;
+
+	var upMark = new svgKit.VGRect( {
+		x: 20 ,
+		y: 5 ,
+		width: 10 ,
+		height: 5 ,
+		style: {
+			fill: '#c75' ,
+			stroke: 'none'
+		}
+	} ) ;
+	vg.addEntity( upMark ) ;
 
 	// We will set the VG viewbox to the polygon bounding box
 	let boundingBox = side.boundingBox ;
@@ -187,8 +199,8 @@ async function createTile3d( scene , id = null ) {
 	var shapeScale = 0.02 ,
 		thickness = 1 ;
 
-	//var tileVg = createTileVg( id ) ;
-	var tileVg = createPathBasedTileVg( id ) ;
+	var tileVg = createTileVg( id ) ;
+	//var tileVg = createPathBasedTileVg( id ) ;
 	var tileSideVg = createTileSideVg() ;
 
 	// Shape profile in XZ plane, we use Z=-Y because images have Y-down
@@ -208,28 +220,30 @@ async function createTile3d( scene , id = null ) {
 
 	// BE CAREFUL, VG coordinates has Y-down, while UV has Y-up, so it is more complicated...
 
+	const epsilonTx = 3 ;	// This is a security in pixels to avoid texture seams at the edge of the geometry
+
 	// Top face
 	faceUV[ 0 ] = new BABYLON.Vector4(
-		0 ,
-		1 - ( tileVg.viewBox.height / textureHeight ) ,
-		tileVg.viewBox.width / textureWidth ,
-		1
+		epsilonTx / textureWidth ,
+		1 - ( ( tileVg.viewBox.height - epsilonTx ) / textureHeight ) ,
+		( tileVg.viewBox.width - epsilonTx ) / textureWidth ,
+		1 - epsilonTx / textureHeight
 	) ;
 
-	// There is only 1 UV for all side face, it cannot be customized -_-'
+	// There is only 1 UV for all the side-faces, it cannot be customized -_-'
 	faceUV[ 1 ] = new BABYLON.Vector4(
-		( tileVg.viewBox.width + spacing ) / textureWidth ,
-		1 - ( tileSideVg.viewBox.height / textureHeight ) ,
-		1 ,
-		1
+		( tileVg.viewBox.width + spacing + epsilonTx ) / textureWidth ,
+		1 - ( ( tileSideVg.viewBox.height - epsilonTx ) / textureHeight ) ,
+		1 - epsilonTx / textureWidth ,
+		1 - epsilonTx / textureHeight
 	) ;
 
 	// Bottom face, for instance we will use the top-face UV, it is flipped for both U and V so it is symetrical to the top face
 	faceUV[ 2 ] = new BABYLON.Vector4(
-		tileVg.viewBox.width / textureWidth ,
-		1 ,
-		0 ,
-		1 - ( tileVg.viewBox.height / textureHeight )
+		( tileVg.viewBox.width - epsilonTx ) / textureWidth ,
+		1 - epsilonTx / textureHeight ,
+		epsilonTx / textureWidth ,
+		1 - ( ( tileVg.viewBox.height - epsilonTx ) / textureHeight )
 	) ;
 
 	var dynamicTexture = new BABYLON.DynamicTexture( "vgTexture" , { width: textureWidth , height: textureHeight } , scene ) ;
@@ -374,9 +388,9 @@ async function createScene() {
 
 
 
-	//let board3d = await createBoard3d( scene ) ;
+	let board3d = await createBoard3d( scene ) ;
 
-	let tile3d = await createTile3d( scene , 0 ) ;
+	//let tile3d = await createTile3d( scene , 0 ) ;
 
 	/*
 	for ( let i = 0 ; i < 1 ; i ++ ) {
