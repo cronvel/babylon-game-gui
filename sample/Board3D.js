@@ -33,8 +33,10 @@ function createPathBasedTileVg( id = null ) {
 
 	var polygon = vgPath.path.toPolygon( {
 		step: 10 ,
+		//step: 5 ,
 		forceKeyPoints: true ,
 		angleThresholdDeg: 15
+		//angleThresholdDeg: 5
 	} )[ 0 ] ;
 
 	let boundingBox = vgPath.boundingBox ;
@@ -189,8 +191,11 @@ async function createTile3d( scene , id = null ) {
 	var tileVg = createPathBasedTileVg( id ) ;
 	var tileSideVg = createTileSideVg() ;
 
-	// Shape profile in XZ plane
-	var shapeXZ = tileVg.data.extrusionShape.map( point => new BABYLON.Vector3( point.x * shapeScale , 0 , point.y * shapeScale ) ) ;
+	// Shape profile in XZ plane, we use Z=-Y because images have Y-down
+	var shapeXZ = tileVg.data.extrusionShape.map( point => new BABYLON.Vector3( point.x * shapeScale , 0 , - point.y * shapeScale ) ) ;
+	// It seems that the mesh builder expect that point are produced with the correct chirality,
+	// here we have to reverse the points or the face normals would be wrong
+	shapeXZ.reverse() ;
 
 
 	// It is not possible to have multiple material/texture for the same mesh,
