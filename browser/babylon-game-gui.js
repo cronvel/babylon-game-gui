@@ -1895,20 +1895,29 @@ helpers.areControlsOverlaping = ( control1 , control2 ) => {
 
 /* global BABYLON, earcut */
 
+// Derived from:
+// https://github.com/BabylonJS/Babylon.js/blob/master/packages/dev/core/src/Meshes/Builders/polygonBuilder.ts
+// https://github.com/BabylonJS/Babylon.js/blob/master/packages/dev/core/src/Meshes/polygonMesh.ts
+/* eslint-disable camelcase */
+
 const Vector2 = BABYLON.Vector2 ;
+const Vector3 = BABYLON.Vector3 ;
 const Vector4 = BABYLON.Vector4 ;
 const Color4 = BABYLON.Color4 ;
 const Mesh = BABYLON.Mesh ;
 const VertexData = BABYLON.VertexData ;
 const VertexBuffer = BABYLON.VertexBuffer ;
 const EngineStore = BABYLON.EngineStore ;
-const PolygonMeshBuilder = BABYLON.PolygonMeshBuilder ;
+const Epsilon = BABYLON.Epsilon ;
+//const PolygonMeshBuilder = BABYLON.PolygonMeshBuilder ;
 const useOpenGLOrientationForUV = BABYLON.useOpenGLOrientationForUV ;
 
 
 
 const meshBuilders = {} ;
 module.exports = meshBuilders ;
+
+
 
 /**
  * Creates a polygon mesh
@@ -2071,6 +2080,261 @@ meshBuilders.createPolygonVertexData = ( polygon , sideOrientation , fUV = null 
 	return vertexData ;
 } ;
 
+
+
+/**
+ * Builds a polygon
+ * @see https://doc.babylonjs.com/features/featuresDeepDive/mesh/creation/param/polyMeshBuilder
+ */
+class PolygonMeshBuilder {
+	_name = null ;
+	_scene = null ;
+
+	_points = [] ;
+	_outlinepoints = [] ;
+	_epoints = [] ;
+	_bounds ;
+
+	// Babylon reference to the earcut plugin.
+	bjsEarcut = null ;
+
+	/**
+	 * Creates a PolygonMeshBuilder
+	 * @param name name of the builder
+	 * @param contours Path of the polygon
+	 * @param scene scene to add to when creating the mesh
+	 * @param earcutInjection can be used to inject your own earcut reference
+	 */
+	constructor( name , points , scene , earcutInjection = earcut ) {
+		this.bjsEarcut = earcutInjection ;
+		this._name = name ;
+		this._scene = scene || EngineStore.LastCreatedScene ;
+
+		this._points = points.slice() ;
+		this._outlinepoints = points.slice() ;
+		points.forEach( point => this._epoints.push( point.x , point.y ) ) ;
+		this.computeBounds() ;
+
+		if ( this.bjsEarcut === undefined ) {
+			console.warn( "Earcut was not found, the polygon will not be built." ) ;
+		}
+	}
+
+
+
+	/**
+	 * Creates the polygon
+	 * @param updatable If the mesh should be updatable
+	 * @param depth The depth of the mesh created
+	 * @param smoothingThreshold Dot product threshold for smoothed normals
+	 * @returns the created mesh
+	 */
+	build( updatable = false , depth = 0 , smoothingThreshold = 2 ) {
+		const mesh = new Mesh( this._name , this._scene ) ;
+
+		const vertexData = this.buildVertexData( depth , smoothingThreshold ) ;
+
+		mesh.setVerticesData( VertexBuffer.PositionKind , vertexData.positions , updatable ) ;
+		mesh.setVerticesData( VertexBuffer.NormalKind , vertexData.normals , updatable ) ;
+		mesh.setVerticesData( VertexBuffer.UVKind , vertexData.uvs , updatable ) ;
+		mesh.setIndices( vertexData.indices ) ;
+
+		return mesh ;
+	}
+
+	/**
+	 * Creates the polygon
+	 * @param depth The depth of the mesh created
+	 * @param smoothingThreshold Dot product threshold for smoothed normals
+	 * @returns the created VertexData
+	 */
+	buildVertexData( depth = 0 , smoothingThreshold = 2 ) {
+		const vertexData = new VertexData() ;
+		const normals = [] ;
+		const positions = [] ;
+		const uvs = [] ;
+
+		// Add the top-face
+		this._points.forEach( ( p ) => {
+			normals.push( 0 , 1.0 , 0 ) ;
+			positions.push( p.x , 0 , p.y ) ;
+			uvs.push( ( p.x - this._bounds.min.x ) / this._bounds.width , ( p.y - this._bounds.min.y ) / this._bounds.height ) ;
+		} ) ;
+
+		const indices = [] ;
+
+		const earcutPoints = this.bjsEarcut( this._epoints ) ;
+
+		for ( let i = 0 ; i < earcutPoints.length ; i ++ ) {
+			indices.push( earcutPoints[i] ) ;
+		}
+
+		if ( depth > 0 ) {
+			// Add the bottom-face
+			const positionscount = positions.length / 3 ; //get the current pointcount
+
+			this._points.forEach( ( p ) => {
+				//add the elements at the depth
+				normals.push( 0 , - 1.0 , 0 ) ;
+				positions.push( p.x , - depth , p.y ) ;
+				uvs.push( 1 - ( p.x - this._bounds.min.x ) / this._bounds.width , 1 - ( p.y - this._bounds.min.y ) / this._bounds.height ) ;
+			} ) ;
+
+			const totalCount = indices.length ;
+			// indices get reversed for each tris, so front-face/back-face is correct
+			for ( let i = 0 ; i < totalCount ; i += 3 ) {
+				const i0 = indices[i + 0] ;
+				const i1 = indices[i + 1] ;
+				const i2 = indices[i + 2] ;
+
+				indices.push( i2 + positionscount ) ;
+				indices.push( i1 + positionscount ) ;
+				indices.push( i0 + positionscount ) ;
+			}
+
+			// Add the sides
+			this._addSide( positions , normals , uvs , indices , this._bounds , this._outlinepoints , depth , false , smoothingThreshold ) ;
+		}
+
+		vertexData.indices = indices ;
+		vertexData.positions = positions ;
+		vertexData.normals = normals ;
+		vertexData.uvs = uvs ;
+
+		return vertexData ;
+	}
+
+	/**
+	 * Adds a side to the polygon
+	 * @param positions points that make the polygon
+	 * @param normals normals of the polygon
+	 * @param uvs uvs of the polygon
+	 * @param indices indices of the polygon
+	 * @param bounds bounds of the polygon
+	 * @param points points of the polygon
+	 * @param depth depth of the polygon
+	 * @param flip flip of the polygon
+	 * @param smoothingThreshold
+	 */
+	_addSide( positions , normals , uvs , indices , bounds , points , depth , flip , smoothingThreshold ) {
+		let startIndex = positions.length / 3 ;
+		let ulength = 0 ;
+		for ( let i = 0 ; i < points.length ; i ++ ) {
+			const p = points[i] ;
+			const p1 = points[( i + 1 ) % points.length] ;
+
+			positions.push( p.x , 0 , p.y ) ;
+			positions.push( p.x , - depth , p.y ) ;
+			positions.push( p1.x , 0 , p1.y ) ;
+			positions.push( p1.x , - depth , p1.y ) ;
+
+			const p0 = points[( i + points.length - 1 ) % points.length] ;
+			const p2 = points[( i + 2 ) % points.length] ;
+
+			let vc = new Vector3( - ( p1.y - p.y ) , 0 , p1.x - p.x ) ;
+			let vp = new Vector3( - ( p.y - p0.y ) , 0 , p.x - p0.x ) ;
+			let vn = new Vector3( - ( p2.y - p1.y ) , 0 , p2.x - p1.x ) ;
+
+			if ( ! flip ) {
+				vc = vc.scale( - 1 ) ;
+				vp = vp.scale( - 1 ) ;
+				vn = vn.scale( - 1 ) ;
+			}
+
+			const vc_norm = vc.normalizeToNew() ;
+			let vp_norm = vp.normalizeToNew() ;
+			let vn_norm = vn.normalizeToNew() ;
+
+			const dotp = Vector3.Dot( vp_norm , vc_norm ) ;
+			if ( dotp > smoothingThreshold ) {
+				if ( dotp < Epsilon - 1 ) {
+					vp_norm = new Vector3( p.x , 0 , p.y ).subtract( new Vector3( p1.x , 0 , p1.y ) ).normalize() ;
+				}
+				else {
+					// cheap average weighed by side length
+					vp_norm = vp.add( vc ).normalize() ;
+				}
+			}
+			else {
+				vp_norm = vc_norm ;
+			}
+
+			const dotn = Vector3.Dot( vn , vc ) ;
+			if ( dotn > smoothingThreshold ) {
+				if ( dotn < Epsilon - 1 ) {
+					// back to back
+					vn_norm = new Vector3( p1.x , 0 , p1.y ).subtract( new Vector3( p.x , 0 , p.y ) ).normalize() ;
+				}
+				else {
+					// cheap average weighed by side length
+					vn_norm = vn.add( vc ).normalize() ;
+				}
+			}
+			else {
+				vn_norm = vc_norm ;
+			}
+
+			uvs.push( ulength / bounds.width , 0 ) ;
+			uvs.push( ulength / bounds.width , 1 ) ;
+			ulength += vc.length() ;
+			uvs.push( ulength / bounds.width , 0 ) ;
+			uvs.push( ulength / bounds.width , 1 ) ;
+
+			normals.push( vp_norm.x , vp_norm.y , vp_norm.z ) ;
+			normals.push( vp_norm.x , vp_norm.y , vp_norm.z ) ;
+			normals.push( vn_norm.x , vn_norm.y , vn_norm.z ) ;
+			normals.push( vn_norm.x , vn_norm.y , vn_norm.z ) ;
+
+			if ( ! flip ) {
+				indices.push( startIndex ) ;
+				indices.push( startIndex + 1 ) ;
+				indices.push( startIndex + 2 ) ;
+
+				indices.push( startIndex + 1 ) ;
+				indices.push( startIndex + 3 ) ;
+				indices.push( startIndex + 2 ) ;
+			}
+			else {
+				indices.push( startIndex ) ;
+				indices.push( startIndex + 2 ) ;
+				indices.push( startIndex + 1 ) ;
+
+				indices.push( startIndex + 1 ) ;
+				indices.push( startIndex + 2 ) ;
+				indices.push( startIndex + 3 ) ;
+			}
+			startIndex += 4 ;
+		}
+	}
+
+	computeBounds() {
+		const lmin = new Vector2(this._points[0].x, this._points[0].y);
+		const lmax = new Vector2(this._points[0].x, this._points[0].y);
+
+		this._points.forEach( point => {
+			// x
+			if (point.x < lmin.x) {
+				lmin.x = point.x;
+			} else if (point.x > lmax.x) {
+				lmax.x = point.x;
+			}
+
+			// y
+			if (point.y < lmin.y) {
+				lmin.y = point.y;
+			} else if (point.y > lmax.y) {
+				lmax.y = point.y;
+			}
+		});
+
+		this._bounds = {
+			min: lmin,
+			max: lmax,
+			width: lmax.x - lmin.x,
+			height: lmax.y - lmin.y,
+		};
+	}
+}
 
 },{}],10:[function(require,module,exports){
 (function (process,global){(function (){
@@ -21927,8 +22191,8 @@ inspectStyle.html = Object.assign( {} , inspectStyle.none , {
 } ) ;
 
 
-}).call(this)}).call(this,{"isBuffer":require("../../../../../../../../../../../opt/node-v20.11.0/lib/node_modules/browserify/node_modules/is-buffer/index.js")},require('_process'))
-},{"../../../../../../../../../../../opt/node-v20.11.0/lib/node_modules/browserify/node_modules/is-buffer/index.js":134,"./ansi.js":71,"./escape.js":73,"_process":136}],77:[function(require,module,exports){
+}).call(this)}).call(this,{"isBuffer":require("../../../../../../../../../../../opt/node-v14.15.4/lib/node_modules/browserify/node_modules/is-buffer/index.js")},require('_process'))
+},{"../../../../../../../../../../../opt/node-v14.15.4/lib/node_modules/browserify/node_modules/is-buffer/index.js":134,"./ansi.js":71,"./escape.js":73,"_process":136}],77:[function(require,module,exports){
 module.exports={"߀":"0","́":""," ":" ","Ⓐ":"A","Ａ":"A","À":"A","Á":"A","Â":"A","Ầ":"A","Ấ":"A","Ẫ":"A","Ẩ":"A","Ã":"A","Ā":"A","Ă":"A","Ằ":"A","Ắ":"A","Ẵ":"A","Ẳ":"A","Ȧ":"A","Ǡ":"A","Ä":"A","Ǟ":"A","Ả":"A","Å":"A","Ǻ":"A","Ǎ":"A","Ȁ":"A","Ȃ":"A","Ạ":"A","Ậ":"A","Ặ":"A","Ḁ":"A","Ą":"A","Ⱥ":"A","Ɐ":"A","Ꜳ":"AA","Æ":"AE","Ǽ":"AE","Ǣ":"AE","Ꜵ":"AO","Ꜷ":"AU","Ꜹ":"AV","Ꜻ":"AV","Ꜽ":"AY","Ⓑ":"B","Ｂ":"B","Ḃ":"B","Ḅ":"B","Ḇ":"B","Ƀ":"B","Ɓ":"B","ｃ":"C","Ⓒ":"C","Ｃ":"C","Ꜿ":"C","Ḉ":"C","Ç":"C","Ⓓ":"D","Ｄ":"D","Ḋ":"D","Ď":"D","Ḍ":"D","Ḑ":"D","Ḓ":"D","Ḏ":"D","Đ":"D","Ɗ":"D","Ɖ":"D","ᴅ":"D","Ꝺ":"D","Ð":"Dh","Ǳ":"DZ","Ǆ":"DZ","ǲ":"Dz","ǅ":"Dz","ɛ":"E","Ⓔ":"E","Ｅ":"E","È":"E","É":"E","Ê":"E","Ề":"E","Ế":"E","Ễ":"E","Ể":"E","Ẽ":"E","Ē":"E","Ḕ":"E","Ḗ":"E","Ĕ":"E","Ė":"E","Ë":"E","Ẻ":"E","Ě":"E","Ȅ":"E","Ȇ":"E","Ẹ":"E","Ệ":"E","Ȩ":"E","Ḝ":"E","Ę":"E","Ḙ":"E","Ḛ":"E","Ɛ":"E","Ǝ":"E","ᴇ":"E","ꝼ":"F","Ⓕ":"F","Ｆ":"F","Ḟ":"F","Ƒ":"F","Ꝼ":"F","Ⓖ":"G","Ｇ":"G","Ǵ":"G","Ĝ":"G","Ḡ":"G","Ğ":"G","Ġ":"G","Ǧ":"G","Ģ":"G","Ǥ":"G","Ɠ":"G","Ꞡ":"G","Ᵹ":"G","Ꝿ":"G","ɢ":"G","Ⓗ":"H","Ｈ":"H","Ĥ":"H","Ḣ":"H","Ḧ":"H","Ȟ":"H","Ḥ":"H","Ḩ":"H","Ḫ":"H","Ħ":"H","Ⱨ":"H","Ⱶ":"H","Ɥ":"H","Ⓘ":"I","Ｉ":"I","Ì":"I","Í":"I","Î":"I","Ĩ":"I","Ī":"I","Ĭ":"I","İ":"I","Ï":"I","Ḯ":"I","Ỉ":"I","Ǐ":"I","Ȉ":"I","Ȋ":"I","Ị":"I","Į":"I","Ḭ":"I","Ɨ":"I","Ⓙ":"J","Ｊ":"J","Ĵ":"J","Ɉ":"J","ȷ":"J","Ⓚ":"K","Ｋ":"K","Ḱ":"K","Ǩ":"K","Ḳ":"K","Ķ":"K","Ḵ":"K","Ƙ":"K","Ⱪ":"K","Ꝁ":"K","Ꝃ":"K","Ꝅ":"K","Ꞣ":"K","Ⓛ":"L","Ｌ":"L","Ŀ":"L","Ĺ":"L","Ľ":"L","Ḷ":"L","Ḹ":"L","Ļ":"L","Ḽ":"L","Ḻ":"L","Ł":"L","Ƚ":"L","Ɫ":"L","Ⱡ":"L","Ꝉ":"L","Ꝇ":"L","Ꞁ":"L","Ǉ":"LJ","ǈ":"Lj","Ⓜ":"M","Ｍ":"M","Ḿ":"M","Ṁ":"M","Ṃ":"M","Ɱ":"M","Ɯ":"M","ϻ":"M","Ꞥ":"N","Ƞ":"N","Ⓝ":"N","Ｎ":"N","Ǹ":"N","Ń":"N","Ñ":"N","Ṅ":"N","Ň":"N","Ṇ":"N","Ņ":"N","Ṋ":"N","Ṉ":"N","Ɲ":"N","Ꞑ":"N","ᴎ":"N","Ǌ":"NJ","ǋ":"Nj","Ⓞ":"O","Ｏ":"O","Ò":"O","Ó":"O","Ô":"O","Ồ":"O","Ố":"O","Ỗ":"O","Ổ":"O","Õ":"O","Ṍ":"O","Ȭ":"O","Ṏ":"O","Ō":"O","Ṑ":"O","Ṓ":"O","Ŏ":"O","Ȯ":"O","Ȱ":"O","Ö":"O","Ȫ":"O","Ỏ":"O","Ő":"O","Ǒ":"O","Ȍ":"O","Ȏ":"O","Ơ":"O","Ờ":"O","Ớ":"O","Ỡ":"O","Ở":"O","Ợ":"O","Ọ":"O","Ộ":"O","Ǫ":"O","Ǭ":"O","Ø":"O","Ǿ":"O","Ɔ":"O","Ɵ":"O","Ꝋ":"O","Ꝍ":"O","Œ":"OE","Ƣ":"OI","Ꝏ":"OO","Ȣ":"OU","Ⓟ":"P","Ｐ":"P","Ṕ":"P","Ṗ":"P","Ƥ":"P","Ᵽ":"P","Ꝑ":"P","Ꝓ":"P","Ꝕ":"P","Ⓠ":"Q","Ｑ":"Q","Ꝗ":"Q","Ꝙ":"Q","Ɋ":"Q","Ⓡ":"R","Ｒ":"R","Ŕ":"R","Ṙ":"R","Ř":"R","Ȑ":"R","Ȓ":"R","Ṛ":"R","Ṝ":"R","Ŗ":"R","Ṟ":"R","Ɍ":"R","Ɽ":"R","Ꝛ":"R","Ꞧ":"R","Ꞃ":"R","Ⓢ":"S","Ｓ":"S","ẞ":"S","Ś":"S","Ṥ":"S","Ŝ":"S","Ṡ":"S","Š":"S","Ṧ":"S","Ṣ":"S","Ṩ":"S","Ș":"S","Ş":"S","Ȿ":"S","Ꞩ":"S","Ꞅ":"S","Ⓣ":"T","Ｔ":"T","Ṫ":"T","Ť":"T","Ṭ":"T","Ț":"T","Ţ":"T","Ṱ":"T","Ṯ":"T","Ŧ":"T","Ƭ":"T","Ʈ":"T","Ⱦ":"T","Ꞇ":"T","Þ":"Th","Ꜩ":"TZ","Ⓤ":"U","Ｕ":"U","Ù":"U","Ú":"U","Û":"U","Ũ":"U","Ṹ":"U","Ū":"U","Ṻ":"U","Ŭ":"U","Ü":"U","Ǜ":"U","Ǘ":"U","Ǖ":"U","Ǚ":"U","Ủ":"U","Ů":"U","Ű":"U","Ǔ":"U","Ȕ":"U","Ȗ":"U","Ư":"U","Ừ":"U","Ứ":"U","Ữ":"U","Ử":"U","Ự":"U","Ụ":"U","Ṳ":"U","Ų":"U","Ṷ":"U","Ṵ":"U","Ʉ":"U","Ⓥ":"V","Ｖ":"V","Ṽ":"V","Ṿ":"V","Ʋ":"V","Ꝟ":"V","Ʌ":"V","Ꝡ":"VY","Ⓦ":"W","Ｗ":"W","Ẁ":"W","Ẃ":"W","Ŵ":"W","Ẇ":"W","Ẅ":"W","Ẉ":"W","Ⱳ":"W","Ⓧ":"X","Ｘ":"X","Ẋ":"X","Ẍ":"X","Ⓨ":"Y","Ｙ":"Y","Ỳ":"Y","Ý":"Y","Ŷ":"Y","Ỹ":"Y","Ȳ":"Y","Ẏ":"Y","Ÿ":"Y","Ỷ":"Y","Ỵ":"Y","Ƴ":"Y","Ɏ":"Y","Ỿ":"Y","Ⓩ":"Z","Ｚ":"Z","Ź":"Z","Ẑ":"Z","Ż":"Z","Ž":"Z","Ẓ":"Z","Ẕ":"Z","Ƶ":"Z","Ȥ":"Z","Ɀ":"Z","Ⱬ":"Z","Ꝣ":"Z","ⓐ":"a","ａ":"a","ẚ":"a","à":"a","á":"a","â":"a","ầ":"a","ấ":"a","ẫ":"a","ẩ":"a","ã":"a","ā":"a","ă":"a","ằ":"a","ắ":"a","ẵ":"a","ẳ":"a","ȧ":"a","ǡ":"a","ä":"a","ǟ":"a","ả":"a","å":"a","ǻ":"a","ǎ":"a","ȁ":"a","ȃ":"a","ạ":"a","ậ":"a","ặ":"a","ḁ":"a","ą":"a","ⱥ":"a","ɐ":"a","ɑ":"a","ꜳ":"aa","æ":"ae","ǽ":"ae","ǣ":"ae","ꜵ":"ao","ꜷ":"au","ꜹ":"av","ꜻ":"av","ꜽ":"ay","ⓑ":"b","ｂ":"b","ḃ":"b","ḅ":"b","ḇ":"b","ƀ":"b","ƃ":"b","ɓ":"b","Ƃ":"b","ⓒ":"c","ć":"c","ĉ":"c","ċ":"c","č":"c","ç":"c","ḉ":"c","ƈ":"c","ȼ":"c","ꜿ":"c","ↄ":"c","C":"c","Ć":"c","Ĉ":"c","Ċ":"c","Č":"c","Ƈ":"c","Ȼ":"c","ⓓ":"d","ｄ":"d","ḋ":"d","ď":"d","ḍ":"d","ḑ":"d","ḓ":"d","ḏ":"d","đ":"d","ƌ":"d","ɖ":"d","ɗ":"d","Ƌ":"d","Ꮷ":"d","ԁ":"d","Ɦ":"d","ð":"dh","ǳ":"dz","ǆ":"dz","ⓔ":"e","ｅ":"e","è":"e","é":"e","ê":"e","ề":"e","ế":"e","ễ":"e","ể":"e","ẽ":"e","ē":"e","ḕ":"e","ḗ":"e","ĕ":"e","ė":"e","ë":"e","ẻ":"e","ě":"e","ȅ":"e","ȇ":"e","ẹ":"e","ệ":"e","ȩ":"e","ḝ":"e","ę":"e","ḙ":"e","ḛ":"e","ɇ":"e","ǝ":"e","ⓕ":"f","ｆ":"f","ḟ":"f","ƒ":"f","ﬀ":"ff","ﬁ":"fi","ﬂ":"fl","ﬃ":"ffi","ﬄ":"ffl","ⓖ":"g","ｇ":"g","ǵ":"g","ĝ":"g","ḡ":"g","ğ":"g","ġ":"g","ǧ":"g","ģ":"g","ǥ":"g","ɠ":"g","ꞡ":"g","ꝿ":"g","ᵹ":"g","ⓗ":"h","ｈ":"h","ĥ":"h","ḣ":"h","ḧ":"h","ȟ":"h","ḥ":"h","ḩ":"h","ḫ":"h","ẖ":"h","ħ":"h","ⱨ":"h","ⱶ":"h","ɥ":"h","ƕ":"hv","ⓘ":"i","ｉ":"i","ì":"i","í":"i","î":"i","ĩ":"i","ī":"i","ĭ":"i","ï":"i","ḯ":"i","ỉ":"i","ǐ":"i","ȉ":"i","ȋ":"i","ị":"i","į":"i","ḭ":"i","ɨ":"i","ı":"i","ⓙ":"j","ｊ":"j","ĵ":"j","ǰ":"j","ɉ":"j","ⓚ":"k","ｋ":"k","ḱ":"k","ǩ":"k","ḳ":"k","ķ":"k","ḵ":"k","ƙ":"k","ⱪ":"k","ꝁ":"k","ꝃ":"k","ꝅ":"k","ꞣ":"k","ⓛ":"l","ｌ":"l","ŀ":"l","ĺ":"l","ľ":"l","ḷ":"l","ḹ":"l","ļ":"l","ḽ":"l","ḻ":"l","ſ":"l","ł":"l","ƚ":"l","ɫ":"l","ⱡ":"l","ꝉ":"l","ꞁ":"l","ꝇ":"l","ɭ":"l","ǉ":"lj","ⓜ":"m","ｍ":"m","ḿ":"m","ṁ":"m","ṃ":"m","ɱ":"m","ɯ":"m","ⓝ":"n","ｎ":"n","ǹ":"n","ń":"n","ñ":"n","ṅ":"n","ň":"n","ṇ":"n","ņ":"n","ṋ":"n","ṉ":"n","ƞ":"n","ɲ":"n","ŉ":"n","ꞑ":"n","ꞥ":"n","ԉ":"n","ǌ":"nj","ⓞ":"o","ｏ":"o","ò":"o","ó":"o","ô":"o","ồ":"o","ố":"o","ỗ":"o","ổ":"o","õ":"o","ṍ":"o","ȭ":"o","ṏ":"o","ō":"o","ṑ":"o","ṓ":"o","ŏ":"o","ȯ":"o","ȱ":"o","ö":"o","ȫ":"o","ỏ":"o","ő":"o","ǒ":"o","ȍ":"o","ȏ":"o","ơ":"o","ờ":"o","ớ":"o","ỡ":"o","ở":"o","ợ":"o","ọ":"o","ộ":"o","ǫ":"o","ǭ":"o","ø":"o","ǿ":"o","ꝋ":"o","ꝍ":"o","ɵ":"o","ɔ":"o","ᴑ":"o","œ":"oe","ƣ":"oi","ꝏ":"oo","ȣ":"ou","ⓟ":"p","ｐ":"p","ṕ":"p","ṗ":"p","ƥ":"p","ᵽ":"p","ꝑ":"p","ꝓ":"p","ꝕ":"p","ρ":"p","ⓠ":"q","ｑ":"q","ɋ":"q","ꝗ":"q","ꝙ":"q","ⓡ":"r","ｒ":"r","ŕ":"r","ṙ":"r","ř":"r","ȑ":"r","ȓ":"r","ṛ":"r","ṝ":"r","ŗ":"r","ṟ":"r","ɍ":"r","ɽ":"r","ꝛ":"r","ꞧ":"r","ꞃ":"r","ⓢ":"s","ｓ":"s","ś":"s","ṥ":"s","ŝ":"s","ṡ":"s","š":"s","ṧ":"s","ṣ":"s","ṩ":"s","ș":"s","ş":"s","ȿ":"s","ꞩ":"s","ꞅ":"s","ẛ":"s","ʂ":"s","ß":"ss","ⓣ":"t","ｔ":"t","ṫ":"t","ẗ":"t","ť":"t","ṭ":"t","ț":"t","ţ":"t","ṱ":"t","ṯ":"t","ŧ":"t","ƭ":"t","ʈ":"t","ⱦ":"t","ꞇ":"t","þ":"th","ꜩ":"tz","ⓤ":"u","ｕ":"u","ù":"u","ú":"u","û":"u","ũ":"u","ṹ":"u","ū":"u","ṻ":"u","ŭ":"u","ü":"u","ǜ":"u","ǘ":"u","ǖ":"u","ǚ":"u","ủ":"u","ů":"u","ű":"u","ǔ":"u","ȕ":"u","ȗ":"u","ư":"u","ừ":"u","ứ":"u","ữ":"u","ử":"u","ự":"u","ụ":"u","ṳ":"u","ų":"u","ṷ":"u","ṵ":"u","ʉ":"u","ⓥ":"v","ｖ":"v","ṽ":"v","ṿ":"v","ʋ":"v","ꝟ":"v","ʌ":"v","ꝡ":"vy","ⓦ":"w","ｗ":"w","ẁ":"w","ẃ":"w","ŵ":"w","ẇ":"w","ẅ":"w","ẘ":"w","ẉ":"w","ⱳ":"w","ⓧ":"x","ｘ":"x","ẋ":"x","ẍ":"x","ⓨ":"y","ｙ":"y","ỳ":"y","ý":"y","ŷ":"y","ỹ":"y","ȳ":"y","ẏ":"y","ÿ":"y","ỷ":"y","ẙ":"y","ỵ":"y","ƴ":"y","ɏ":"y","ỿ":"y","ⓩ":"z","ｚ":"z","ź":"z","ẑ":"z","ż":"z","ž":"z","ẓ":"z","ẕ":"z","ƶ":"z","ȥ":"z","ɀ":"z","ⱬ":"z","ꝣ":"z"}
 },{}],78:[function(require,module,exports){
 /*

@@ -270,7 +270,8 @@ async function createTile3d( scene , id = null ) {
 			closeShape: true ,
 			depth: 1 ,
 			//sideOrientation: BABYLON.Mesh.DOUBLESIDE ,
-			faceUV
+			faceUV ,
+			//wrap: true
 		} ,
 		scene
 	) ;
