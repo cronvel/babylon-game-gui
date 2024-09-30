@@ -122,6 +122,7 @@ function createPathBasedTileVg( id = null ) {
 		angleThresholdDeg: 15
 		//angleThresholdDeg: 5
 	} )[ 0 ] ;
+	//polygon.ensureOrientation( 1 ) ;
 
 	let boundingBox = vgPath.boundingBox ;
 	boundingBox.shrink( 2 , 1 ) ;	// We have to shrink the boundingBox by 2 pixels each side to avoid aliasing on the boundary of the shape (1 pixel is not enough)
@@ -199,16 +200,17 @@ async function createTile3d( scene , id = null ) {
 	var shapeScale = 0.02 ,
 		thickness = 1 ;
 
-	var tileVg = createTileVg( id ) ;
-	//var tileVg = createPathBasedTileVg( id ) ;
+	//var tileVg = createTileVg( id ) ;
+	var tileVg = createPathBasedTileVg( id ) ;
 	var tileSideVg = createTileSideVg() ;
 
 	// Shape profile in XZ plane, we use Z=-Y because images have Y-down
-	var shapeXZ = tileVg.data.extrusionShape.map( point => new BABYLON.Vector3( point.x * shapeScale , 0 , - point.y * shapeScale ) ) ;
-	// It seems that the mesh builder expect that point are produced with the correct chirality,
-	// here we have to reverse the points or the face normals would be wrong
-	shapeXZ.reverse() ;
-
+	// First, revert Y
+	var extrusionShape = tileVg.data.extrusionShape.map( point => ( { x: point.x , y: - point.y } ) ) ;
+	// Ensure a trigonometric orientation of points, since the mesh builder expect that points are produced
+	// in the correct orientation/rotation (counter-clockwise)
+	svgKit.Polygon.ensureOrientation( extrusionShape , 1 ) ;
+	var shapeXZ = extrusionShape.map( point => new BABYLON.Vector3( point.x * shapeScale , 0 , point.y * shapeScale ) ) ;
 
 	// It is not possible to have multiple material/texture for the same mesh,
 	// so we have to construct one single texture out of multiple VG and compute the UV mapping.
@@ -388,9 +390,9 @@ async function createScene() {
 
 
 
-	let board3d = await createBoard3d( scene ) ;
+	//let board3d = await createBoard3d( scene ) ;
 
-	//let tile3d = await createTile3d( scene , 0 ) ;
+	let tile3d = await createTile3d( scene , 0 ) ;
 
 	/*
 	for ( let i = 0 ; i < 1 ; i ++ ) {
