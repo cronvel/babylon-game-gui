@@ -261,7 +261,8 @@ async function createTile3d( scene , id = null ) {
 	material.ambientColor = new BABYLON.Color3( 1 , 1 , 1 ) ;
 
 
-	var tile = BABYLON.MeshBuilder.ExtrudePolygon(
+	//var tile = BABYLON.MeshBuilder.ExtrudePolygon(
+	var tile = GAMEGUI.meshBuilders.extrudePolygon(
 		"tile3d#" + id ,
 		{
 			shape: shapeXZ ,
@@ -355,6 +356,7 @@ async function createScene() {
 	// This creates and positions a free camera (non-mesh)
 	//var camera = new BABYLON.FreeCamera( "camera1" , new BABYLON.Vector3( 0 , 5 , - 10 ) , scene ) ;
 	var camera = new BABYLON.ArcRotateCamera( "Camera" , 3 * Math.PI / 2 , Math.PI / 4 , 20 , BABYLON.Vector3.Zero() ) ;
+	camera.wheelPrecision = 10 ;	// Mouse wheel will move the camera less with that setting
 
 	// This targets the camera to scene origin
 	//camera.setTarget( BABYLON.Vector3.Zero() ) ;

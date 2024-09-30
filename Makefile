@@ -52,7 +52,7 @@ UGLIFY=uglifyjs
 # Files rules
 
 # Build the browser lib
-browser/babylon-game-gui.js: lib/*.js
+browser/babylon-game-gui.js: lib/*.js lib/*/*.js
 	${BROWSERIFY} lib/babylon-game-gui.js -i fs -i image-size -s GAMEGUI -o browser/babylon-game-gui.js
 
 # Build the browser minified lib
