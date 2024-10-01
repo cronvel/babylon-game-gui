@@ -211,6 +211,7 @@ async function createTile3d( scene , id = null ) {
 	// in the correct orientation/rotation (counter-clockwise)
 	svgKit.Polygon.ensureOrientation( extrusionShape , 1 ) ;
 	var shapeXZ = extrusionShape.map( point => new BABYLON.Vector3( point.x * shapeScale , 0 , point.y * shapeScale ) ) ;
+	var shapeXY = extrusionShape.map( point => new BABYLON.Vector2( point.x * shapeScale , point.y * shapeScale ) ) ;
 
 	// It is not possible to have multiple material/texture for the same mesh,
 	// so we have to construct one single texture out of multiple VG and compute the UV mapping.
@@ -261,6 +262,7 @@ async function createTile3d( scene , id = null ) {
 	material.ambientColor = new BABYLON.Color3( 1 , 1 , 1 ) ;
 
 
+	/*
 	//var tile = BABYLON.MeshBuilder.ExtrudePolygon(
 	var tile = GAMEGUI.meshBuilders.extrudePolygon(
 		"tile3d#" + id ,
@@ -275,6 +277,25 @@ async function createTile3d( scene , id = null ) {
 		} ,
 		scene
 	) ;
+	//*/
+	
+	//*
+	var polygonMeshBuilder = new GAMEGUI.PolygonMeshBuilder(
+		"tile3d#" + id ,
+		shapeXY ,
+		{
+			depth: 1 ,
+			//top: false ,
+			//bottom: false ,
+			//side: false ,
+			//sideOrientation: BABYLON.Mesh.DOUBLESIDE ,
+			faceUV ,
+			//wrapSideUV: true
+		} ,
+		scene
+	) ;
+	var tile = polygonMeshBuilder.build() ;
+	//*/
 
 	//tile.rotation.x = - Math.PI / 2 ;
 	tile.position.y = 0.5 ;
