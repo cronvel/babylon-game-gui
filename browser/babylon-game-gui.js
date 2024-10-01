@@ -1938,6 +1938,7 @@ class PolygonMeshBuilder {
 
 	_bounds ;
 	_earcutIndices ;
+	_vertexData = null ;
 
 	/**
 	 * Creates a polygon mesh
@@ -1974,17 +1975,17 @@ class PolygonMeshBuilder {
 		}
 
 		// default face colors and UV if undefined
-		for ( let f = 0 ; f < 3 ; f ++ ) {
-			if ( this._faceUV[f] === undefined ) {
-				this._faceUV[f] = new Vector4( 0 , 0 , 1 , 1 ) ;
+		for ( let i = 0 ; i < 3 ; i ++ ) {
+			if ( this._faceUV[ i ] === undefined ) {
+				this._faceUV[ i ] = new Vector4( 0 , 0 , 1 , 1 ) ;
 			}
 
-			if ( this._faceColors && this._faceColors[f] === undefined ) {
-				this._faceColors[f] = new Color4( 1 , 1 , 1 , 1 ) ;
+			if ( this._faceColors && this._faceColors[ i ] === undefined ) {
+				this._faceColors[ i ] = new Color4( 1 , 1 , 1 , 1 ) ;
 			}
 		}
 
-		this.computeBounds() ;
+		this._computeBounds() ;
 	}
 
 
@@ -1995,20 +1996,20 @@ class PolygonMeshBuilder {
 		const mesh = new Mesh( this._name , this._scene ) ;
 
 		// Create vertex data
-		const vertexData = this.buildVertexData() ;
+		this._buildVertexData() ;
 
 		// Apply vertex data to the mesh
 		// updatability MUST be set to false during the triangulation process (it would produce errors),
 		// it will be set during .applyToMesh()
-		mesh.setVerticesData( VertexBuffer.PositionKind , vertexData.positions , false ) ;
-		mesh.setVerticesData( VertexBuffer.NormalKind , vertexData.normals , false ) ;
-		mesh.setVerticesData( VertexBuffer.UVKind , vertexData.uvs , false ) ;
-		mesh.setIndices( vertexData.indices ) ;
+		mesh.setVerticesData( VertexBuffer.PositionKind , this._vertexData.positions , false ) ;
+		mesh.setVerticesData( VertexBuffer.NormalKind , this._vertexData.normals , false ) ;
+		mesh.setVerticesData( VertexBuffer.UVKind , this._vertexData.uvs , false ) ;
+		mesh.setIndices( this._vertexData.indices ) ;
 
 		
 		// This was inside another function, it should be fused properly
 		mesh._originalBuilderSideOrientation = this._sideOrientation ;
-		const vertexData2 = this.buildVertexData_2( mesh ) ;
+		const vertexData2 = this._buildVertexData_2( mesh ) ;
 		vertexData2.applyToMesh( mesh , this._updatable ) ;
 
 		return mesh ;
@@ -2016,43 +2017,25 @@ class PolygonMeshBuilder {
 
 
 
-	// Build vertex data indices for the top/bottom face, using earcut behind the scene
-	_buildEarcutIndices() {
-		const flatPoints = [] ;
-		this._shapePoints.forEach( point => flatPoints.push( point.x , point.y ) ) ;
-		this._earcutIndices = earcut( flatPoints ) ;
+	_buildVertexData() {
+		if ( this._vertexData ) { return ; }
+
+		this._vertexData = new VertexData() ;
+		this._vertexData.positions = [] ;
+		this._vertexData.normals = [] ;
+		this._vertexData.uvs = [] ;
+		this._vertexData.indices = [] ;
+
+		if ( this._hasTop ) { this._buildTopFaceVertexData() ; }
+		if ( this._hasBottom ) { this._buildBottomFaceVertexData() ; }
+		if ( this._hasSide ) { this._buildSideFacesVertexData( false ) ; }
+
 	}
 
 
 
-	/**
-	 * Creates the polygon
-	 * @param depth The depth of the mesh created
-	 * @param smoothingThreshold Dot product threshold for smoothed normals
-	 * @returns the created VertexData
-	 */
-	buildVertexData() {
-		const vertexData = new VertexData() ;
-		const positions = [] ;
-		const normals = [] ;
-		const uvs = [] ;
-		const indices = [] ;
-
-		if ( this._hasTop ) { this._buildTopFaceVertexData( positions , normals , uvs , indices ) ; }
-		if ( this._hasBottom ) { this._buildBottomFaceVertexData( positions , normals , uvs , indices ) ; }
-		if ( this._hasSide > 0 ) { this._buildSideFacesVertexData( positions , normals , uvs , indices , false ) ; }
-
-		vertexData.indices = indices ;
-		vertexData.positions = positions ;
-		vertexData.normals = normals ;
-		vertexData.uvs = uvs ;
-
-		return vertexData ;
-	}
-
-
-
-	_buildTopFaceVertexData( positions , normals , uvs , indices ) {
+	_buildTopFaceVertexData() {
+		const { positions , normals , uvs , indices } = this._vertexData ;
 		const indiceOffset = positions.length / 3 ;	// There is 1 indice for 3 positions
 
 		if ( ! this._earcutIndices ) { this._buildEarcutIndices() ; }
@@ -2070,7 +2053,8 @@ class PolygonMeshBuilder {
 
 
 
-	_buildBottomFaceVertexData( positions , normals , uvs , indices ) {
+	_buildBottomFaceVertexData() {
+		const { positions , normals , uvs , indices } = this._vertexData ;
 		const indiceOffset = positions.length / 3 ;	// There is 1 indice for 3 positions
 
 		if ( ! this._earcutIndices ) { this._buildEarcutIndices() ; }
@@ -2093,8 +2077,10 @@ class PolygonMeshBuilder {
 
 
 	// flip: flip normals, indices, etc...
-	_buildSideFacesVertexData( positions , normals , uvs , indices , flip ) {
-		let startIndex = positions.length / 3 ;
+	_buildSideFacesVertexData( flip ) {
+		const { positions , normals , uvs , indices } = this._vertexData ;
+		let indiceOffset = positions.length / 3 ;	// There is 1 indice for 3 positions
+
 		let ulength = 0 ;
 
 		for ( let i = 0 ; i < this._shapePoints.length ; i ++ ) {
@@ -2166,56 +2152,47 @@ class PolygonMeshBuilder {
 			normals.push( vn_norm.x , vn_norm.y , vn_norm.z ) ;
 
 			if ( ! flip ) {
-				indices.push( startIndex ) ;
-				indices.push( startIndex + 1 ) ;
-				indices.push( startIndex + 2 ) ;
+				indices.push( indiceOffset ) ;
+				indices.push( indiceOffset + 1 ) ;
+				indices.push( indiceOffset + 2 ) ;
 
-				indices.push( startIndex + 1 ) ;
-				indices.push( startIndex + 3 ) ;
-				indices.push( startIndex + 2 ) ;
+				indices.push( indiceOffset + 1 ) ;
+				indices.push( indiceOffset + 3 ) ;
+				indices.push( indiceOffset + 2 ) ;
 			}
 			else {
-				indices.push( startIndex ) ;
-				indices.push( startIndex + 2 ) ;
-				indices.push( startIndex + 1 ) ;
+				indices.push( indiceOffset ) ;
+				indices.push( indiceOffset + 2 ) ;
+				indices.push( indiceOffset + 1 ) ;
 
-				indices.push( startIndex + 1 ) ;
-				indices.push( startIndex + 2 ) ;
-				indices.push( startIndex + 3 ) ;
+				indices.push( indiceOffset + 1 ) ;
+				indices.push( indiceOffset + 2 ) ;
+				indices.push( indiceOffset + 3 ) ;
 			}
 
-			startIndex += 4 ;
+			indiceOffset += 4 ;
 		}
 	}
 
-	/**
-	 * Creates the VertexData for an irregular Polygon in the XoZ plane using a mesh built by polygonTriangulation.build()
-	 * All parameters are provided by CreatePolygon as needed
-	 * @param polygon a mesh built from polygonTriangulation.build()
-	 * @param sideOrientation takes the values Mesh.FRONTSIDE (default), Mesh.BACKSIDE or Mesh.DOUBLESIDE
-	 * @param fUV an array of Vector4 elements used to set different images to the top, rings and bottom respectively
-	 * @param fColors an array of Color3 elements used to set different colors to the top, rings and bottom respectively
-	 * @param frontUVs only usable when you create a double-sided mesh, used to choose what parts of the texture image to crop and apply on the front side, optional, default vector4 (0, 0, 1, 1)
-	 * @param backUVs only usable when you create a double-sided mesh, used to choose what parts of the texture image to crop and apply on the back side, optional, default vector4 (0, 0, 1, 1)
-	 * @param wrp a boolean, default false, when true and fUVs used texture is wrapped around all sides, when false texture is applied side
-	 * @returns the VertexData of the Polygon
-	 */
-	buildVertexData_2( mesh ) {
+
+
+	_buildVertexData_2( mesh ) {
 		const colors = [] ;
 
 		const positions = mesh.getVerticesData( VertexBuffer.PositionKind ) ;
 		const normals = mesh.getVerticesData( VertexBuffer.NormalKind ) ;
 		const uvs = mesh.getVerticesData( VertexBuffer.UVKind ) ;
 		const indices = mesh.getIndices() ;
-		const startIndex = positions.length / 9 ;
+		const indiceOffset = positions.length / 9 ;
 		let disp = 0 ;
 		let distX = 0 ;
 		let distZ = 0 ;
 		let dist = 0 ;
 		let totalLen = 0 ;
 		const cumulate = [ 0 ] ;
+
 		if ( this._wrapSideUV ) {
-			for ( let idx = startIndex ; idx < positions.length / 3 ; idx += 4 ) {
+			for ( let idx = indiceOffset ; idx < positions.length / 3 ; idx += 4 ) {
 				distX = positions[3 * ( idx + 2 )] - positions[3 * idx] ;
 				distZ = positions[3 * ( idx + 2 ) + 2] - positions[3 * idx + 2] ;
 				dist = Math.sqrt( distX * distX + distZ * distZ ) ;
@@ -2241,7 +2218,7 @@ class PolygonMeshBuilder {
 			}
 			idx = index / 3 ;
 			if ( face === 1 ) {	// the side
-				disp = idx - startIndex ;
+				disp = idx - indiceOffset ;
 				if ( disp % 4 < 1.5 ) {
 					if ( this._wrapSideUV ) {
 						uvs[2 * idx] = this._faceUV[face].x + ( ( this._faceUV[face].z - this._faceUV[face].x ) * cumulate[Math.floor( disp / 4 )] ) / totalLen ;
@@ -2296,7 +2273,18 @@ class PolygonMeshBuilder {
 		return vertexData ;
 	}
 
-	computeBounds() {
+
+
+	// Build the vertex data indices for the top/bottom face, using earcut behind the scene
+	_buildEarcutIndices() {
+		const flatPoints = [] ;
+		this._shapePoints.forEach( point => flatPoints.push( point.x , point.y ) ) ;
+		this._earcutIndices = earcut( flatPoints ) ;
+	}
+
+
+
+	_computeBounds() {
 		const lmin = new Vector2( this._shapePoints[0].x , this._shapePoints[0].y ) ;
 		const lmax = new Vector2( this._shapePoints[0].x , this._shapePoints[0].y ) ;
 
