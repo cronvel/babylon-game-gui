@@ -3,7 +3,8 @@
 
 /* global BABYLON GAMEGUI */
 
-var svgKit = GAMEGUI.svgKit ;
+const svgKit = GAMEGUI.svgKit ;
+const Atlas = GAMEGUI.Atlas ;
 
 
 
@@ -219,6 +220,11 @@ async function createTile3d( scene , id = null ) {
 		textureWidth = tileVg.viewBox.width + tileSideVg.viewBox.width + spacing ,
 		textureHeight = Math.max( tileVg.viewBox.height , tileSideVg.viewBox.height ) ;
 
+	var atlas = new Atlas() ;
+	atlas.addArea( 'top' , tileVg.viewBox ) ;
+	atlas.addArea( 'side' , tileSideVg.viewBox ) ;
+	console.warn( "ATLAS:" , atlas ) ;
+	
 	// BE CAREFUL, VG coordinates has Y-down, while UV has Y-up, so it is more complicated...
 
 	const epsilonTx = 3 ;	// This is a security in pixels to avoid texture seams at the edge of the geometry
