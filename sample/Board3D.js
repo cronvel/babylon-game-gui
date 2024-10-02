@@ -200,8 +200,8 @@ async function createTile3d( scene , id = null ) {
 	var shapeScale = 0.02 ,
 		thickness = 1 ;
 
-	//var tileVg = createTileVg( id ) ;
-	var tileVg = createPathBasedTileVg( id ) ;
+	var tileVg = createTileVg( id ) ;
+	//var tileVg = createPathBasedTileVg( id ) ;
 	var tileSideVg = createTileSideVg() ;
 
 	// Shape profile in XZ plane, we use Z=-Y because images have Y-down
@@ -257,29 +257,10 @@ async function createTile3d( scene , id = null ) {
 	dynamicTexture.update() ;
 
 	var material = new BABYLON.StandardMaterial( "material" , scene ) ;
-	material.diffuseTexture = new BABYLON.Texture( "/sample/uv-white.png" ) ;
+	//material.diffuseTexture = new BABYLON.Texture( "/sample/uv-white.png" ) ;
 	material.diffuseTexture = dynamicTexture ;
 	material.ambientColor = new BABYLON.Color3( 1 , 1 , 1 ) ;
 
-
-	/*
-	//var tile = BABYLON.MeshBuilder.ExtrudePolygon(
-	var tile = GAMEGUI.meshBuilders.extrudePolygon(
-		"tile3d#" + id ,
-		{
-			shape: shapeXZ ,
-			// shape: [ new BABYLON.Vector3( -1 , 0 , -1 ) , new BABYLON.Vector3( -1 , 0 , 1 ) , new BABYLON.Vector3( 1 , 0 , 1 ) , new BABYLON.Vector3( 1 , 0 , -1 ) ] ,
-			closeShape: true ,
-			depth: 1 ,
-			//sideOrientation: BABYLON.Mesh.DOUBLESIDE ,
-			faceUV ,
-			//wrap: true
-		} ,
-		scene
-	) ;
-	//*/
-	
-	//*
 	var polygonMeshBuilder = new GAMEGUI.PolygonMeshBuilder(
 		"tile3d#" + id ,
 		shapeXY ,
@@ -293,12 +274,12 @@ async function createTile3d( scene , id = null ) {
 			topFaceUV: faceUV[ 0 ] ,
 			sideFaceUV: faceUV[ 1 ] ,
 			bottomFaceUV: faceUV[ 2 ] ,
-			//wrapSideUV: true
+			//wrapSideUV: true ,
+			updatable: true
 		} ,
 		scene
 	) ;
 	var tile = polygonMeshBuilder.build() ;
-	//*/
 
 	//tile.rotation.x = - Math.PI / 2 ;
 	tile.position.y = 0.5 ;
@@ -417,9 +398,9 @@ async function createScene() {
 
 
 
-	//let board3d = await createBoard3d( scene ) ;
+	let board3d = await createBoard3d( scene ) ;
 
-	let tile3d = await createTile3d( scene , 0 ) ;
+	//let tile3d = await createTile3d( scene , 0 ) ;
 
 	/*
 	for ( let i = 0 ; i < 1 ; i ++ ) {

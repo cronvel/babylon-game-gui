@@ -64,7 +64,7 @@ BABYLON.GUI.Card = Card ;
 BABYLON.RegisterClass( 'BABYLON.GUI.Card' , Card ) ;
 
 
-},{"./VG.js":6,"seventh":19,"svg-kit":67}],2:[function(require,module,exports){
+},{"./VG.js":6,"seventh":18,"svg-kit":66}],2:[function(require,module,exports){
 /*
 	Babylon Game GUI
 
@@ -451,7 +451,7 @@ BABYLON.GUI.DecoratedContainer = DecoratedContainer ;
 BABYLON.RegisterClass( 'BABYLON.GUI.DecoratedContainer' , DecoratedContainer ) ;
 
 
-},{"./VG.js":6,"seventh":19}],3:[function(require,module,exports){
+},{"./VG.js":6,"seventh":18}],3:[function(require,module,exports){
 /*
 	Babylon Game GUI
 
@@ -842,7 +842,7 @@ BABYLON.GUI.Dialog = Dialog ;
 BABYLON.RegisterClass( 'BABYLON.GUI.Dialog' , Dialog ) ;
 
 
-},{"./DecoratedContainer.js":2,"./FlowingText.js":4,"./helpers.js":8,"seventh":19}],4:[function(require,module,exports){
+},{"./DecoratedContainer.js":2,"./FlowingText.js":4,"./helpers.js":8,"seventh":18}],4:[function(require,module,exports){
 /*
 	Babylon Game GUI
 
@@ -1126,7 +1126,7 @@ BABYLON.GUI.FlowingText = FlowingText ;
 BABYLON.RegisterClass( 'BABYLON.GUI.FlowingText' , FlowingText ) ;
 
 
-},{"./VG.js":6,"seventh":19,"svg-kit":67}],5:[function(require,module,exports){
+},{"./VG.js":6,"seventh":18,"svg-kit":66}],5:[function(require,module,exports){
 /*
 	Babylon Game GUI
 
@@ -1691,7 +1691,7 @@ BABYLON.GUI.VG = VG ;
 BABYLON.RegisterClass( 'BABYLON.GUI.VG' , VG ) ;
 
 
-},{"seventh":19,"svg-kit":67}],7:[function(require,module,exports){
+},{"seventh":18,"svg-kit":66}],7:[function(require,module,exports){
 /*
 	Babylon Game GUI
 
@@ -1734,11 +1734,10 @@ exports.HandPanel = require( './HandPanel.js' ) ;
 
 exports.setFontUrl = ( ... args ) => svgKit.fontLib.setFontUrl( ... args ) ;
 
-exports.meshBuilders = require( './mesh/meshBuilders.js' ) ;
 exports.PolygonMeshBuilder = require( './mesh/PolygonMeshBuilder.js' ) ;
 
 
-},{"./Card.js":1,"./DecoratedContainer.js":2,"./Dialog.js":3,"./FlowingText.js":4,"./HandPanel.js":5,"./VG.js":6,"./helpers.js":8,"./mesh/PolygonMeshBuilder.js":9,"./mesh/meshBuilders.js":10,"svg-kit":67}],8:[function(require,module,exports){
+},{"./Card.js":1,"./DecoratedContainer.js":2,"./Dialog.js":3,"./FlowingText.js":4,"./HandPanel.js":5,"./VG.js":6,"./helpers.js":8,"./mesh/PolygonMeshBuilder.js":9,"svg-kit":66}],8:[function(require,module,exports){
 /*
 	Babylon Game GUI
 
@@ -1903,7 +1902,7 @@ helpers.areControlsOverlaping = ( control1 , control2 ) => {
 
 const Vector2 = BABYLON.Vector2 ;
 const Vector3 = BABYLON.Vector3 ;
-const Vector4 = BABYLON.Vector4 ;
+//const Vector4 = BABYLON.Vector4 ;
 const Color4 = BABYLON.Color4 ;
 const Mesh = BABYLON.Mesh ;
 const VertexData = BABYLON.VertexData ;
@@ -1929,37 +1928,49 @@ class PolygonMeshBuilder {
 	_depth = 0 ;	// the depth of the extrusion, if depth=0, force _hasSide and _hasBottom to false
 	_sideOrientation ;
 	_smoothingThreshold ;
-	_faceUV ;	// DEPRECATED, to be removed
-	_faceColors ;	// DEPRECATED, to be removed
 	_topFaceUV ;
 	_topFaceColor ;
 	_bottomFaceUV ;
 	_bottomFaceColor ;
 	_sideFaceUV ;
 	_sideFaceColor ;
-	_frontUVs ;
-	_backUVs ;
 	_wrapSideUV = false ;
 	_updatable = false ;
 
+	_hasFaceColors = false ;
 	_bounds ;
 	_perimeter = 0 ;
 	_perimeterOffsets = [] ;
 	_earcutIndices ;
 	_vertexData = null ;
 
-	/**
-	 * Creates a polygon mesh
-	 * The polygon's shape will depend on the input parameters and is constructed parallel to a ground mesh
-	 * * The parameter `shape` is a required array of successive Vector3 representing the corners of the polygon in th XoZ plane, that is y = 0 for all vectors
-	 * * You can set the mesh side orientation with the values : Mesh.FRONTSIDE (default), Mesh.BACKSIDE or Mesh.DOUBLESIDE
-	 * * The mesh can be set to updatable with the boolean parameter `updatable` (default false) if its internal geometry is supposed to change once created
-	 * * If you create a double-sided mesh, you can choose what parts of the texture image to crop and stick respectively on the front and the back sides with the parameters `frontUVs` and `backUVs` (Vector4)
-	 * * Remember you can only change the shape positions, not their number when updating a polygon
-	 * @param name defines the name of the mesh
-	 * @param options defines the options used to create the mesh
-	 * @param scene defines the hosting scene
-	 * @returns the polygon mesh
+	/*
+		Creates and returns a polygon mesh, given an array of points defining the shape.
+		The polygon's shape will depend on the input parameters and is constructed parallel to a ground mesh.
+
+		Arguments:
+			name: the name of the mesh to produce
+			shapePoints: array of object {x,y}, the successive 2D coordinates of the points of the polygon (but it will be produced
+			  in the XoZ plane, so y->z)
+			scene: the scene where to add the mesh
+			options: an object of options, where:
+				depth: depth size for the extrusion, if not set it default to 0 (= no extrusion, produce only the top-face)
+				top: boolean (default: true), if true, the mesh will have the top end cap
+				bottom: boolean, if true, the mesh will have the bottom end cap
+				side: boolean, if true, the mesh will have the side faces
+				sideOrientation: (default: Mesh.FRONTSIDE,) define if the front-face, back-face or both are visible (values:
+				  Mesh.FRONTSIDE, Mesh.BACKSIDE or Mesh.DOUBLESIDE)
+				smoothingThreshold: (default: 2) threshold for the side's normals
+				topFaceUV: specific UV for the whole top face, if not provided the whole texture will be used
+				bottomFaceUV: specific UV for the whole bottom face, if not provided the whole texture will be used
+				sideFaceUV: specific UV for the whole side face, if not provided the whole texture will be used,
+				  also see option `wrapSideUV`
+				topFaceColor: specific vertex color for the top face
+				bottomFaceColor: specific vertex color for the bottom face
+				sideFaceColor: specific vertex color for the side faces
+				wrapSideUV: boolean (default: false), if set the texture will wrap around the whole side, if false,
+				  each side face (even tiny) will have the whole side-face texture (or part of it, if sideFaceUV is set)
+				updatable: boolean (default: false), set to true if its internal geometry is supposed to change once created
 	 */
 	constructor( name , shapePoints , options = {} , scene = null ) {
 		this._name = name ;
@@ -1967,20 +1978,16 @@ class PolygonMeshBuilder {
 		this._shapePoints = Array.from( shapePoints ) ;	// options.shape, this._points
 		this._depth = + options.depth || 0 ;
 		this._hasTop = options.top !== undefined ? !! options.top : true ;
-		this._hasSide = options.side !== undefined ? !! options.side : !! this._depth ;
 		this._hasBottom = options.bottom !== undefined ? !! options.bottom : !! this._depth ;
+		this._hasSide = options.side !== undefined ? !! options.side : !! this._depth ;
 		this._sideOrientation = Mesh._GetDefaultSideOrientation( options.sideOrientation ) ;
 		this._smoothingThreshold = + options.smoothingThreshold || 2 ;
-		this._faceUV = options.faceUV || new Array( 3 ) ;
-		this._faceColors = options.faceColors ;
 		this._topFaceUV = options.topFaceUV ;
 		this._topFaceColor = options.topFaceColor ;
 		this._bottomFaceUV = options.bottomFaceUV ;
 		this._bottomFaceColor = options.bottomFaceColor ;
 		this._sideFaceUV = options.sideFaceUV ;
 		this._sideFaceColor = options.sideFaceColor ;
-		this._frontUVs = options.frontUVs ;
-		this._backUVs = options.backUVs ;
 		this._wrapSideUV = !! options.wrapSideUV ;	// options.wrap
 		this._updatable = !! options.updatable ;
 
@@ -1990,6 +1997,7 @@ class PolygonMeshBuilder {
 
 		// face colors if undefined
 		if ( this._topFaceColor || this._bottomFaceColor || this._sideFaceColor ) {
+			this._hasFaceColors = true ;
 			if ( ! this._topFaceColor ) { this._topFaceColor = new Color4( 1 , 1 , 1 , 1 ) ; }
 			if ( ! this._bottomFaceColor ) { this._bottomFaceColor = new Color4( 1 , 1 , 1 , 1 ) ; }
 			if ( ! this._sideFaceColor ) { this._sideFaceColor = new Color4( 1 , 1 , 1 , 1 ) ; }
@@ -2010,19 +2018,10 @@ class PolygonMeshBuilder {
 		this._buildVertexData() ;
 
 		// Apply vertex data to the mesh
-		// updatability MUST be set to false during the triangulation process (it would produce errors),
-		// it will be set during .applyToMesh()
-		mesh.setVerticesData( VertexBuffer.PositionKind , this._vertexData.positions , false ) ;
-		mesh.setVerticesData( VertexBuffer.NormalKind , this._vertexData.normals , false ) ;
-		mesh.setVerticesData( VertexBuffer.UVKind , this._vertexData.uvs , false ) ;
+		mesh.setVerticesData( VertexBuffer.PositionKind , this._vertexData.positions , this._updatable ) ;
+		mesh.setVerticesData( VertexBuffer.NormalKind , this._vertexData.normals , this._updatable ) ;
+		mesh.setVerticesData( VertexBuffer.UVKind , this._vertexData.uvs , this._updatable ) ;
 		mesh.setIndices( this._vertexData.indices ) ;
-		return mesh ;
-
-		
-		// This was inside another function, it should be fused properly
-		mesh._originalBuilderSideOrientation = this._sideOrientation ;
-		const vertexData2 = this._buildVertexData_2( mesh ) ;
-		vertexData2.applyToMesh( mesh , this._updatable ) ;
 
 		return mesh ;
 	}
@@ -2042,12 +2041,20 @@ class PolygonMeshBuilder {
 		if ( this._hasTop ) { this._buildTopFaceVertexData() ; }
 		if ( this._hasBottom ) { this._buildBottomFaceVertexData() ; }
 		if ( this._hasSide ) { this._buildSideFacesVertexData( false ) ; }
+
+		if ( this._hasFaceColors && this._sideOrientation === VertexData.DOUBLESIDE ) {
+			let colors = this._vertexData.colors ;
+			// Duplicate colors for the backfaces.
+			// We could do: colors.push( ... colors )
+			// ... but the spread operator has a limit (probably 10k but it depends on the JS engine)
+			for ( let l = colors.length , i = 0 ; i < l ; i ++ ) { colors[ l + i ]( colors[ i ] ) ; }
+		}
 	}
 
 
 
 	_buildTopFaceVertexData() {
-		const { positions , normals , uvs , indices } = this._vertexData ;
+		const { positions , normals , indices , colors } = this._vertexData ;
 		const faceUV = this._topFaceUV ;
 		const faceColor = this._topFaceColor ;
 		const indiceOffset = positions.length / 3 ;	// There is 1 indice for 3 positions
@@ -2059,18 +2066,11 @@ class PolygonMeshBuilder {
 			positions.push( p.x , 0 , p.y ) ;
 
 			// Place vertex UV relative to its position
-			let u = ( p.x - this._bounds.min.x ) / this._bounds.width ;
-			let v = ( p.y - this._bounds.min.y ) / this._bounds.height ;
-
-			// If there is a specific top face UV region...
-			if ( faceUV ) {
-				u = ( 1 - u ) * faceUV.x + u * faceUV.z ;
-				v = ( 1 - v ) * faceUV.y + v * faceUV.w ;
-			}
-
-			if ( useOpenGLOrientationForUV ) { v = 1 - v ; }
-			
-			uvs.push( u , v ) ;
+			this._buildUV(
+				( p.x - this._bounds.min.x ) / this._bounds.width ,
+				( p.y - this._bounds.min.y ) / this._bounds.height ,
+				faceUV
+			) ;
 
 			if ( faceColor ) {
 				colors.push( faceColor.r , faceColor.g , faceColor.b , faceColor.a ) ;
@@ -2085,7 +2085,7 @@ class PolygonMeshBuilder {
 
 
 	_buildBottomFaceVertexData() {
-		const { positions , normals , uvs , indices } = this._vertexData ;
+		const { positions , normals , indices , colors } = this._vertexData ;
 		const faceUV = this._bottomFaceUV ;
 		const faceColor = this._bottomFaceColor ;
 		const indiceOffset = positions.length / 3 ;	// There is 1 indice for 3 positions
@@ -2098,18 +2098,11 @@ class PolygonMeshBuilder {
 			positions.push( p.x , - this._depth , p.y ) ;
 
 			// Place vertex UV relative to its *inverted* position
-			let u = 1 - ( p.x - this._bounds.min.x ) / this._bounds.width ;
-			let v = 1 - ( p.y - this._bounds.min.y ) / this._bounds.height ;
-
-			// If there is a specific top face UV region...
-			if ( faceUV ) {
-				u = ( 1 - u ) * faceUV.x + u * faceUV.z ;
-				v = ( 1 - v ) * faceUV.y + v * faceUV.w ;
-			}
-
-			if ( useOpenGLOrientationForUV ) { v = 1 - v ; }
-			
-			uvs.push( u , v ) ;
+			this._buildUV(
+				1 - ( p.x - this._bounds.min.x ) / this._bounds.width ,
+				1 - ( p.y - this._bounds.min.y ) / this._bounds.height ,
+				faceUV
+			) ;
 
 			if ( faceColor ) {
 				colors.push( faceColor.r , faceColor.g , faceColor.b , faceColor.a ) ;
@@ -2128,24 +2121,32 @@ class PolygonMeshBuilder {
 
 	// flip: flip normals, indices, etc...
 	_buildSideFacesVertexData( flip ) {
-		const { positions , normals , uvs , indices } = this._vertexData ;
+		const { positions , normals , indices , colors } = this._vertexData ;
 		let faceUV = this._sideFaceUV ;
 		let faceColor = this._sideFaceColor ;
 		let indiceOffset = positions.length / 3 ;	// There is 1 indice for 3 positions
 
 		for ( let i = 0 ; i < this._shapePoints.length ; i ++ ) {
+
+			// Preliminaries
+
 			const p = this._shapePoints[i] ;
 			const p1 = this._shapePoints[( i + 1 ) % this._shapePoints.length] ;
+			const p0 = this._shapePoints[( i + this._shapePoints.length - 1 ) % this._shapePoints.length] ;
+			const p2 = this._shapePoints[( i + 2 ) % this._shapePoints.length] ;
 			const perimeterOffset0 = i > 0 ? this._perimeterOffsets[ i - 1 ] : 0 ;
 			const perimeterOffset1 = this._perimeterOffsets[ i ] ;
+
+
+			// Positions
 
 			positions.push( p.x , 0 , p.y ) ;
 			positions.push( p.x , - this._depth , p.y ) ;
 			positions.push( p1.x , 0 , p1.y ) ;
 			positions.push( p1.x , - this._depth , p1.y ) ;
 
-			const p0 = this._shapePoints[( i + this._shapePoints.length - 1 ) % this._shapePoints.length] ;
-			const p2 = this._shapePoints[( i + 2 ) % this._shapePoints.length] ;
+
+			// Vertex normals + smoothing
 
 			let vc = new Vector3( - ( p1.y - p.y ) , 0 , p1.x - p.x ) ;
 			let vp = new Vector3( - ( p.y - p0.y ) , 0 , p.x - p0.x ) ;
@@ -2197,28 +2198,31 @@ class PolygonMeshBuilder {
 			normals.push( vn_norm.x , vn_norm.y , vn_norm.z ) ;
 			normals.push( vn_norm.x , vn_norm.y , vn_norm.z ) ;
 
-			if ( false && faceUV ) {
-				if ( this._wrapSideUV ) {
-				}
-				else {
-					uvs[2 * idx] = this._faceUV[face].x ;
-					
-					
-					
-					if ( disp % 2 === 0 ) {
-						uvs[2 * idx + 1] = useOpenGLOrientationForUV ? 1.0 - this._faceUV[face].w : this._faceUV[face].w ;
-					}
-					else {
-						uvs[2 * idx + 1] = useOpenGLOrientationForUV ? 1.0 - this._faceUV[face].y : this._faceUV[face].y ;
-					}
-				}
+
+			// Vertex UVs
+
+			if ( this._wrapSideUV ) {
+				this._buildUV( perimeterOffset0 / this._perimeter , 1 , faceUV ) ;
+				this._buildUV( perimeterOffset0 / this._perimeter , 0 , faceUV ) ;
+				this._buildUV( perimeterOffset1 / this._perimeter , 1 , faceUV ) ;
+				this._buildUV( perimeterOffset1 / this._perimeter , 0 , faceUV ) ;
 			}
 			else {
-				uvs.push( perimeterOffset0 / this._perimeter , 0 ) ;
-				uvs.push( perimeterOffset0 / this._perimeter , 1 ) ;
-				uvs.push( perimeterOffset1 / this._perimeter , 0 ) ;
-				uvs.push( perimeterOffset1 / this._perimeter , 1 ) ;
+				this._buildUV( 0 , 1 , faceUV ) ;
+				this._buildUV( 0 , 0 , faceUV ) ;
+				this._buildUV( 1 , 1 , faceUV ) ;
+				this._buildUV( 1 , 0 , faceUV ) ;
 			}
+
+
+			// Vertex colors...
+
+			if ( faceColor ) {
+				colors.push( faceColor.r , faceColor.g , faceColor.b , faceColor.a ) ;
+			}
+
+
+			// Indices...
 
 			if ( ! flip ) {
 				indices.push( indiceOffset ) ;
@@ -2245,187 +2249,25 @@ class PolygonMeshBuilder {
 
 
 
-	_buildVertexData_2( mesh ) {
-		const colors = [] ;
-
-		const positions = mesh.getVerticesData( VertexBuffer.PositionKind ) ;
-		const normals = mesh.getVerticesData( VertexBuffer.NormalKind ) ;
-		const uvs = mesh.getVerticesData( VertexBuffer.UVKind ) ;
-		const indices = mesh.getIndices() ;
-		const indiceOffset = positions.length / 9 ;	// point_count = pos_count/3 , point_count/3 = start of the side
-		let disp = 0 ;
-		let distX = 0 ;
-		let distZ = 0 ;
-		let dist = 0 ;
-		let totalLen = 0 ;
-		const cumulate = [ 0 ] ;
-
-		if ( this._wrapSideUV ) {
-			for ( let idx = indiceOffset ; idx < positions.length / 3 ; idx += 4 ) {
-				distX = positions[3 * ( idx + 2 )] - positions[3 * idx] ;
-				distZ = positions[3 * ( idx + 2 ) + 2] - positions[3 * idx + 2] ;
-				dist = Math.sqrt( distX * distX + distZ * distZ ) ;
-				totalLen += dist ;
-				cumulate.push( totalLen ) ;
-			}
-		}
-		// set face colours and textures
-		let idx = 0 ;
-		let face = 0 ;
-		for ( let index = 0 ; index < normals.length ; index += 3 ) {
-			//Edge Face  no. 1
-			if ( Math.abs( normals[index + 1] ) < 0.001 ) {		// y = 0	=> the side
-				face = 1 ;
-			}
-			//Top Face  no. 0
-			if ( Math.abs( normals[index + 1] - 1 ) < 0.001 ) {	// y = 1
-				face = 0 ;
-			}
-			//Bottom Face  no. 2
-			if ( Math.abs( normals[index + 1] + 1 ) < 0.001 ) {	// y = -1
-				face = 2 ;
-			}
-			idx = index / 3 ;
-			if ( face === 1 ) {	// the side
-				disp = idx - indiceOffset ;
-				if ( disp % 4 < 1.5 ) {
-					if ( this._wrapSideUV ) {
-						uvs[2 * idx] = this._faceUV[face].x + ( ( this._faceUV[face].z - this._faceUV[face].x ) * cumulate[Math.floor( disp / 4 )] ) / totalLen ;
-					}
-					else {
-						uvs[2 * idx] = this._faceUV[face].x ;
-					}
-				}
-				else {
-					if ( this._wrapSideUV ) {
-						uvs[2 * idx] = this._faceUV[face].x + ( ( this._faceUV[face].z - this._faceUV[face].x ) * cumulate[Math.floor( disp / 4 ) + 1] ) / totalLen ;
-					}
-					else {
-						uvs[2 * idx] = this._faceUV[face].z ;
-					}
-				}
-				if ( disp % 2 === 0 ) {
-					uvs[2 * idx + 1] = useOpenGLOrientationForUV ? 1.0 - this._faceUV[face].w : this._faceUV[face].w ;
-				}
-				else {
-					uvs[2 * idx + 1] = useOpenGLOrientationForUV ? 1.0 - this._faceUV[face].y : this._faceUV[face].y ;
-				}
-			}
-			else {
-				uvs[2 * idx] = ( 1 - uvs[2 * idx] ) * this._faceUV[face].x + uvs[2 * idx] * this._faceUV[face].z ;
-				uvs[2 * idx + 1] = ( 1 - uvs[2 * idx + 1] ) * this._faceUV[face].y + uvs[2 * idx + 1] * this._faceUV[face].w ;
-
-				if ( useOpenGLOrientationForUV ) {
-					uvs[2 * idx + 1] = 1.0 - uvs[2 * idx + 1] ;
-				}
-			}
-			if ( this._faceColors ) {
-				colors.push( this._faceColors[face].r , this._faceColors[face].g , this._faceColors[face].b , this._faceColors[face].a ) ;
-			}
-		}
-
-		// sides
-		VertexData._ComputeSides( this._sideOrientation , positions , indices , normals , uvs , this._frontUVs , this._backUVs ) ;
-
-		// Result
-		const vertexData = new VertexData() ;
-		vertexData.indices = indices ;
-		vertexData.positions = positions ;
-		vertexData.normals = normals ;
-		vertexData.uvs = uvs ;
-
-		if ( this._faceColors ) {
-			const totalColors = this._sideOrientation === VertexData.DOUBLESIDE ? colors.concat( colors ) : colors ;
-			vertexData.colors = totalColors ;
-		}
-
-		return vertexData ;
-	}
-
-
-
-	_buildVertexData_2_remaining_code_to_port( mesh ) {
-		const colors = [] ;
-
-		const positions = mesh.getVerticesData( VertexBuffer.PositionKind ) ;
-		const normals = mesh.getVerticesData( VertexBuffer.NormalKind ) ;
-		const uvs = mesh.getVerticesData( VertexBuffer.UVKind ) ;
-		const indices = mesh.getIndices() ;
-		const indiceOffset = positions.length / 9 ;	// point_count = pos_count/3 , point_count/3 = start of the side
-		let disp = 0 ;
-		let distX = 0 ;
-		let distZ = 0 ;
-		let dist = 0 ;
-		let totalLen = 0 ;
-		const cumulate = [ 0 ] ;
-
-		if ( this._wrapSideUV ) {
-			for ( let idx = indiceOffset ; idx < positions.length / 3 ; idx += 4 ) {
-				distX = positions[3 * ( idx + 2 )] - positions[3 * idx] ;
-				distZ = positions[3 * ( idx + 2 ) + 2] - positions[3 * idx + 2] ;
-				dist = Math.sqrt( distX * distX + distZ * distZ ) ;
-				totalLen += dist ;
-				cumulate.push( totalLen ) ;
-			}
-		}
-		// set face colours and textures
-		let idx = 0 ;
-		let face = 0 ;
-		for ( let index = 0 ; index < normals.length ; index += 3 ) {
-			idx = index / 3 ;
-			if ( face === 1 ) {	// the side
-				disp = idx - indiceOffset ;
-				if ( disp % 4 < 1.5 ) {
-					if ( this._wrapSideUV ) {
-						uvs[2 * idx] = this._faceUV[face].x + ( ( this._faceUV[face].z - this._faceUV[face].x ) * cumulate[Math.floor( disp / 4 )] ) / totalLen ;
-					}
-					else {
-						uvs[2 * idx] = this._faceUV[face].x ;
-					}
-				}
-				else {
-					if ( this._wrapSideUV ) {
-						uvs[2 * idx] = this._faceUV[face].x + ( ( this._faceUV[face].z - this._faceUV[face].x ) * cumulate[Math.floor( disp / 4 ) + 1] ) / totalLen ;
-					}
-					else {
-						uvs[2 * idx] = this._faceUV[face].z ;
-					}
-				}
-				if ( disp % 2 === 0 ) {
-					uvs[2 * idx + 1] = useOpenGLOrientationForUV ? 1.0 - this._faceUV[face].w : this._faceUV[face].w ;
-				}
-				else {
-					uvs[2 * idx + 1] = useOpenGLOrientationForUV ? 1.0 - this._faceUV[face].y : this._faceUV[face].y ;
-				}
-			}
-			else {
-				// PORTED for top and bottom
-			}
-			if ( this._faceColors ) {
-				// PORTED for top and bottom , but not for side
-				colors.push( this._faceColors[face].r , this._faceColors[face].g , this._faceColors[face].b , this._faceColors[face].a ) ;
-			}
-		}
-
-		// sides
-		// ?? should it be ported or not ??
-		VertexData._ComputeSides( this._sideOrientation , positions , indices , normals , uvs , this._frontUVs , this._backUVs ) ;
-
-		if ( this._faceColors ) {
-			const totalColors = this._sideOrientation === VertexData.DOUBLESIDE ? colors.concat( colors ) : colors ;
-			vertexData.colors = totalColors ;
-		}
-
-		return vertexData ;
-	}
-
-
-
 	// Build the vertex data indices for the top/bottom face, using earcut behind the scene
 	_buildEarcutIndices() {
 		const flatPoints = [] ;
 		this._shapePoints.forEach( point => flatPoints.push( point.x , point.y ) ) ;
 		this._earcutIndices = earcut( flatPoints ) ;
+	}
+
+
+
+	_buildUV( u , v , faceUV ) {
+		// If there is a specific face UV...
+		if ( faceUV ) {
+			u = ( 1 - u ) * faceUV.x + u * faceUV.z ;
+			v = ( 1 - v ) * faceUV.y + v * faceUV.w ;
+		}
+
+		if ( useOpenGLOrientationForUV ) { v = 1 - v ; }
+
+		this._vertexData.uvs.push( u , v ) ;
 	}
 
 
@@ -2482,437 +2324,6 @@ module.exports = PolygonMeshBuilder ;
 
 
 },{}],10:[function(require,module,exports){
-
-"use strict" ;
-
-/* global BABYLON, earcut */
-
-// Derived from:
-// https://github.com/BabylonJS/Babylon.js/blob/master/packages/dev/core/src/Meshes/Builders/polygonBuilder.ts
-// https://github.com/BabylonJS/Babylon.js/blob/master/packages/dev/core/src/Meshes/polygonMesh.ts
-/* eslint-disable camelcase */
-
-const Vector2 = BABYLON.Vector2 ;
-const Vector3 = BABYLON.Vector3 ;
-const Vector4 = BABYLON.Vector4 ;
-const Color4 = BABYLON.Color4 ;
-const Mesh = BABYLON.Mesh ;
-const VertexData = BABYLON.VertexData ;
-const VertexBuffer = BABYLON.VertexBuffer ;
-const EngineStore = BABYLON.EngineStore ;
-const Epsilon = BABYLON.Epsilon ;
-//const PolygonMeshBuilder = BABYLON.PolygonMeshBuilder ;
-const useOpenGLOrientationForUV = BABYLON.useOpenGLOrientationForUV ;
-
-
-
-const meshBuilders = {} ;
-module.exports = meshBuilders ;
-
-
-
-/**
- * Creates a polygon mesh
- * The polygon's shape will depend on the input parameters and is constructed parallel to a ground mesh
- * * The parameter `shape` is a required array of successive Vector3 representing the corners of the polygon in th XoZ plane, that is y = 0 for all vectors
- * * You can set the mesh side orientation with the values : Mesh.FRONTSIDE (default), Mesh.BACKSIDE or Mesh.DOUBLESIDE
- * * The mesh can be set to updatable with the boolean parameter `updatable` (default false) if its internal geometry is supposed to change once created
- * * If you create a double-sided mesh, you can choose what parts of the texture image to crop and stick respectively on the front and the back sides with the parameters `frontUVs` and `backUVs` (Vector4)
- * * Remember you can only change the shape positions, not their number when updating a polygon
- * @param name defines the name of the mesh
- * @param options defines the options used to create the mesh
- * @param scene defines the hosting scene
- * @returns the polygon mesh
- */
-meshBuilders.extrudePolygon = ( name , options = {} , scene = null ) => {
-	options.sideOrientation = Mesh._GetDefaultSideOrientation( options.sideOrientation ) ;
-	const shape = options.shape ;
-	const depth = options.depth || 0 ;
-	const smoothingThreshold = options.smoothingThreshold || 2 ;
-	const contours = [] ;
-
-	for ( let i = 0 ; i < shape.length ; i ++ ) {
-		contours[i] = new Vector2( shape[i].x , shape[i].z ) ;
-	}
-
-	const polygonTriangulation = new PolygonMeshBuilder( name , contours , scene || EngineStore.LastCreatedScene ) ;
-
-	//updatability is set during applyToMesh; setting to true in triangulation build produces errors
-	const polygon = polygonTriangulation.build( false , depth , smoothingThreshold ) ;
-	polygon._originalBuilderSideOrientation = options.sideOrientation ;
-	const vertexData = meshBuilders.createPolygonVertexData( polygon , options.sideOrientation , options.faceUV , options.faceColors , options.frontUVs , options.backUVs , options.wrap ) ;
-	vertexData.applyToMesh( polygon , options.updatable ) ;
-
-	return polygon ;
-} ;
-
-/**
- * Creates the VertexData for an irregular Polygon in the XoZ plane using a mesh built by polygonTriangulation.build()
- * All parameters are provided by CreatePolygon as needed
- * @param polygon a mesh built from polygonTriangulation.build()
- * @param sideOrientation takes the values Mesh.FRONTSIDE (default), Mesh.BACKSIDE or Mesh.DOUBLESIDE
- * @param fUV an array of Vector4 elements used to set different images to the top, rings and bottom respectively
- * @param fColors an array of Color3 elements used to set different colors to the top, rings and bottom respectively
- * @param frontUVs only usable when you create a double-sided mesh, used to choose what parts of the texture image to crop and apply on the front side, optional, default vector4 (0, 0, 1, 1)
- * @param backUVs only usable when you create a double-sided mesh, used to choose what parts of the texture image to crop and apply on the back side, optional, default vector4 (0, 0, 1, 1)
- * @param wrp a boolean, default false, when true and fUVs used texture is wrapped around all sides, when false texture is applied side
- * @returns the VertexData of the Polygon
- */
-meshBuilders.createPolygonVertexData = ( polygon , sideOrientation , fUV = null , fColors = null , frontUVs = null , backUVs = null , wrp = null ) => {
-	const faceUV = fUV || new Array( 3 ) ;
-	const faceColors = fColors ;
-	const colors = [] ;
-	const wrap = wrp || false ;
-
-	// default face colors and UV if undefined
-	for ( let f = 0 ; f < 3 ; f ++ ) {
-		if ( faceUV[f] === undefined ) {
-			faceUV[f] = new Vector4( 0 , 0 , 1 , 1 ) ;
-		}
-		if ( faceColors && faceColors[f] === undefined ) {
-			faceColors[f] = new Color4( 1 , 1 , 1 , 1 ) ;
-		}
-	}
-
-	const positions = polygon.getVerticesData( VertexBuffer.PositionKind ) ;
-	const normals = polygon.getVerticesData( VertexBuffer.NormalKind ) ;
-	const uvs = polygon.getVerticesData( VertexBuffer.UVKind ) ;
-	const indices = polygon.getIndices() ;
-	const startIndex = positions.length / 9 ;
-	let disp = 0 ;
-	let distX = 0 ;
-	let distZ = 0 ;
-	let dist = 0 ;
-	let totalLen = 0 ;
-	const cumulate = [ 0 ] ;
-	if ( wrap ) {
-		for ( let idx = startIndex ; idx < positions.length / 3 ; idx += 4 ) {
-			distX = positions[3 * ( idx + 2 )] - positions[3 * idx] ;
-			distZ = positions[3 * ( idx + 2 ) + 2] - positions[3 * idx + 2] ;
-			dist = Math.sqrt( distX * distX + distZ * distZ ) ;
-			totalLen += dist ;
-			cumulate.push( totalLen ) ;
-		}
-	}
-	// set face colours and textures
-	let idx = 0 ;
-	let face = 0 ;
-	for ( let index = 0 ; index < normals.length ; index += 3 ) {
-		//Edge Face  no. 1
-		if ( Math.abs( normals[index + 1] ) < 0.001 ) {		// y = 0	=> the side
-			face = 1 ;
-		}
-		//Top Face  no. 0
-		if ( Math.abs( normals[index + 1] - 1 ) < 0.001 ) {	// y = 1
-			face = 0 ;
-		}
-		//Bottom Face  no. 2
-		if ( Math.abs( normals[index + 1] + 1 ) < 0.001 ) {	// y = -1
-			face = 2 ;
-		}
-		idx = index / 3 ;
-		if ( face === 1 ) {	// the side
-			disp = idx - startIndex ;
-			if ( disp % 4 < 1.5 ) {
-				if ( wrap ) {
-					uvs[2 * idx] = faceUV[face].x + ( ( faceUV[face].z - faceUV[face].x ) * cumulate[Math.floor( disp / 4 )] ) / totalLen ;
-				}
-				else {
-					uvs[2 * idx] = faceUV[face].x ;
-				}
-			}
-			else {
-				if ( wrap ) {
-					uvs[2 * idx] = faceUV[face].x + ( ( faceUV[face].z - faceUV[face].x ) * cumulate[Math.floor( disp / 4 ) + 1] ) / totalLen ;
-				}
-				else {
-					uvs[2 * idx] = faceUV[face].z ;
-				}
-			}
-			if ( disp % 2 === 0 ) {
-				uvs[2 * idx + 1] = useOpenGLOrientationForUV ? 1.0 - faceUV[face].w : faceUV[face].w ;
-			}
-			else {
-				uvs[2 * idx + 1] = useOpenGLOrientationForUV ? 1.0 - faceUV[face].y : faceUV[face].y ;
-			}
-		}
-		else {
-			uvs[2 * idx] = ( 1 - uvs[2 * idx] ) * faceUV[face].x + uvs[2 * idx] * faceUV[face].z ;
-			uvs[2 * idx + 1] = ( 1 - uvs[2 * idx + 1] ) * faceUV[face].y + uvs[2 * idx + 1] * faceUV[face].w ;
-
-			if ( useOpenGLOrientationForUV ) {
-				uvs[2 * idx + 1] = 1.0 - uvs[2 * idx + 1] ;
-			}
-		}
-		if ( faceColors ) {
-			colors.push( faceColors[face].r , faceColors[face].g , faceColors[face].b , faceColors[face].a ) ;
-		}
-	}
-
-	// sides
-	VertexData._ComputeSides( sideOrientation , positions , indices , normals , uvs , frontUVs , backUVs ) ;
-
-	// Result
-	const vertexData = new VertexData() ;
-	vertexData.indices = indices ;
-	vertexData.positions = positions ;
-	vertexData.normals = normals ;
-	vertexData.uvs = uvs ;
-
-	if ( faceColors ) {
-		const totalColors = sideOrientation === VertexData.DOUBLESIDE ? colors.concat( colors ) : colors ;
-		vertexData.colors = totalColors ;
-	}
-
-	return vertexData ;
-} ;
-
-
-
-/**
- * Builds a polygon
- * @see https://doc.babylonjs.com/features/featuresDeepDive/mesh/creation/param/polyMeshBuilder
- */
-class PolygonMeshBuilder {
-	_name = null ;
-	_scene = null ;
-
-	_points = [] ;
-	_bounds ;
-
-	/**
-	 * Creates a PolygonMeshBuilder
-	 * @param name name of the builder
-	 * @param contours Path of the polygon
-	 * @param scene scene to add to when creating the mesh
-	 */
-	constructor( name , points , scene ) {
-		this._name = name ;
-		this._scene = scene || EngineStore.LastCreatedScene ;
-
-		this._points = points.slice() ;
-		this.computeBounds() ;
-	}
-
-
-
-	/**
-	 * Creates the polygon
-	 * @param updatable If the mesh should be updatable
-	 * @param depth The depth of the mesh created
-	 * @param smoothingThreshold Dot product threshold for smoothed normals
-	 * @returns the created mesh
-	 */
-	build( updatable = false , depth = 0 , smoothingThreshold = 2 ) {
-		const mesh = new Mesh( this._name , this._scene ) ;
-
-		const vertexData = this.buildVertexData( depth , smoothingThreshold ) ;
-
-		mesh.setVerticesData( VertexBuffer.PositionKind , vertexData.positions , updatable ) ;
-		mesh.setVerticesData( VertexBuffer.NormalKind , vertexData.normals , updatable ) ;
-		mesh.setVerticesData( VertexBuffer.UVKind , vertexData.uvs , updatable ) ;
-		mesh.setIndices( vertexData.indices ) ;
-
-		return mesh ;
-	}
-
-	/**
-	 * Creates the polygon
-	 * @param depth The depth of the mesh created
-	 * @param smoothingThreshold Dot product threshold for smoothed normals
-	 * @returns the created VertexData
-	 */
-	buildVertexData( depth = 0 , smoothingThreshold = 2 ) {
-		const vertexData = new VertexData() ;
-		const normals = [] ;
-		const positions = [] ;
-		const uvs = [] ;
-
-		// Add the top-face
-		this._points.forEach( ( p ) => {
-			normals.push( 0 , 1.0 , 0 ) ;
-			positions.push( p.x , 0 , p.y ) ;
-			uvs.push( ( p.x - this._bounds.min.x ) / this._bounds.width , ( p.y - this._bounds.min.y ) / this._bounds.height ) ;
-		} ) ;
-
-		const indices = [] ;
-
-		const flatPoints = [] ;
-		this._points.forEach( point => flatPoints.push( point.x , point.y ) ) ;
-		const earcutPoints = earcut( flatPoints ) ;
-
-		for ( let i = 0 ; i < earcutPoints.length ; i ++ ) {
-			indices.push( earcutPoints[i] ) ;
-		}
-
-		if ( depth > 0 ) {
-			// Add the bottom-face
-			const positionscount = positions.length / 3 ; //get the current pointcount
-
-			this._points.forEach( ( p ) => {
-				//add the elements at the depth
-				normals.push( 0 , - 1.0 , 0 ) ;
-				positions.push( p.x , - depth , p.y ) ;
-				uvs.push( 1 - ( p.x - this._bounds.min.x ) / this._bounds.width , 1 - ( p.y - this._bounds.min.y ) / this._bounds.height ) ;
-			} ) ;
-
-			const totalCount = indices.length ;
-			// indices get reversed for each tris, so front-face/back-face is correct
-			for ( let i = 0 ; i < totalCount ; i += 3 ) {
-				const i0 = indices[i + 0] ;
-				const i1 = indices[i + 1] ;
-				const i2 = indices[i + 2] ;
-
-				indices.push( i2 + positionscount ) ;
-				indices.push( i1 + positionscount ) ;
-				indices.push( i0 + positionscount ) ;
-			}
-
-			// Add the sides
-			this._addSide( positions , normals , uvs , indices , this._bounds , this._points , depth , false , smoothingThreshold ) ;
-		}
-
-		vertexData.indices = indices ;
-		vertexData.positions = positions ;
-		vertexData.normals = normals ;
-		vertexData.uvs = uvs ;
-
-		return vertexData ;
-	}
-
-	/**
-	 * Adds a side to the polygon
-	 * @param positions points that make the polygon
-	 * @param normals normals of the polygon
-	 * @param uvs uvs of the polygon
-	 * @param indices indices of the polygon
-	 * @param bounds bounds of the polygon
-	 * @param points points of the polygon
-	 * @param depth depth of the polygon
-	 * @param flip flip of the polygon
-	 * @param smoothingThreshold
-	 */
-	_addSide( positions , normals , uvs , indices , bounds , points , depth , flip , smoothingThreshold ) {
-		let startIndex = positions.length / 3 ;
-		let ulength = 0 ;
-		for ( let i = 0 ; i < points.length ; i ++ ) {
-			const p = points[i] ;
-			const p1 = points[( i + 1 ) % points.length] ;
-
-			positions.push( p.x , 0 , p.y ) ;
-			positions.push( p.x , - depth , p.y ) ;
-			positions.push( p1.x , 0 , p1.y ) ;
-			positions.push( p1.x , - depth , p1.y ) ;
-
-			const p0 = points[( i + points.length - 1 ) % points.length] ;
-			const p2 = points[( i + 2 ) % points.length] ;
-
-			let vc = new Vector3( - ( p1.y - p.y ) , 0 , p1.x - p.x ) ;
-			let vp = new Vector3( - ( p.y - p0.y ) , 0 , p.x - p0.x ) ;
-			let vn = new Vector3( - ( p2.y - p1.y ) , 0 , p2.x - p1.x ) ;
-
-			if ( ! flip ) {
-				vc = vc.scale( - 1 ) ;
-				vp = vp.scale( - 1 ) ;
-				vn = vn.scale( - 1 ) ;
-			}
-
-			const vc_norm = vc.normalizeToNew() ;
-			let vp_norm = vp.normalizeToNew() ;
-			let vn_norm = vn.normalizeToNew() ;
-
-			const dotp = Vector3.Dot( vp_norm , vc_norm ) ;
-			if ( dotp > smoothingThreshold ) {
-				if ( dotp < Epsilon - 1 ) {
-					vp_norm = new Vector3( p.x , 0 , p.y ).subtract( new Vector3( p1.x , 0 , p1.y ) ).normalize() ;
-				}
-				else {
-					// cheap average weighed by side length
-					vp_norm = vp.add( vc ).normalize() ;
-				}
-			}
-			else {
-				vp_norm = vc_norm ;
-			}
-
-			const dotn = Vector3.Dot( vn , vc ) ;
-			if ( dotn > smoothingThreshold ) {
-				if ( dotn < Epsilon - 1 ) {
-					// back to back
-					vn_norm = new Vector3( p1.x , 0 , p1.y ).subtract( new Vector3( p.x , 0 , p.y ) ).normalize() ;
-				}
-				else {
-					// cheap average weighed by side length
-					vn_norm = vn.add( vc ).normalize() ;
-				}
-			}
-			else {
-				vn_norm = vc_norm ;
-			}
-
-			uvs.push( ulength / bounds.width , 0 ) ;
-			uvs.push( ulength / bounds.width , 1 ) ;
-			ulength += vc.length() ;
-			uvs.push( ulength / bounds.width , 0 ) ;
-			uvs.push( ulength / bounds.width , 1 ) ;
-
-			normals.push( vp_norm.x , vp_norm.y , vp_norm.z ) ;
-			normals.push( vp_norm.x , vp_norm.y , vp_norm.z ) ;
-			normals.push( vn_norm.x , vn_norm.y , vn_norm.z ) ;
-			normals.push( vn_norm.x , vn_norm.y , vn_norm.z ) ;
-
-			if ( ! flip ) {
-				indices.push( startIndex ) ;
-				indices.push( startIndex + 1 ) ;
-				indices.push( startIndex + 2 ) ;
-
-				indices.push( startIndex + 1 ) ;
-				indices.push( startIndex + 3 ) ;
-				indices.push( startIndex + 2 ) ;
-			}
-			else {
-				indices.push( startIndex ) ;
-				indices.push( startIndex + 2 ) ;
-				indices.push( startIndex + 1 ) ;
-
-				indices.push( startIndex + 1 ) ;
-				indices.push( startIndex + 2 ) ;
-				indices.push( startIndex + 3 ) ;
-			}
-			startIndex += 4 ;
-		}
-	}
-
-	computeBounds() {
-		const lmin = new Vector2(this._points[0].x, this._points[0].y);
-		const lmax = new Vector2(this._points[0].x, this._points[0].y);
-
-		this._points.forEach( point => {
-			// x
-			if (point.x < lmin.x) {
-				lmin.x = point.x;
-			} else if (point.x > lmax.x) {
-				lmax.x = point.x;
-			}
-
-			// y
-			if (point.y < lmin.y) {
-				lmin.y = point.y;
-			} else if (point.y > lmax.y) {
-				lmax.y = point.y;
-			}
-		});
-
-		this._bounds = {
-			min: lmin,
-			max: lmax,
-			width: lmax.x - lmin.x,
-			height: lmax.y - lmin.y,
-		};
-	}
-}
-
-},{}],11:[function(require,module,exports){
 (function (process,global){(function (){
 (function (global, undefined) {
     "use strict";
@@ -3102,7 +2513,7 @@ class PolygonMeshBuilder {
 }(typeof self === "undefined" ? typeof global === "undefined" ? this : global : self));
 
 }).call(this)}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"_process":137}],12:[function(require,module,exports){
+},{"_process":136}],11:[function(require,module,exports){
 /*
 	Seventh
 
@@ -3331,7 +2742,7 @@ Queue.prototype.getStats = function() {
 } ;
 
 
-},{"./seventh.js":19}],13:[function(require,module,exports){
+},{"./seventh.js":18}],12:[function(require,module,exports){
 /*
 	Seventh
 
@@ -3415,7 +2826,7 @@ Promise.promisifyAnyNodeApi = ( api , suffix , multiSuffix , filter ) => {
 
 
 
-},{"./seventh.js":19}],14:[function(require,module,exports){
+},{"./seventh.js":18}],13:[function(require,module,exports){
 /*
 	Seventh
 
@@ -4038,7 +3449,7 @@ Promise.race = ( iterable ) => {
 } ;
 
 
-},{"./seventh.js":19}],15:[function(require,module,exports){
+},{"./seventh.js":18}],14:[function(require,module,exports){
 (function (process,global,setImmediate){(function (){
 /*
 	Seventh
@@ -4810,7 +4221,7 @@ if ( process.browser ) {
 
 
 }).call(this)}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("timers").setImmediate)
-},{"_process":137,"setimmediate":11,"timers":138}],16:[function(require,module,exports){
+},{"_process":136,"setimmediate":10,"timers":137}],15:[function(require,module,exports){
 /*
 	Seventh
 
@@ -5512,7 +4923,7 @@ Promise.variableTimeout = ( asyncFn , thisBinding ) => {
 } ;
 
 
-},{"./seventh.js":19}],17:[function(require,module,exports){
+},{"./seventh.js":18}],16:[function(require,module,exports){
 (function (process){(function (){
 /*
 	Seventh
@@ -5612,7 +5023,7 @@ Promise.resolveSafeTimeout = function( timeout , value ) {
 
 
 }).call(this)}).call(this,require('_process'))
-},{"./seventh.js":19,"_process":137}],18:[function(require,module,exports){
+},{"./seventh.js":18,"_process":136}],17:[function(require,module,exports){
 /*
 	Seventh
 
@@ -5664,7 +5075,7 @@ Promise.parasite = () => {
 } ;
 
 
-},{"./seventh.js":19}],19:[function(require,module,exports){
+},{"./seventh.js":18}],18:[function(require,module,exports){
 /*
 	Seventh
 
@@ -5708,7 +5119,7 @@ require( './parasite.js' ) ;
 require( './misc.js' ) ;
 
 
-},{"./Queue.js":12,"./api.js":13,"./batch.js":14,"./core.js":15,"./decorators.js":16,"./misc.js":17,"./parasite.js":18,"./wrapper.js":20}],20:[function(require,module,exports){
+},{"./Queue.js":11,"./api.js":12,"./batch.js":13,"./core.js":14,"./decorators.js":15,"./misc.js":16,"./parasite.js":17,"./wrapper.js":19}],19:[function(require,module,exports){
 /*
 	Seventh
 
@@ -5873,7 +5284,7 @@ Promise.onceEventAllOrError = ( emitter , eventName , excludeEvents ) => {
 } ;
 
 
-},{"./seventh.js":19}],21:[function(require,module,exports){
+},{"./seventh.js":18}],20:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -6133,7 +5544,7 @@ BoundingBox.prototype.shrink = function( value , min = 0 ) {
 } ;
 
 
-},{}],22:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -6239,7 +5650,7 @@ ConvexPolygon.prototype.checkConvex = function() {
 } ;
 
 
-},{"../package.json":130,"./BoundingBox.js":21,"./Polygon.js":34}],23:[function(require,module,exports){
+},{"../package.json":129,"./BoundingBox.js":20,"./Polygon.js":33}],22:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -6490,7 +5901,7 @@ DynamicArea.prototype.restore = function( canvasCtx ) {
 } ;
 
 
-},{"../package.json":130,"./BoundingBox.js":21}],24:[function(require,module,exports){
+},{"../package.json":129,"./BoundingBox.js":20}],23:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -6881,7 +6292,7 @@ DynamicManager.prototype.getAllBabylonControlEmittableEvents = function( eventNa
 } ;
 
 
-},{"../package.json":130,"./canvas-utilities.js":60,"nextgen-events/lib/LeanEvents.js":102,"seventh":118}],25:[function(require,module,exports){
+},{"../package.json":129,"./canvas-utilities.js":59,"nextgen-events/lib/LeanEvents.js":101,"seventh":117}],24:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -6998,7 +6409,7 @@ Metric.isEqual = function( a , b ) {
 } ;
 
 
-},{}],26:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -7330,7 +6741,7 @@ const angleBetween = ( v0 , v1 ) => {
 } ;
 
 
-},{"../BoundingBox.js":21}],27:[function(require,module,exports){
+},{"../BoundingBox.js":20}],26:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -7480,7 +6891,7 @@ Bezier.prototype.getT = function( xs , ys , length ) {
 } ;
 
 
-},{}],28:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -7693,7 +7104,7 @@ function getTExtrema( ps , tExtrema ) {
 }
 
 
-},{"../BoundingBox.js":21,"./Bezier.js":27,"./QuadraticBezier.js":32,"./bezier-values.json":33}],29:[function(require,module,exports){
+},{"../BoundingBox.js":20,"./Bezier.js":26,"./QuadraticBezier.js":31,"./bezier-values.json":32}],28:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -7796,7 +7207,7 @@ Line.prototype.getPropertiesAtLength = function( length ) {
 } ;
 
 
-},{"../BoundingBox.js":21}],30:[function(require,module,exports){
+},{"../BoundingBox.js":20}],29:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -7867,7 +7278,7 @@ Move.prototype.getPropertiesAtLength = function() {
 } ;
 
 
-},{}],31:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -9078,7 +8489,7 @@ Path.linePointsToD = ( points , invertY = false ) => {
 Path.polygonPointsToD = ( points , invertY = false ) => Path.linePointsToD( points , invertY ) + ' z' ;
 
 
-},{"../../package.json":130,"../BoundingBox.js":21,"../Polygon.js":34,"../Polyline.js":35,"./Arc.js":26,"./CubicBezier.js":28,"./Line.js":29,"./Move.js":30,"./QuadraticBezier.js":32}],32:[function(require,module,exports){
+},{"../../package.json":129,"../BoundingBox.js":20,"../Polygon.js":33,"../Polyline.js":34,"./Arc.js":25,"./CubicBezier.js":27,"./Line.js":28,"./Move.js":29,"./QuadraticBezier.js":31}],31:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -9229,9 +8640,9 @@ function getExtrema( ps , pExtrema ) {
 }
 
 
-},{"../BoundingBox.js":21,"./Bezier.js":27}],33:[function(require,module,exports){
+},{"../BoundingBox.js":20,"./Bezier.js":26}],32:[function(require,module,exports){
 module.exports={"tValues":[[],[],[-0.5773502691896257,0.5773502691896257],[0,-0.7745966692414834,0.7745966692414834],[-0.33998104358485626,0.33998104358485626,-0.8611363115940526,0.8611363115940526],[0,-0.5384693101056831,0.5384693101056831,-0.906179845938664,0.906179845938664],[0.6612093864662645,-0.6612093864662645,-0.2386191860831969,0.2386191860831969,-0.932469514203152,0.932469514203152],[0,0.4058451513773972,-0.4058451513773972,-0.7415311855993945,0.7415311855993945,-0.9491079123427585,0.9491079123427585],[-0.1834346424956498,0.1834346424956498,-0.525532409916329,0.525532409916329,-0.7966664774136267,0.7966664774136267,-0.9602898564975363,0.9602898564975363],[0,-0.8360311073266358,0.8360311073266358,-0.9681602395076261,0.9681602395076261,-0.3242534234038089,0.3242534234038089,-0.6133714327005904,0.6133714327005904],[-0.14887433898163122,0.14887433898163122,-0.4333953941292472,0.4333953941292472,-0.6794095682990244,0.6794095682990244,-0.8650633666889845,0.8650633666889845,-0.9739065285171717,0.9739065285171717],[0,-0.26954315595234496,0.26954315595234496,-0.5190961292068118,0.5190961292068118,-0.7301520055740494,0.7301520055740494,-0.8870625997680953,0.8870625997680953,-0.978228658146057,0.978228658146057],[-0.1252334085114689,0.1252334085114689,-0.3678314989981802,0.3678314989981802,-0.5873179542866175,0.5873179542866175,-0.7699026741943047,0.7699026741943047,-0.9041172563704749,0.9041172563704749,-0.9815606342467192,0.9815606342467192],[0,-0.2304583159551348,0.2304583159551348,-0.44849275103644687,0.44849275103644687,-0.6423493394403402,0.6423493394403402,-0.8015780907333099,0.8015780907333099,-0.9175983992229779,0.9175983992229779,-0.9841830547185881,0.9841830547185881],[-0.10805494870734367,0.10805494870734367,-0.31911236892788974,0.31911236892788974,-0.5152486363581541,0.5152486363581541,-0.6872929048116855,0.6872929048116855,-0.827201315069765,0.827201315069765,-0.9284348836635735,0.9284348836635735,-0.9862838086968123,0.9862838086968123],[0,-0.20119409399743451,0.20119409399743451,-0.3941513470775634,0.3941513470775634,-0.5709721726085388,0.5709721726085388,-0.7244177313601701,0.7244177313601701,-0.8482065834104272,0.8482065834104272,-0.937273392400706,0.937273392400706,-0.9879925180204854,0.9879925180204854],[-0.09501250983763744,0.09501250983763744,-0.2816035507792589,0.2816035507792589,-0.45801677765722737,0.45801677765722737,-0.6178762444026438,0.6178762444026438,-0.755404408355003,0.755404408355003,-0.8656312023878318,0.8656312023878318,-0.9445750230732326,0.9445750230732326,-0.9894009349916499,0.9894009349916499],[0,-0.17848418149584785,0.17848418149584785,-0.3512317634538763,0.3512317634538763,-0.5126905370864769,0.5126905370864769,-0.6576711592166907,0.6576711592166907,-0.7815140038968014,0.7815140038968014,-0.8802391537269859,0.8802391537269859,-0.9506755217687678,0.9506755217687678,-0.9905754753144174,0.9905754753144174],[-0.0847750130417353,0.0847750130417353,-0.2518862256915055,0.2518862256915055,-0.41175116146284263,0.41175116146284263,-0.5597708310739475,0.5597708310739475,-0.6916870430603532,0.6916870430603532,-0.8037049589725231,0.8037049589725231,-0.8926024664975557,0.8926024664975557,-0.9558239495713977,0.9558239495713977,-0.9915651684209309,0.9915651684209309],[0,-0.16035864564022537,0.16035864564022537,-0.31656409996362983,0.31656409996362983,-0.46457074137596094,0.46457074137596094,-0.600545304661681,0.600545304661681,-0.7209661773352294,0.7209661773352294,-0.8227146565371428,0.8227146565371428,-0.9031559036148179,0.9031559036148179,-0.96020815213483,0.96020815213483,-0.9924068438435844,0.9924068438435844],[-0.07652652113349734,0.07652652113349734,-0.22778585114164507,0.22778585114164507,-0.37370608871541955,0.37370608871541955,-0.5108670019508271,0.5108670019508271,-0.636053680726515,0.636053680726515,-0.7463319064601508,0.7463319064601508,-0.8391169718222188,0.8391169718222188,-0.912234428251326,0.912234428251326,-0.9639719272779138,0.9639719272779138,-0.9931285991850949,0.9931285991850949],[0,-0.1455618541608951,0.1455618541608951,-0.2880213168024011,0.2880213168024011,-0.4243421202074388,0.4243421202074388,-0.5516188358872198,0.5516188358872198,-0.6671388041974123,0.6671388041974123,-0.7684399634756779,0.7684399634756779,-0.8533633645833173,0.8533633645833173,-0.9200993341504008,0.9200993341504008,-0.9672268385663063,0.9672268385663063,-0.9937521706203895,0.9937521706203895],[-0.06973927331972223,0.06973927331972223,-0.20786042668822127,0.20786042668822127,-0.34193582089208424,0.34193582089208424,-0.469355837986757,0.469355837986757,-0.5876404035069116,0.5876404035069116,-0.6944872631866827,0.6944872631866827,-0.7878168059792081,0.7878168059792081,-0.8658125777203002,0.8658125777203002,-0.926956772187174,0.926956772187174,-0.9700604978354287,0.9700604978354287,-0.9942945854823992,0.9942945854823992],[0,-0.1332568242984661,0.1332568242984661,-0.26413568097034495,0.26413568097034495,-0.3903010380302908,0.3903010380302908,-0.5095014778460075,0.5095014778460075,-0.6196098757636461,0.6196098757636461,-0.7186613631319502,0.7186613631319502,-0.8048884016188399,0.8048884016188399,-0.8767523582704416,0.8767523582704416,-0.9329710868260161,0.9329710868260161,-0.9725424712181152,0.9725424712181152,-0.9947693349975522,0.9947693349975522],[-0.06405689286260563,0.06405689286260563,-0.1911188674736163,0.1911188674736163,-0.3150426796961634,0.3150426796961634,-0.4337935076260451,0.4337935076260451,-0.5454214713888396,0.5454214713888396,-0.6480936519369755,0.6480936519369755,-0.7401241915785544,0.7401241915785544,-0.820001985973903,0.820001985973903,-0.8864155270044011,0.8864155270044011,-0.9382745520027328,0.9382745520027328,-0.9747285559713095,0.9747285559713095,-0.9951872199970213,0.9951872199970213]],"cValues":[[],[],[1,1],[0.8888888888888888,0.5555555555555556,0.5555555555555556],[0.6521451548625461,0.6521451548625461,0.34785484513745385,0.34785484513745385],[0.5688888888888889,0.47862867049936647,0.47862867049936647,0.23692688505618908,0.23692688505618908],[0.3607615730481386,0.3607615730481386,0.46791393457269104,0.46791393457269104,0.17132449237917036,0.17132449237917036],[0.4179591836734694,0.3818300505051189,0.3818300505051189,0.27970539148927664,0.27970539148927664,0.1294849661688697,0.1294849661688697],[0.362683783378362,0.362683783378362,0.31370664587788727,0.31370664587788727,0.22238103445337448,0.22238103445337448,0.10122853629037626,0.10122853629037626],[0.3302393550012598,0.1806481606948574,0.1806481606948574,0.08127438836157441,0.08127438836157441,0.31234707704000286,0.31234707704000286,0.26061069640293544,0.26061069640293544],[0.29552422471475287,0.29552422471475287,0.26926671930999635,0.26926671930999635,0.21908636251598204,0.21908636251598204,0.1494513491505806,0.1494513491505806,0.06667134430868814,0.06667134430868814],[0.2729250867779006,0.26280454451024665,0.26280454451024665,0.23319376459199048,0.23319376459199048,0.18629021092773426,0.18629021092773426,0.1255803694649046,0.1255803694649046,0.05566856711617366,0.05566856711617366],[0.24914704581340277,0.24914704581340277,0.2334925365383548,0.2334925365383548,0.20316742672306592,0.20316742672306592,0.16007832854334622,0.16007832854334622,0.10693932599531843,0.10693932599531843,0.04717533638651183,0.04717533638651183],[0.2325515532308739,0.22628318026289723,0.22628318026289723,0.2078160475368885,0.2078160475368885,0.17814598076194574,0.17814598076194574,0.13887351021978725,0.13887351021978725,0.09212149983772845,0.09212149983772845,0.04048400476531588,0.04048400476531588],[0.2152638534631578,0.2152638534631578,0.2051984637212956,0.2051984637212956,0.18553839747793782,0.18553839747793782,0.15720316715819355,0.15720316715819355,0.12151857068790319,0.12151857068790319,0.08015808715976021,0.08015808715976021,0.03511946033175186,0.03511946033175186],[0.2025782419255613,0.19843148532711158,0.19843148532711158,0.1861610000155622,0.1861610000155622,0.16626920581699392,0.16626920581699392,0.13957067792615432,0.13957067792615432,0.10715922046717194,0.10715922046717194,0.07036604748810812,0.07036604748810812,0.03075324199611727,0.03075324199611727],[0.1894506104550685,0.1894506104550685,0.18260341504492358,0.18260341504492358,0.16915651939500254,0.16915651939500254,0.14959598881657674,0.14959598881657674,0.12462897125553388,0.12462897125553388,0.09515851168249279,0.09515851168249279,0.062253523938647894,0.062253523938647894,0.027152459411754096,0.027152459411754096],[0.17944647035620653,0.17656270536699264,0.17656270536699264,0.16800410215645004,0.16800410215645004,0.15404576107681028,0.15404576107681028,0.13513636846852548,0.13513636846852548,0.11188384719340397,0.11188384719340397,0.08503614831717918,0.08503614831717918,0.0554595293739872,0.0554595293739872,0.02414830286854793,0.02414830286854793],[0.1691423829631436,0.1691423829631436,0.16427648374583273,0.16427648374583273,0.15468467512626524,0.15468467512626524,0.14064291467065065,0.14064291467065065,0.12255520671147846,0.12255520671147846,0.10094204410628717,0.10094204410628717,0.07642573025488905,0.07642573025488905,0.0497145488949698,0.0497145488949698,0.02161601352648331,0.02161601352648331],[0.1610544498487837,0.15896884339395434,0.15896884339395434,0.15276604206585967,0.15276604206585967,0.1426067021736066,0.1426067021736066,0.12875396253933621,0.12875396253933621,0.11156664554733399,0.11156664554733399,0.09149002162245,0.09149002162245,0.06904454273764123,0.06904454273764123,0.0448142267656996,0.0448142267656996,0.019461788229726478,0.019461788229726478],[0.15275338713072584,0.15275338713072584,0.14917298647260374,0.14917298647260374,0.14209610931838204,0.14209610931838204,0.13168863844917664,0.13168863844917664,0.11819453196151841,0.11819453196151841,0.10193011981724044,0.10193011981724044,0.08327674157670475,0.08327674157670475,0.06267204833410907,0.06267204833410907,0.04060142980038694,0.04060142980038694,0.017614007139152118,0.017614007139152118],[0.14608113364969041,0.14452440398997005,0.14452440398997005,0.13988739479107315,0.13988739479107315,0.13226893863333747,0.13226893863333747,0.12183141605372853,0.12183141605372853,0.10879729916714838,0.10879729916714838,0.09344442345603386,0.09344442345603386,0.0761001136283793,0.0761001136283793,0.057134425426857205,0.057134425426857205,0.036953789770852494,0.036953789770852494,0.016017228257774335,0.016017228257774335],[0.13925187285563198,0.13925187285563198,0.13654149834601517,0.13654149834601517,0.13117350478706238,0.13117350478706238,0.12325237681051242,0.12325237681051242,0.11293229608053922,0.11293229608053922,0.10041414444288096,0.10041414444288096,0.08594160621706773,0.08594160621706773,0.06979646842452049,0.06979646842452049,0.052293335152683286,0.052293335152683286,0.03377490158481415,0.03377490158481415,0.0146279952982722,0.0146279952982722],[0.13365457218610619,0.1324620394046966,0.1324620394046966,0.12890572218808216,0.12890572218808216,0.12304908430672953,0.12304908430672953,0.11499664022241136,0.11499664022241136,0.10489209146454141,0.10489209146454141,0.09291576606003515,0.09291576606003515,0.07928141177671895,0.07928141177671895,0.06423242140852585,0.06423242140852585,0.04803767173108467,0.04803767173108467,0.030988005856979445,0.030988005856979445,0.013411859487141771,0.013411859487141771],[0.12793819534675216,0.12793819534675216,0.1258374563468283,0.1258374563468283,0.12167047292780339,0.12167047292780339,0.1155056680537256,0.1155056680537256,0.10744427011596563,0.10744427011596563,0.09761865210411388,0.09761865210411388,0.08619016153195327,0.08619016153195327,0.0733464814110803,0.0733464814110803,0.05929858491543678,0.05929858491543678,0.04427743881741981,0.04427743881741981,0.028531388628933663,0.028531388628933663,0.0123412297999872,0.0123412297999872]],"binomialCoefficients":[[1],[1,1],[1,2,1],[1,3,3,1]]}
-},{}],34:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -9486,7 +8897,7 @@ Polygon.castRayOnSide = function( side , ray ) {
 } ;
 
 
-},{"../package.json":130,"./BoundingBox.js":21,"./Path/Path.js":31}],35:[function(require,module,exports){
+},{"../package.json":129,"./BoundingBox.js":20,"./Path/Path.js":30}],34:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -9541,7 +8952,7 @@ Polyline.prototype.addClosingSide = null ;
 Polyline.prototype.isInside = function( coords ) { return false ; } ;	// There is no “inside”, just lines
 
 
-},{"../package.json":130,"./BoundingBox.js":21,"./Polygon.js":34}],36:[function(require,module,exports){
+},{"../package.json":129,"./BoundingBox.js":20,"./Polygon.js":33}],35:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -9754,7 +9165,7 @@ Style.prototype.setDomSvgStyle = function( $element , palette ) {
 } ;
 
 
-},{"./color-utilities.js":61,"string-kit/lib/camel":120,"string-kit/lib/escape":123}],37:[function(require,module,exports){
+},{"./color-utilities.js":60,"string-kit/lib/camel":119,"string-kit/lib/escape":122}],36:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -9912,7 +9323,7 @@ VG.prototype.addCssRule = function( rule ) {
 } ;
 
 
-},{"../package.json":130,"./VGContainer.js":39,"palette-shade":109}],38:[function(require,module,exports){
+},{"../package.json":129,"./VGContainer.js":38,"palette-shade":108}],37:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -10022,7 +9433,7 @@ VGClip.prototype.svgContentGroupAttributes = function() {
 } ;
 
 
-},{"../package.json":130,"./VGContainer.js":39,"./VGEntity.js":42,"./svg-kit.js":67,"array-kit":89}],39:[function(require,module,exports){
+},{"../package.json":129,"./VGContainer.js":38,"./VGEntity.js":41,"./svg-kit.js":66,"array-kit":88}],38:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -10229,7 +9640,7 @@ VGContainer.prototype.morphSvgDom = function() {
 } ;
 
 
-},{"../package.json":130,"./VGEntity.js":42,"./svg-kit.js":67,"array-kit":89}],40:[function(require,module,exports){
+},{"../package.json":129,"./VGEntity.js":41,"./svg-kit.js":66,"array-kit":88}],39:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -10388,7 +9799,7 @@ VGConvexPolygon.prototype.renderHookForPath2D = function( path2D , canvasCtx , o
 } ;
 
 
-},{"../package.json":130,"./ConvexPolygon.js":22,"./VGEntity.js":42,"./canvas-utilities.js":60}],41:[function(require,module,exports){
+},{"../package.json":129,"./ConvexPolygon.js":21,"./VGEntity.js":41,"./canvas-utilities.js":59}],40:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -10525,7 +9936,7 @@ VGEllipse.prototype.renderHookForPath2D = function( path2D , canvasCtx , options
 } ;
 
 
-},{"../package.json":130,"./BoundingBox.js":21,"./VGEntity.js":42,"./canvas-utilities.js":60}],42:[function(require,module,exports){
+},{"../package.json":129,"./BoundingBox.js":20,"./VGEntity.js":41,"./canvas-utilities.js":59}],41:[function(require,module,exports){
 (function (process){(function (){
 /*
 	SVG Kit
@@ -11481,7 +10892,7 @@ VGEntity.prototype.computeBoundingBox = function() {} ;
 
 
 }).call(this)}).call(this,require('_process'))
-},{"../package.json":130,"./BoundingBox.js":21,"./DynamicArea.js":23,"./Style.js":36,"./color-utilities.js":61,"./fontLib.js":63,"./fx/fx.js":64,"_process":137,"dom-kit":101,"seventh":118,"string-kit/lib/camel":120,"string-kit/lib/escape":123}],43:[function(require,module,exports){
+},{"../package.json":129,"./BoundingBox.js":20,"./DynamicArea.js":22,"./Style.js":35,"./color-utilities.js":60,"./fontLib.js":62,"./fx/fx.js":63,"_process":136,"dom-kit":100,"seventh":117,"string-kit/lib/camel":119,"string-kit/lib/escape":122}],42:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -11566,7 +10977,7 @@ StructuredTextLine.prototype.fuseEqualAttr = function() {
 } ;
 
 
-},{"./TextMetrics.js":47}],44:[function(require,module,exports){
+},{"./TextMetrics.js":46}],43:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -11806,7 +11217,7 @@ StructuredTextPart.prototype.checkLineSplit = function() {
 } ;
 
 
-},{"./TextAttribute.js":46,"./TextMetrics.js":47,"string-kit/lib/escape.js":123}],45:[function(require,module,exports){
+},{"./TextAttribute.js":45,"./TextMetrics.js":46,"string-kit/lib/escape.js":122}],44:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -12081,7 +11492,7 @@ StructuredTextRenderer.prototype.populateStyle = function( part , style ) {
 } ;
 
 
-},{}],46:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -12706,7 +12117,7 @@ TextAttribute.prototype.getFrameSvgStyle = function( inherit = null , relTo = nu
 } ;
 
 
-},{"../Metric.js":25,"../Style.js":36,"../color-utilities.js":61,"palette-shade":109}],47:[function(require,module,exports){
+},{"../Metric.js":24,"../Style.js":35,"../color-utilities.js":60,"palette-shade":108}],46:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -12846,7 +12257,7 @@ TextMetrics.measureStructuredTextPart = async function( part , inheritedAttr ) {
 } ;
 
 
-},{"../fontLib.js":63,"../getImageSize.js":66}],48:[function(require,module,exports){
+},{"../fontLib.js":62,"../getImageSize.js":65}],47:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -13666,7 +13077,7 @@ VGFlowingText.prototype.computeXYOffset = function() {
 } ;
 
 
-},{"../../package.json":130,"../BoundingBox.js":21,"../VGPseudoContainer.js":56,"../canvas-utilities.js":60,"../fontLib.js":63,"./StructuredTextLine.js":43,"./StructuredTextPart.js":44,"./StructuredTextRenderer.js":45,"./TextAttribute.js":46,"./TextMetrics.js":47,"./VGFlowingTextImagePart.js":49,"./VGFlowingTextPart.js":50,"book-source":98,"dom-kit":101}],49:[function(require,module,exports){
+},{"../../package.json":129,"../BoundingBox.js":20,"../VGPseudoContainer.js":55,"../canvas-utilities.js":59,"../fontLib.js":62,"./StructuredTextLine.js":42,"./StructuredTextPart.js":43,"./StructuredTextRenderer.js":44,"./TextAttribute.js":45,"./TextMetrics.js":46,"./VGFlowingTextImagePart.js":48,"./VGFlowingTextPart.js":49,"book-source":97,"dom-kit":100}],48:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -13816,7 +13227,7 @@ VGFlowingTextImagePart.prototype.renderHookForCanvas = async function( canvasCtx
 } ;
 
 
-},{"../../package.json":130,"../VGPseudoEntity.js":57,"dom-kit":101}],50:[function(require,module,exports){
+},{"../../package.json":129,"../VGPseudoEntity.js":56,"dom-kit":100}],49:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -14255,7 +13666,7 @@ VGFlowingTextPart.prototype.renderHookForPath2D = async function( path2D , canva
 } ;
 
 
-},{"../../package.json":130,"../VGPseudoEntity.js":57,"../canvas-utilities.js":60,"../fontLib.js":63,"./TextAttribute.js":46,"./TextMetrics.js":47,"string-kit/lib/unicode.js":129}],51:[function(require,module,exports){
+},{"../../package.json":129,"../VGPseudoEntity.js":56,"../canvas-utilities.js":59,"../fontLib.js":62,"./TextAttribute.js":45,"./TextMetrics.js":46,"string-kit/lib/unicode.js":128}],50:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -14312,7 +13723,7 @@ VGGroup.prototype.set = function( params ) {
 } ;
 
 
-},{"../package.json":130,"./VGContainer.js":39,"./svg-kit.js":67}],52:[function(require,module,exports){
+},{"../package.json":129,"./VGContainer.js":38,"./svg-kit.js":66}],51:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -14900,7 +14311,7 @@ VGImage.prototype.getNinePatchCoordsList = function( imageSize ) {
 } ;
 
 
-},{"../package.json":130,"./BoundingBox.js":21,"./VGEntity.js":42,"./getImageSize.js":66,"dom-kit":101}],53:[function(require,module,exports){
+},{"../package.json":129,"./BoundingBox.js":20,"./VGEntity.js":41,"./getImageSize.js":65,"dom-kit":100}],52:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -15067,7 +14478,7 @@ VGPath.prototype.renderHookForPath2D = function( path2D , canvasCtx , options = 
 } ;
 
 
-},{"../package.json":130,"./Path/Path.js":31,"./VGEntity.js":42,"./VGPolygon.js":54,"./canvas-utilities.js":60}],54:[function(require,module,exports){
+},{"../package.json":129,"./Path/Path.js":30,"./VGEntity.js":41,"./VGPolygon.js":53,"./canvas-utilities.js":59}],53:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -15195,7 +14606,7 @@ VGPolygon.prototype.renderHookForPath2D = function( path2D , canvasCtx , options
 } ;
 
 
-},{"../package.json":130,"./Polygon.js":34,"./VGEntity.js":42,"./canvas-utilities.js":60}],55:[function(require,module,exports){
+},{"../package.json":129,"./Polygon.js":33,"./VGEntity.js":41,"./canvas-utilities.js":59}],54:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -15324,7 +14735,7 @@ VGPolyline.prototype.renderHookForPath2D = function( path2D , canvasCtx , option
 } ;
 
 
-},{"../package.json":130,"./Polyline.js":35,"./VGEntity.js":42,"./canvas-utilities.js":60}],56:[function(require,module,exports){
+},{"../package.json":129,"./Polyline.js":34,"./VGEntity.js":41,"./canvas-utilities.js":59}],55:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -15420,7 +14831,7 @@ VGPseudoContainer.prototype.clearPseudoEntities = function() {
 VGPseudoContainer.prototype.computePseudoEntities = async function() {} ;
 
 
-},{"../package.json":130,"./VGEntity.js":42,"./svg-kit.js":67,"array-kit":89}],57:[function(require,module,exports){
+},{"../package.json":129,"./VGEntity.js":41,"./svg-kit.js":66,"array-kit":88}],56:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -15478,7 +14889,7 @@ VGPseudoEntity.prototype.__prototypeVersion__ = require( '../package.json' ).ver
 //VGPseudoEntity.prototype.isPseudoEntity = true ;
 
 
-},{"../package.json":130,"./VGEntity.js":42,"./svg-kit.js":67,"array-kit":89}],58:[function(require,module,exports){
+},{"../package.json":129,"./VGEntity.js":41,"./svg-kit.js":66,"array-kit":88}],57:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -15637,7 +15048,7 @@ VGRect.prototype.renderHookForPath2D = function( path2D , canvasCtx , options = 
 } ;
 
 
-},{"../package.json":130,"./BoundingBox.js":21,"./VGEntity.js":42,"./canvas-utilities.js":60}],59:[function(require,module,exports){
+},{"../package.json":129,"./BoundingBox.js":20,"./VGEntity.js":41,"./canvas-utilities.js":59}],58:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -15820,7 +15231,7 @@ VGText.prototype.renderHookForCanvas = function( canvasCtx , options = {} , isRe
 } ;
 
 
-},{"../package.json":130,"./VGEntity.js":42}],60:[function(require,module,exports){
+},{"../package.json":129,"./VGEntity.js":41}],59:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -15985,7 +15396,7 @@ canvas.contextToCanvasCoords = ( canvasCtx , contextCoords ) => {
 } ;
 
 
-},{"./color-utilities.js":61}],61:[function(require,module,exports){
+},{"./color-utilities.js":60}],60:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -16127,7 +15538,7 @@ colorUtilities.getContrastColorCode = ( colorStr , rate = 0.5 ) => {
 } ;
 
 
-},{"palette-shade":109}],62:[function(require,module,exports){
+},{"palette-shade":108}],61:[function(require,module,exports){
 (function (process){(function (){
 /*
 	SVG Kit
@@ -16579,7 +15990,7 @@ core.standalone = function( content , viewBox ) {
 
 
 }).call(this)}).call(this,require('_process'))
-},{"_process":137,"dom-kit":101,"fs":131,"string-kit/lib/escape.js":123}],63:[function(require,module,exports){
+},{"_process":136,"dom-kit":100,"fs":130,"string-kit/lib/escape.js":122}],62:[function(require,module,exports){
 (function (process,__dirname){(function (){
 /*
 	SVG Kit
@@ -16958,7 +16369,7 @@ else {
 
 
 }).call(this)}).call(this,require('_process'),"/../svg-kit/lib")
-},{"_process":137,"fs":131,"opentype.js":105,"path":136}],64:[function(require,module,exports){
+},{"_process":136,"fs":130,"opentype.js":104,"path":135}],63:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -17398,7 +16809,7 @@ exports.fade = ( params ) => {
 
 
 
-},{"../VGFlowingText/TextAttribute.js":46,"./mathFn.js":65}],65:[function(require,module,exports){
+},{"../VGFlowingText/TextAttribute.js":45,"./mathFn.js":64}],64:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -17509,7 +16920,7 @@ easing.sine = t => 0.5 + Math.sin( - PI_OVER_2 + t * PI ) / 2 ;
 
 
 
-},{}],66:[function(require,module,exports){
+},{}],65:[function(require,module,exports){
 (function (process){(function (){
 /*
 	SVG Kit
@@ -17567,7 +16978,7 @@ else {
 
 
 }).call(this)}).call(this,require('_process'))
-},{"_process":137,"image-size":131}],67:[function(require,module,exports){
+},{"_process":136,"image-size":130}],66:[function(require,module,exports){
 /*
 	SVG Kit
 
@@ -17663,7 +17074,7 @@ svgKit.objectToVG = function( object , clone = false ) {
 } ;
 
 
-},{"./BoundingBox.js":21,"./ConvexPolygon.js":22,"./DynamicArea.js":23,"./DynamicManager.js":24,"./Path/Path.js":31,"./Polygon.js":34,"./Polyline.js":35,"./Style.js":36,"./VG.js":37,"./VGClip.js":38,"./VGContainer.js":39,"./VGConvexPolygon.js":40,"./VGEllipse.js":41,"./VGEntity.js":42,"./VGFlowingText/StructuredTextLine.js":43,"./VGFlowingText/StructuredTextPart.js":44,"./VGFlowingText/TextAttribute.js":46,"./VGFlowingText/TextMetrics.js":47,"./VGFlowingText/VGFlowingText.js":48,"./VGGroup.js":51,"./VGImage.js":52,"./VGPath.js":53,"./VGPolygon.js":54,"./VGPolyline.js":55,"./VGRect.js":58,"./VGText.js":59,"./canvas-utilities.js":60,"./color-utilities.js":61,"./core-utilities.js":62,"./fontLib.js":63,"./fx/fx.js":64,"dom-kit":101,"opentype.js":105}],68:[function(require,module,exports){
+},{"./BoundingBox.js":20,"./ConvexPolygon.js":21,"./DynamicArea.js":22,"./DynamicManager.js":23,"./Path/Path.js":30,"./Polygon.js":33,"./Polyline.js":34,"./Style.js":35,"./VG.js":36,"./VGClip.js":37,"./VGContainer.js":38,"./VGConvexPolygon.js":39,"./VGEllipse.js":40,"./VGEntity.js":41,"./VGFlowingText/StructuredTextLine.js":42,"./VGFlowingText/StructuredTextPart.js":43,"./VGFlowingText/TextAttribute.js":45,"./VGFlowingText/TextMetrics.js":46,"./VGFlowingText/VGFlowingText.js":47,"./VGGroup.js":50,"./VGImage.js":51,"./VGPath.js":52,"./VGPolygon.js":53,"./VGPolyline.js":54,"./VGRect.js":57,"./VGText.js":58,"./canvas-utilities.js":59,"./color-utilities.js":60,"./core-utilities.js":61,"./fontLib.js":62,"./fx/fx.js":63,"dom-kit":100,"opentype.js":104}],67:[function(require,module,exports){
 function DOMParser(options){
 	this.options = options ||{locator:{}};
 	
@@ -17917,7 +17328,7 @@ exports.XMLSerializer = require('./dom').XMLSerializer ;
 exports.DOMParser = DOMParser;
 //}
 
-},{"./dom":69,"./entities":70,"./sax":88}],69:[function(require,module,exports){
+},{"./dom":68,"./entities":69,"./sax":87}],68:[function(require,module,exports){
 
 "use strict" ;
 
@@ -19325,7 +18736,7 @@ try{
 	exports.XMLSerializer = XMLSerializer;
 //}
 
-},{"nwmatcher":104,"string-kit":83}],70:[function(require,module,exports){
+},{"nwmatcher":103,"string-kit":82}],69:[function(require,module,exports){
 exports.entityMap = {
        lt: '<',
        gt: '>',
@@ -19570,7 +18981,7 @@ exports.entityMap = {
        diams: "♦"
 };
 //for(var  n in exports.entityMap){console.log(exports.entityMap[n].charCodeAt())}
-},{}],71:[function(require,module,exports){
+},{}],70:[function(require,module,exports){
 /*
 	String Kit
 
@@ -19984,7 +19395,7 @@ function arrayConcatSlice( intoArray , sourceArray , start = 0 , end = sourceArr
 }
 
 
-},{}],72:[function(require,module,exports){
+},{}],71:[function(require,module,exports){
 /*
 	String Kit
 
@@ -20253,7 +19664,7 @@ ansi.parse = str => {
 } ;
 
 
-},{}],73:[function(require,module,exports){
+},{}],72:[function(require,module,exports){
 /*
 	String Kit
 
@@ -20342,7 +19753,7 @@ camel.camelCaseToDash =
 camel.camelCaseToDashed = ( str ) => camel.camelCaseToSeparated( str , '-' , false ) ;
 
 
-},{}],74:[function(require,module,exports){
+},{}],73:[function(require,module,exports){
 /*
 	String Kit
 
@@ -20447,7 +19858,7 @@ exports.unicodePercentEncode = str => str.replace( /[\x00-\x1f\u0100-\uffff\x7f%
 exports.httpHeaderValue = str => exports.unicodePercentEncode( str ) ;
 
 
-},{}],75:[function(require,module,exports){
+},{}],74:[function(require,module,exports){
 (function (Buffer){(function (){
 /*
 	String Kit
@@ -21688,7 +21099,7 @@ function round( v , step ) {
 
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"./StringNumber.js":71,"./ansi.js":72,"./escape.js":74,"./inspect.js":77,"./naturalSort.js":81,"./unicode.js":86,"buffer":133}],76:[function(require,module,exports){
+},{"./StringNumber.js":70,"./ansi.js":71,"./escape.js":73,"./inspect.js":76,"./naturalSort.js":80,"./unicode.js":85,"buffer":132}],75:[function(require,module,exports){
 /*
 	String Kit
 
@@ -22004,7 +21415,7 @@ fuzzy.levenshtein = ( left , right ) => {
 } ;
 
 
-},{}],77:[function(require,module,exports){
+},{}],76:[function(require,module,exports){
 (function (Buffer,process){(function (){
 /*
 	String Kit
@@ -22768,9 +22179,9 @@ inspectStyle.html = Object.assign( {} , inspectStyle.none , {
 
 
 }).call(this)}).call(this,{"isBuffer":require("../../../../../../../../../../../opt/node-v20.11.0/lib/node_modules/browserify/node_modules/is-buffer/index.js")},require('_process'))
-},{"../../../../../../../../../../../opt/node-v20.11.0/lib/node_modules/browserify/node_modules/is-buffer/index.js":135,"./ansi.js":72,"./escape.js":74,"_process":137}],78:[function(require,module,exports){
+},{"../../../../../../../../../../../opt/node-v20.11.0/lib/node_modules/browserify/node_modules/is-buffer/index.js":134,"./ansi.js":71,"./escape.js":73,"_process":136}],77:[function(require,module,exports){
 module.exports={"߀":"0","́":""," ":" ","Ⓐ":"A","Ａ":"A","À":"A","Á":"A","Â":"A","Ầ":"A","Ấ":"A","Ẫ":"A","Ẩ":"A","Ã":"A","Ā":"A","Ă":"A","Ằ":"A","Ắ":"A","Ẵ":"A","Ẳ":"A","Ȧ":"A","Ǡ":"A","Ä":"A","Ǟ":"A","Ả":"A","Å":"A","Ǻ":"A","Ǎ":"A","Ȁ":"A","Ȃ":"A","Ạ":"A","Ậ":"A","Ặ":"A","Ḁ":"A","Ą":"A","Ⱥ":"A","Ɐ":"A","Ꜳ":"AA","Æ":"AE","Ǽ":"AE","Ǣ":"AE","Ꜵ":"AO","Ꜷ":"AU","Ꜹ":"AV","Ꜻ":"AV","Ꜽ":"AY","Ⓑ":"B","Ｂ":"B","Ḃ":"B","Ḅ":"B","Ḇ":"B","Ƀ":"B","Ɓ":"B","ｃ":"C","Ⓒ":"C","Ｃ":"C","Ꜿ":"C","Ḉ":"C","Ç":"C","Ⓓ":"D","Ｄ":"D","Ḋ":"D","Ď":"D","Ḍ":"D","Ḑ":"D","Ḓ":"D","Ḏ":"D","Đ":"D","Ɗ":"D","Ɖ":"D","ᴅ":"D","Ꝺ":"D","Ð":"Dh","Ǳ":"DZ","Ǆ":"DZ","ǲ":"Dz","ǅ":"Dz","ɛ":"E","Ⓔ":"E","Ｅ":"E","È":"E","É":"E","Ê":"E","Ề":"E","Ế":"E","Ễ":"E","Ể":"E","Ẽ":"E","Ē":"E","Ḕ":"E","Ḗ":"E","Ĕ":"E","Ė":"E","Ë":"E","Ẻ":"E","Ě":"E","Ȅ":"E","Ȇ":"E","Ẹ":"E","Ệ":"E","Ȩ":"E","Ḝ":"E","Ę":"E","Ḙ":"E","Ḛ":"E","Ɛ":"E","Ǝ":"E","ᴇ":"E","ꝼ":"F","Ⓕ":"F","Ｆ":"F","Ḟ":"F","Ƒ":"F","Ꝼ":"F","Ⓖ":"G","Ｇ":"G","Ǵ":"G","Ĝ":"G","Ḡ":"G","Ğ":"G","Ġ":"G","Ǧ":"G","Ģ":"G","Ǥ":"G","Ɠ":"G","Ꞡ":"G","Ᵹ":"G","Ꝿ":"G","ɢ":"G","Ⓗ":"H","Ｈ":"H","Ĥ":"H","Ḣ":"H","Ḧ":"H","Ȟ":"H","Ḥ":"H","Ḩ":"H","Ḫ":"H","Ħ":"H","Ⱨ":"H","Ⱶ":"H","Ɥ":"H","Ⓘ":"I","Ｉ":"I","Ì":"I","Í":"I","Î":"I","Ĩ":"I","Ī":"I","Ĭ":"I","İ":"I","Ï":"I","Ḯ":"I","Ỉ":"I","Ǐ":"I","Ȉ":"I","Ȋ":"I","Ị":"I","Į":"I","Ḭ":"I","Ɨ":"I","Ⓙ":"J","Ｊ":"J","Ĵ":"J","Ɉ":"J","ȷ":"J","Ⓚ":"K","Ｋ":"K","Ḱ":"K","Ǩ":"K","Ḳ":"K","Ķ":"K","Ḵ":"K","Ƙ":"K","Ⱪ":"K","Ꝁ":"K","Ꝃ":"K","Ꝅ":"K","Ꞣ":"K","Ⓛ":"L","Ｌ":"L","Ŀ":"L","Ĺ":"L","Ľ":"L","Ḷ":"L","Ḹ":"L","Ļ":"L","Ḽ":"L","Ḻ":"L","Ł":"L","Ƚ":"L","Ɫ":"L","Ⱡ":"L","Ꝉ":"L","Ꝇ":"L","Ꞁ":"L","Ǉ":"LJ","ǈ":"Lj","Ⓜ":"M","Ｍ":"M","Ḿ":"M","Ṁ":"M","Ṃ":"M","Ɱ":"M","Ɯ":"M","ϻ":"M","Ꞥ":"N","Ƞ":"N","Ⓝ":"N","Ｎ":"N","Ǹ":"N","Ń":"N","Ñ":"N","Ṅ":"N","Ň":"N","Ṇ":"N","Ņ":"N","Ṋ":"N","Ṉ":"N","Ɲ":"N","Ꞑ":"N","ᴎ":"N","Ǌ":"NJ","ǋ":"Nj","Ⓞ":"O","Ｏ":"O","Ò":"O","Ó":"O","Ô":"O","Ồ":"O","Ố":"O","Ỗ":"O","Ổ":"O","Õ":"O","Ṍ":"O","Ȭ":"O","Ṏ":"O","Ō":"O","Ṑ":"O","Ṓ":"O","Ŏ":"O","Ȯ":"O","Ȱ":"O","Ö":"O","Ȫ":"O","Ỏ":"O","Ő":"O","Ǒ":"O","Ȍ":"O","Ȏ":"O","Ơ":"O","Ờ":"O","Ớ":"O","Ỡ":"O","Ở":"O","Ợ":"O","Ọ":"O","Ộ":"O","Ǫ":"O","Ǭ":"O","Ø":"O","Ǿ":"O","Ɔ":"O","Ɵ":"O","Ꝋ":"O","Ꝍ":"O","Œ":"OE","Ƣ":"OI","Ꝏ":"OO","Ȣ":"OU","Ⓟ":"P","Ｐ":"P","Ṕ":"P","Ṗ":"P","Ƥ":"P","Ᵽ":"P","Ꝑ":"P","Ꝓ":"P","Ꝕ":"P","Ⓠ":"Q","Ｑ":"Q","Ꝗ":"Q","Ꝙ":"Q","Ɋ":"Q","Ⓡ":"R","Ｒ":"R","Ŕ":"R","Ṙ":"R","Ř":"R","Ȑ":"R","Ȓ":"R","Ṛ":"R","Ṝ":"R","Ŗ":"R","Ṟ":"R","Ɍ":"R","Ɽ":"R","Ꝛ":"R","Ꞧ":"R","Ꞃ":"R","Ⓢ":"S","Ｓ":"S","ẞ":"S","Ś":"S","Ṥ":"S","Ŝ":"S","Ṡ":"S","Š":"S","Ṧ":"S","Ṣ":"S","Ṩ":"S","Ș":"S","Ş":"S","Ȿ":"S","Ꞩ":"S","Ꞅ":"S","Ⓣ":"T","Ｔ":"T","Ṫ":"T","Ť":"T","Ṭ":"T","Ț":"T","Ţ":"T","Ṱ":"T","Ṯ":"T","Ŧ":"T","Ƭ":"T","Ʈ":"T","Ⱦ":"T","Ꞇ":"T","Þ":"Th","Ꜩ":"TZ","Ⓤ":"U","Ｕ":"U","Ù":"U","Ú":"U","Û":"U","Ũ":"U","Ṹ":"U","Ū":"U","Ṻ":"U","Ŭ":"U","Ü":"U","Ǜ":"U","Ǘ":"U","Ǖ":"U","Ǚ":"U","Ủ":"U","Ů":"U","Ű":"U","Ǔ":"U","Ȕ":"U","Ȗ":"U","Ư":"U","Ừ":"U","Ứ":"U","Ữ":"U","Ử":"U","Ự":"U","Ụ":"U","Ṳ":"U","Ų":"U","Ṷ":"U","Ṵ":"U","Ʉ":"U","Ⓥ":"V","Ｖ":"V","Ṽ":"V","Ṿ":"V","Ʋ":"V","Ꝟ":"V","Ʌ":"V","Ꝡ":"VY","Ⓦ":"W","Ｗ":"W","Ẁ":"W","Ẃ":"W","Ŵ":"W","Ẇ":"W","Ẅ":"W","Ẉ":"W","Ⱳ":"W","Ⓧ":"X","Ｘ":"X","Ẋ":"X","Ẍ":"X","Ⓨ":"Y","Ｙ":"Y","Ỳ":"Y","Ý":"Y","Ŷ":"Y","Ỹ":"Y","Ȳ":"Y","Ẏ":"Y","Ÿ":"Y","Ỷ":"Y","Ỵ":"Y","Ƴ":"Y","Ɏ":"Y","Ỿ":"Y","Ⓩ":"Z","Ｚ":"Z","Ź":"Z","Ẑ":"Z","Ż":"Z","Ž":"Z","Ẓ":"Z","Ẕ":"Z","Ƶ":"Z","Ȥ":"Z","Ɀ":"Z","Ⱬ":"Z","Ꝣ":"Z","ⓐ":"a","ａ":"a","ẚ":"a","à":"a","á":"a","â":"a","ầ":"a","ấ":"a","ẫ":"a","ẩ":"a","ã":"a","ā":"a","ă":"a","ằ":"a","ắ":"a","ẵ":"a","ẳ":"a","ȧ":"a","ǡ":"a","ä":"a","ǟ":"a","ả":"a","å":"a","ǻ":"a","ǎ":"a","ȁ":"a","ȃ":"a","ạ":"a","ậ":"a","ặ":"a","ḁ":"a","ą":"a","ⱥ":"a","ɐ":"a","ɑ":"a","ꜳ":"aa","æ":"ae","ǽ":"ae","ǣ":"ae","ꜵ":"ao","ꜷ":"au","ꜹ":"av","ꜻ":"av","ꜽ":"ay","ⓑ":"b","ｂ":"b","ḃ":"b","ḅ":"b","ḇ":"b","ƀ":"b","ƃ":"b","ɓ":"b","Ƃ":"b","ⓒ":"c","ć":"c","ĉ":"c","ċ":"c","č":"c","ç":"c","ḉ":"c","ƈ":"c","ȼ":"c","ꜿ":"c","ↄ":"c","C":"c","Ć":"c","Ĉ":"c","Ċ":"c","Č":"c","Ƈ":"c","Ȼ":"c","ⓓ":"d","ｄ":"d","ḋ":"d","ď":"d","ḍ":"d","ḑ":"d","ḓ":"d","ḏ":"d","đ":"d","ƌ":"d","ɖ":"d","ɗ":"d","Ƌ":"d","Ꮷ":"d","ԁ":"d","Ɦ":"d","ð":"dh","ǳ":"dz","ǆ":"dz","ⓔ":"e","ｅ":"e","è":"e","é":"e","ê":"e","ề":"e","ế":"e","ễ":"e","ể":"e","ẽ":"e","ē":"e","ḕ":"e","ḗ":"e","ĕ":"e","ė":"e","ë":"e","ẻ":"e","ě":"e","ȅ":"e","ȇ":"e","ẹ":"e","ệ":"e","ȩ":"e","ḝ":"e","ę":"e","ḙ":"e","ḛ":"e","ɇ":"e","ǝ":"e","ⓕ":"f","ｆ":"f","ḟ":"f","ƒ":"f","ﬀ":"ff","ﬁ":"fi","ﬂ":"fl","ﬃ":"ffi","ﬄ":"ffl","ⓖ":"g","ｇ":"g","ǵ":"g","ĝ":"g","ḡ":"g","ğ":"g","ġ":"g","ǧ":"g","ģ":"g","ǥ":"g","ɠ":"g","ꞡ":"g","ꝿ":"g","ᵹ":"g","ⓗ":"h","ｈ":"h","ĥ":"h","ḣ":"h","ḧ":"h","ȟ":"h","ḥ":"h","ḩ":"h","ḫ":"h","ẖ":"h","ħ":"h","ⱨ":"h","ⱶ":"h","ɥ":"h","ƕ":"hv","ⓘ":"i","ｉ":"i","ì":"i","í":"i","î":"i","ĩ":"i","ī":"i","ĭ":"i","ï":"i","ḯ":"i","ỉ":"i","ǐ":"i","ȉ":"i","ȋ":"i","ị":"i","į":"i","ḭ":"i","ɨ":"i","ı":"i","ⓙ":"j","ｊ":"j","ĵ":"j","ǰ":"j","ɉ":"j","ⓚ":"k","ｋ":"k","ḱ":"k","ǩ":"k","ḳ":"k","ķ":"k","ḵ":"k","ƙ":"k","ⱪ":"k","ꝁ":"k","ꝃ":"k","ꝅ":"k","ꞣ":"k","ⓛ":"l","ｌ":"l","ŀ":"l","ĺ":"l","ľ":"l","ḷ":"l","ḹ":"l","ļ":"l","ḽ":"l","ḻ":"l","ſ":"l","ł":"l","ƚ":"l","ɫ":"l","ⱡ":"l","ꝉ":"l","ꞁ":"l","ꝇ":"l","ɭ":"l","ǉ":"lj","ⓜ":"m","ｍ":"m","ḿ":"m","ṁ":"m","ṃ":"m","ɱ":"m","ɯ":"m","ⓝ":"n","ｎ":"n","ǹ":"n","ń":"n","ñ":"n","ṅ":"n","ň":"n","ṇ":"n","ņ":"n","ṋ":"n","ṉ":"n","ƞ":"n","ɲ":"n","ŉ":"n","ꞑ":"n","ꞥ":"n","ԉ":"n","ǌ":"nj","ⓞ":"o","ｏ":"o","ò":"o","ó":"o","ô":"o","ồ":"o","ố":"o","ỗ":"o","ổ":"o","õ":"o","ṍ":"o","ȭ":"o","ṏ":"o","ō":"o","ṑ":"o","ṓ":"o","ŏ":"o","ȯ":"o","ȱ":"o","ö":"o","ȫ":"o","ỏ":"o","ő":"o","ǒ":"o","ȍ":"o","ȏ":"o","ơ":"o","ờ":"o","ớ":"o","ỡ":"o","ở":"o","ợ":"o","ọ":"o","ộ":"o","ǫ":"o","ǭ":"o","ø":"o","ǿ":"o","ꝋ":"o","ꝍ":"o","ɵ":"o","ɔ":"o","ᴑ":"o","œ":"oe","ƣ":"oi","ꝏ":"oo","ȣ":"ou","ⓟ":"p","ｐ":"p","ṕ":"p","ṗ":"p","ƥ":"p","ᵽ":"p","ꝑ":"p","ꝓ":"p","ꝕ":"p","ρ":"p","ⓠ":"q","ｑ":"q","ɋ":"q","ꝗ":"q","ꝙ":"q","ⓡ":"r","ｒ":"r","ŕ":"r","ṙ":"r","ř":"r","ȑ":"r","ȓ":"r","ṛ":"r","ṝ":"r","ŗ":"r","ṟ":"r","ɍ":"r","ɽ":"r","ꝛ":"r","ꞧ":"r","ꞃ":"r","ⓢ":"s","ｓ":"s","ś":"s","ṥ":"s","ŝ":"s","ṡ":"s","š":"s","ṧ":"s","ṣ":"s","ṩ":"s","ș":"s","ş":"s","ȿ":"s","ꞩ":"s","ꞅ":"s","ẛ":"s","ʂ":"s","ß":"ss","ⓣ":"t","ｔ":"t","ṫ":"t","ẗ":"t","ť":"t","ṭ":"t","ț":"t","ţ":"t","ṱ":"t","ṯ":"t","ŧ":"t","ƭ":"t","ʈ":"t","ⱦ":"t","ꞇ":"t","þ":"th","ꜩ":"tz","ⓤ":"u","ｕ":"u","ù":"u","ú":"u","û":"u","ũ":"u","ṹ":"u","ū":"u","ṻ":"u","ŭ":"u","ü":"u","ǜ":"u","ǘ":"u","ǖ":"u","ǚ":"u","ủ":"u","ů":"u","ű":"u","ǔ":"u","ȕ":"u","ȗ":"u","ư":"u","ừ":"u","ứ":"u","ữ":"u","ử":"u","ự":"u","ụ":"u","ṳ":"u","ų":"u","ṷ":"u","ṵ":"u","ʉ":"u","ⓥ":"v","ｖ":"v","ṽ":"v","ṿ":"v","ʋ":"v","ꝟ":"v","ʌ":"v","ꝡ":"vy","ⓦ":"w","ｗ":"w","ẁ":"w","ẃ":"w","ŵ":"w","ẇ":"w","ẅ":"w","ẘ":"w","ẉ":"w","ⱳ":"w","ⓧ":"x","ｘ":"x","ẋ":"x","ẍ":"x","ⓨ":"y","ｙ":"y","ỳ":"y","ý":"y","ŷ":"y","ỹ":"y","ȳ":"y","ẏ":"y","ÿ":"y","ỷ":"y","ẙ":"y","ỵ":"y","ƴ":"y","ɏ":"y","ỿ":"y","ⓩ":"z","ｚ":"z","ź":"z","ẑ":"z","ż":"z","ž":"z","ẓ":"z","ẕ":"z","ƶ":"z","ȥ":"z","ɀ":"z","ⱬ":"z","ꝣ":"z"}
-},{}],79:[function(require,module,exports){
+},{}],78:[function(require,module,exports){
 /*
 	String Kit
 
@@ -22809,7 +22220,7 @@ module.exports = function( str ) {
 
 
 
-},{"./latinize-map.json":78}],80:[function(require,module,exports){
+},{"./latinize-map.json":77}],79:[function(require,module,exports){
 /*
 	String Kit
 
@@ -22869,7 +22280,7 @@ exports.occurrenceCount = function( str , subStr , overlap = false ) {
 } ;
 
 
-},{}],81:[function(require,module,exports){
+},{}],80:[function(require,module,exports){
 /*
 	String Kit
 
@@ -23016,7 +22427,7 @@ function naturalSort( a , b ) {
 module.exports = naturalSort ;
 
 
-},{}],82:[function(require,module,exports){
+},{}],81:[function(require,module,exports){
 /*
 	String Kit
 
@@ -23073,7 +22484,7 @@ exports.regexp.array2alternatives = function array2alternatives( array ) {
 
 
 
-},{"./escape.js":74}],83:[function(require,module,exports){
+},{"./escape.js":73}],82:[function(require,module,exports){
 /*
 	String Kit
 
@@ -23166,7 +22577,7 @@ stringKit.installPolyfills = function installPolyfills() {
 //*/
 
 
-},{"./StringNumber.js":71,"./ansi.js":72,"./camel.js":73,"./escape.js":74,"./format.js":75,"./fuzzy.js":76,"./inspect.js":77,"./latinize.js":79,"./misc.js":80,"./naturalSort.js":81,"./regexp.js":82,"./toTitleCase.js":84,"./unicode.js":86,"./wordwrap.js":87}],84:[function(require,module,exports){
+},{"./StringNumber.js":70,"./ansi.js":71,"./camel.js":72,"./escape.js":73,"./format.js":74,"./fuzzy.js":75,"./inspect.js":76,"./latinize.js":78,"./misc.js":79,"./naturalSort.js":80,"./regexp.js":81,"./toTitleCase.js":83,"./unicode.js":85,"./wordwrap.js":86}],83:[function(require,module,exports){
 /*
 	String Kit
 
@@ -23255,10 +22666,10 @@ module.exports = ( str , options = DEFAULT_OPTIONS ) => {
 } ;
 
 
-},{}],85:[function(require,module,exports){
+},{}],84:[function(require,module,exports){
 module.exports=[{"s":9728,"e":9747,"w":1},{"s":9748,"e":9749,"w":2},{"s":9750,"e":9799,"w":1},{"s":9800,"e":9811,"w":2},{"s":9812,"e":9854,"w":1},{"s":9855,"e":9855,"w":2},{"s":9856,"e":9874,"w":1},{"s":9875,"e":9875,"w":2},{"s":9876,"e":9888,"w":1},{"s":9889,"e":9889,"w":2},{"s":9890,"e":9897,"w":1},{"s":9898,"e":9899,"w":2},{"s":9900,"e":9916,"w":1},{"s":9917,"e":9918,"w":2},{"s":9919,"e":9923,"w":1},{"s":9924,"e":9925,"w":2},{"s":9926,"e":9933,"w":1},{"s":9934,"e":9934,"w":2},{"s":9935,"e":9939,"w":1},{"s":9940,"e":9940,"w":2},{"s":9941,"e":9961,"w":1},{"s":9962,"e":9962,"w":2},{"s":9963,"e":9969,"w":1},{"s":9970,"e":9971,"w":2},{"s":9972,"e":9972,"w":1},{"s":9973,"e":9973,"w":2},{"s":9974,"e":9977,"w":1},{"s":9978,"e":9978,"w":2},{"s":9979,"e":9980,"w":1},{"s":9981,"e":9981,"w":2},{"s":9982,"e":9983,"w":1},{"s":9984,"e":9988,"w":1},{"s":9989,"e":9989,"w":2},{"s":9990,"e":9993,"w":1},{"s":9994,"e":9995,"w":2},{"s":9996,"e":10023,"w":1},{"s":10024,"e":10024,"w":2},{"s":10025,"e":10059,"w":1},{"s":10060,"e":10060,"w":2},{"s":10061,"e":10061,"w":1},{"s":10062,"e":10062,"w":2},{"s":10063,"e":10066,"w":1},{"s":10067,"e":10069,"w":2},{"s":10070,"e":10070,"w":1},{"s":10071,"e":10071,"w":2},{"s":10072,"e":10132,"w":1},{"s":10133,"e":10135,"w":2},{"s":10136,"e":10159,"w":1},{"s":10160,"e":10160,"w":2},{"s":10161,"e":10174,"w":1},{"s":10175,"e":10175,"w":2},{"s":126976,"e":126979,"w":1},{"s":126980,"e":126980,"w":2},{"s":126981,"e":127182,"w":1},{"s":127183,"e":127183,"w":2},{"s":127184,"e":127373,"w":1},{"s":127374,"e":127374,"w":2},{"s":127375,"e":127376,"w":1},{"s":127377,"e":127386,"w":2},{"s":127387,"e":127487,"w":1},{"s":127744,"e":127776,"w":2},{"s":127777,"e":127788,"w":1},{"s":127789,"e":127797,"w":2},{"s":127798,"e":127798,"w":1},{"s":127799,"e":127868,"w":2},{"s":127869,"e":127869,"w":1},{"s":127870,"e":127891,"w":2},{"s":127892,"e":127903,"w":1},{"s":127904,"e":127946,"w":2},{"s":127947,"e":127950,"w":1},{"s":127951,"e":127955,"w":2},{"s":127956,"e":127967,"w":1},{"s":127968,"e":127984,"w":2},{"s":127985,"e":127987,"w":1},{"s":127988,"e":127988,"w":2},{"s":127989,"e":127991,"w":1},{"s":127992,"e":127994,"w":2},{"s":128000,"e":128062,"w":2},{"s":128063,"e":128063,"w":1},{"s":128064,"e":128064,"w":2},{"s":128065,"e":128065,"w":1},{"s":128066,"e":128252,"w":2},{"s":128253,"e":128254,"w":1},{"s":128255,"e":128317,"w":2},{"s":128318,"e":128330,"w":1},{"s":128331,"e":128334,"w":2},{"s":128335,"e":128335,"w":1},{"s":128336,"e":128359,"w":2},{"s":128360,"e":128377,"w":1},{"s":128378,"e":128378,"w":2},{"s":128379,"e":128404,"w":1},{"s":128405,"e":128406,"w":2},{"s":128407,"e":128419,"w":1},{"s":128420,"e":128420,"w":2},{"s":128421,"e":128506,"w":1},{"s":128507,"e":128591,"w":2},{"s":128592,"e":128639,"w":1},{"s":128640,"e":128709,"w":2},{"s":128710,"e":128715,"w":1},{"s":128716,"e":128716,"w":2},{"s":128717,"e":128719,"w":1},{"s":128720,"e":128722,"w":2},{"s":128723,"e":128724,"w":1},{"s":128725,"e":128727,"w":2},{"s":128728,"e":128746,"w":1},{"s":128747,"e":128748,"w":2},{"s":128749,"e":128755,"w":1},{"s":128756,"e":128764,"w":2},{"s":128765,"e":128991,"w":1},{"s":128992,"e":129003,"w":2},{"s":129004,"e":129291,"w":1},{"s":129292,"e":129338,"w":2},{"s":129339,"e":129339,"w":1},{"s":129340,"e":129349,"w":2},{"s":129350,"e":129350,"w":1},{"s":129351,"e":129400,"w":2},{"s":129401,"e":129401,"w":1},{"s":129402,"e":129483,"w":2},{"s":129484,"e":129484,"w":1},{"s":129485,"e":129535,"w":2},{"s":129536,"e":129647,"w":1},{"s":129648,"e":129652,"w":2},{"s":129653,"e":129655,"w":1},{"s":129656,"e":129658,"w":2},{"s":129659,"e":129663,"w":1},{"s":129664,"e":129670,"w":2},{"s":129671,"e":129679,"w":1},{"s":129680,"e":129704,"w":2},{"s":129705,"e":129711,"w":1},{"s":129712,"e":129718,"w":2},{"s":129719,"e":129727,"w":1},{"s":129728,"e":129730,"w":2},{"s":129731,"e":129743,"w":1},{"s":129744,"e":129750,"w":2},{"s":129751,"e":129791,"w":1}]
 
-},{}],86:[function(require,module,exports){
+},{}],85:[function(require,module,exports){
 /*
 	String Kit
 
@@ -23606,7 +23017,7 @@ unicode.isEmojiModifierCodePoint = code =>
 	code === 0xfe0f ;	// VARIATION SELECTOR-16 [VS16] {emoji variation selector}
 
 
-},{"./unicode-emoji-width-ranges.json":85}],87:[function(require,module,exports){
+},{"./unicode-emoji-width-ranges.json":84}],86:[function(require,module,exports){
 /*
 	String Kit
 
@@ -23810,7 +23221,7 @@ module.exports = function wordwrap( str , options ) {
 } ;
 
 
-},{"./unicode.js":86}],88:[function(require,module,exports){
+},{"./unicode.js":85}],87:[function(require,module,exports){
 //[4]   	NameStartChar	   ::=   	":" | [A-Z] | "_" | [a-z] | [#xC0-#xD6] | [#xD8-#xF6] | [#xF8-#x2FF] | [#x370-#x37D] | [#x37F-#x1FFF] | [#x200C-#x200D] | [#x2070-#x218F] | [#x2C00-#x2FEF] | [#x3001-#xD7FF] | [#xF900-#xFDCF] | [#xFDF0-#xFFFD] | [#x10000-#xEFFFF]
 //[4a]   	NameChar	   ::=   	NameStartChar | "-" | "." | [0-9] | #xB7 | [#x0300-#x036F] | [#x203F-#x2040]
 //[5]   	Name	   ::=   	NameStartChar (NameChar)*
@@ -24428,7 +23839,7 @@ function split(source,start){
 exports.XMLReader = XMLReader;
 
 
-},{}],89:[function(require,module,exports){
+},{}],88:[function(require,module,exports){
 /*
 	Array Kit
 
@@ -24476,7 +23887,7 @@ arrayKit.shuffle = array => arrayKit.sample( array , array.length , true ) ;
 arrayKit.randomSampleSize = ( array , min , max , inPlace ) => arrayKit.sample( array , arrayKit.randomInteger( min , max ) , inPlace ) ;
 
 
-},{"./delete.js":90,"./deleteValue.js":91,"./inPlaceFilter.js":92,"./range.js":93,"./sample.js":94}],90:[function(require,module,exports){
+},{"./delete.js":89,"./deleteValue.js":90,"./inPlaceFilter.js":91,"./range.js":92,"./sample.js":93}],89:[function(require,module,exports){
 /*
 	Array Kit
 
@@ -24528,7 +23939,7 @@ module.exports = ( src , index ) => {
 } ;
 
 
-},{}],91:[function(require,module,exports){
+},{}],90:[function(require,module,exports){
 /*
 	Array Kit
 
@@ -24592,7 +24003,7 @@ module.exports = ( src , value ) => {
 } ;
 
 
-},{}],92:[function(require,module,exports){
+},{}],91:[function(require,module,exports){
 /*
 	Array Kit
 
@@ -24657,7 +24068,7 @@ module.exports = ( src , fn , thisArg , forceKey ) => {
 } ;
 
 
-},{}],93:[function(require,module,exports){
+},{}],92:[function(require,module,exports){
 /*
 	Array Kit
 
@@ -24724,7 +24135,7 @@ module.exports = function( start , end , step ) {
 } ;
 
 
-},{}],94:[function(require,module,exports){
+},{}],93:[function(require,module,exports){
 /*
 	Array Kit
 
@@ -24781,7 +24192,7 @@ module.exports = ( array , count = Infinity , inPlace = false ) => {
 } ;
 
 
-},{}],95:[function(require,module,exports){
+},{}],94:[function(require,module,exports){
 /*
 	Book Source
 
@@ -26905,7 +26316,7 @@ function unstackToIndent( ctx , toIndent = 0 ) {
 }
 
 
-},{"./Style.js":96,"./Theme.js":97,"./documentParts.js":99,"./textPostFilters.js":100,"array-kit/lib/inPlaceFilter.js":92}],96:[function(require,module,exports){
+},{"./Style.js":95,"./Theme.js":96,"./documentParts.js":98,"./textPostFilters.js":99,"array-kit/lib/inPlaceFilter.js":91}],95:[function(require,module,exports){
 /*
 	Book Source
 
@@ -27023,7 +26434,7 @@ Style.parse = function( str , forTextElement = true ) {
 } ;
 
 
-},{"palette-shade":109}],97:[function(require,module,exports){
+},{"palette-shade":108}],96:[function(require,module,exports){
 /*
 	Book Source
 
@@ -27153,7 +26564,7 @@ Theme.prototype.substituteWithPalette = function() {
 } ;
 
 
-},{"palette-shade":109}],98:[function(require,module,exports){
+},{"palette-shade":108}],97:[function(require,module,exports){
 /*
 	Book Source
 
@@ -27202,7 +26613,7 @@ bookSource.Palette = paletteShade.Palette ;
 bookSource.parse = bookSource.StructuredDocument.parse ;
 
 
-},{"./StructuredDocument.js":95,"./Style.js":96,"./Theme.js":97,"./documentParts.js":99,"./textPostFilters.js":100,"palette-shade":109}],99:[function(require,module,exports){
+},{"./StructuredDocument.js":94,"./Style.js":95,"./Theme.js":96,"./documentParts.js":98,"./textPostFilters.js":99,"palette-shade":108}],98:[function(require,module,exports){
 /*
 	Book Source
 
@@ -27731,7 +27142,7 @@ TableHeadCell.prototype.constructor = TableHeadCell ;
 documentParts.TableHeadCell = TableHeadCell ;
 
 
-},{"string-kit/lib/emoji.js":121}],100:[function(require,module,exports){
+},{"string-kit/lib/emoji.js":120}],99:[function(require,module,exports){
 /*
 	Book Source
 
@@ -27833,7 +27244,7 @@ exports.apostrophe = ( part ) => {
 } ;
 
 
-},{}],101:[function(require,module,exports){
+},{}],100:[function(require,module,exports){
 (function (process){(function (){
 /*
 	Dom Kit
@@ -28408,7 +27819,7 @@ domKit.html = ( $element , html ) => $element.innerHTML = html ;
 
 
 }).call(this)}).call(this,require('_process'))
-},{"@cronvel/xmldom":68,"_process":137}],102:[function(require,module,exports){
+},{"@cronvel/xmldom":67,"_process":136}],101:[function(require,module,exports){
 /*
 	Next-Gen Events
 
@@ -28634,7 +28045,7 @@ LeanEvents.prototype.getAllStates = function() {
 } ;
 
 
-},{"../package.json":103}],103:[function(require,module,exports){
+},{"../package.json":102}],102:[function(require,module,exports){
 module.exports={
   "name": "nextgen-events",
   "version": "1.5.3",
@@ -28694,7 +28105,7 @@ module.exports={
   }
 }
 
-},{}],104:[function(require,module,exports){
+},{}],103:[function(require,module,exports){
 /*
  * Copyright (C) 2007-2018 Diego Perini
  * All rights reserved.
@@ -30472,7 +29883,7 @@ module.exports={
   return Dom;
 });
 
-},{}],105:[function(require,module,exports){
+},{}],104:[function(require,module,exports){
 (function (Buffer){(function (){
 /**
  * https://opentype.js.org v1.3.4 | (c) Frederik De Bleser and other contributors | MIT License | Uses tiny-inflate by Devon Govett and string.prototype.codepointat polyfill by Mathias Bynens
@@ -44953,7 +44364,7 @@ module.exports={
 
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"buffer":133,"fs":131}],106:[function(require,module,exports){
+},{"buffer":132,"fs":130}],105:[function(require,module,exports){
 /**
  * chroma.js - JavaScript library for color conversions
  *
@@ -45820,7 +45231,7 @@ module.exports={
 
 }));
 
-},{}],107:[function(require,module,exports){
+},{}],106:[function(require,module,exports){
 /*
 	Palette Shade
 
@@ -46035,7 +45446,7 @@ Color.parse = function( str ) {
 } ;
 
 
-},{}],108:[function(require,module,exports){
+},{}],107:[function(require,module,exports){
 /*
 	Palette Shade
 
@@ -46350,7 +45761,7 @@ Palette.cleanClip = function( chromaColor , lch ) {
 } ;
 
 
-},{"../extlib/chromajs.custom.js":106}],109:[function(require,module,exports){
+},{"../extlib/chromajs.custom.js":105}],108:[function(require,module,exports){
 /*
 	Palette Shade
 
@@ -46383,29 +45794,29 @@ exports.Color = require( './Color.js' ) ;
 exports.Palette = require( './Palette.js' ) ;
 
 
-},{"./Color.js":107,"./Palette.js":108}],110:[function(require,module,exports){
+},{"./Color.js":106,"./Palette.js":107}],109:[function(require,module,exports){
+arguments[4][10][0].apply(exports,arguments)
+},{"_process":136,"dup":10}],110:[function(require,module,exports){
 arguments[4][11][0].apply(exports,arguments)
-},{"_process":137,"dup":11}],111:[function(require,module,exports){
+},{"./seventh.js":117,"dup":11}],111:[function(require,module,exports){
 arguments[4][12][0].apply(exports,arguments)
-},{"./seventh.js":118,"dup":12}],112:[function(require,module,exports){
+},{"./seventh.js":117,"dup":12}],112:[function(require,module,exports){
 arguments[4][13][0].apply(exports,arguments)
-},{"./seventh.js":118,"dup":13}],113:[function(require,module,exports){
+},{"./seventh.js":117,"dup":13}],113:[function(require,module,exports){
 arguments[4][14][0].apply(exports,arguments)
-},{"./seventh.js":118,"dup":14}],114:[function(require,module,exports){
+},{"_process":136,"dup":14,"setimmediate":109,"timers":137}],114:[function(require,module,exports){
 arguments[4][15][0].apply(exports,arguments)
-},{"_process":137,"dup":15,"setimmediate":110,"timers":138}],115:[function(require,module,exports){
+},{"./seventh.js":117,"dup":15}],115:[function(require,module,exports){
 arguments[4][16][0].apply(exports,arguments)
-},{"./seventh.js":118,"dup":16}],116:[function(require,module,exports){
+},{"./seventh.js":117,"_process":136,"dup":16}],116:[function(require,module,exports){
 arguments[4][17][0].apply(exports,arguments)
-},{"./seventh.js":118,"_process":137,"dup":17}],117:[function(require,module,exports){
+},{"./seventh.js":117,"dup":17}],117:[function(require,module,exports){
 arguments[4][18][0].apply(exports,arguments)
-},{"./seventh.js":118,"dup":18}],118:[function(require,module,exports){
+},{"./Queue.js":110,"./api.js":111,"./batch.js":112,"./core.js":113,"./decorators.js":114,"./misc.js":115,"./parasite.js":116,"./wrapper.js":118,"dup":18}],118:[function(require,module,exports){
 arguments[4][19][0].apply(exports,arguments)
-},{"./Queue.js":111,"./api.js":112,"./batch.js":113,"./core.js":114,"./decorators.js":115,"./misc.js":116,"./parasite.js":117,"./wrapper.js":119,"dup":19}],119:[function(require,module,exports){
-arguments[4][20][0].apply(exports,arguments)
-},{"./seventh.js":118,"dup":20}],120:[function(require,module,exports){
-arguments[4][73][0].apply(exports,arguments)
-},{"dup":73}],121:[function(require,module,exports){
+},{"./seventh.js":117,"dup":19}],119:[function(require,module,exports){
+arguments[4][72][0].apply(exports,arguments)
+},{"dup":72}],120:[function(require,module,exports){
 /*
 	Book Source
 
@@ -46543,7 +45954,7 @@ emoji.splitIntoKeywords = ( name , noSimplify = false ) => {
 } ;
 
 
-},{"./english.js":122,"./json-data/emoji-char-to-canonical-name.json":124,"./json-data/emoji-keyword-to-charlist.json":125,"./latinize.js":128}],122:[function(require,module,exports){
+},{"./english.js":121,"./json-data/emoji-char-to-canonical-name.json":123,"./json-data/emoji-keyword-to-charlist.json":124,"./latinize.js":127}],121:[function(require,module,exports){
 /*
 	Book Source
 
@@ -46634,17 +46045,17 @@ english.undoPresentParticiple = word => {
 } ;
 
 
-},{}],123:[function(require,module,exports){
-arguments[4][74][0].apply(exports,arguments)
-},{"dup":74}],124:[function(require,module,exports){
+},{}],122:[function(require,module,exports){
+arguments[4][73][0].apply(exports,arguments)
+},{"dup":73}],123:[function(require,module,exports){
 module.exports={"😀":"grinning-face","😃":"grinning-face-with-big-eyes","😄":"grinning-face-with-smiling-eyes","😁":"beaming-face-with-smiling-eyes","😆":"grinning-squinting-face","😅":"grinning-face-with-sweat","🤣":"rolling-on-the-floor-laughing","😂":"face-with-tears-of-joy","🙂":"slightly-smiling-face","🙃":"upside-down-face","🫠":"melting-face","😉":"winking-face","😊":"smiling-face-with-smiling-eyes","😇":"smiling-face-with-halo","🥰":"smiling-face-with-hearts","😍":"smiling-face-with-heart-eyes","🤩":"star-struck","😘":"face-blowing-a-kiss","😗":"kissing-face","☺️":"smiling-face","😚":"kissing-face-with-closed-eyes","😙":"kissing-face-with-smiling-eyes","🥲":"smiling-face-with-tear","😋":"face-savoring-food","😛":"face-with-tongue","😜":"winking-face-with-tongue","🤪":"zany-face","😝":"squinting-face-with-tongue","🤑":"money-mouth-face","🤗":"smiling-face-with-open-hands","🤭":"face-with-hand-over-mouth","🫢":"face-with-open-eyes-and-hand-over-mouth","🫣":"face-with-peeking-eye","🤫":"shushing-face","🤔":"thinking-face","🫡":"saluting-face","🤐":"zipper-mouth-face","🤨":"face-with-raised-eyebrow","😐":"neutral-face","😑":"expressionless-face","😶":"face-without-mouth","🫥":"dotted-line-face","😶‍🌫️":"face-in-clouds","😏":"smirking-face","😒":"unamused-face","🙄":"face-with-rolling-eyes","😬":"grimacing-face","😮‍💨":"face-exhaling","🤥":"lying-face","🫨":"shaking-face","😌":"relieved-face","😔":"pensive-face","😪":"sleepy-face","🤤":"drooling-face","😴":"sleeping-face","😷":"face-with-medical-mask","🤒":"face-with-thermometer","🤕":"face-with-head-bandage","🤢":"nauseated-face","🤮":"face-vomiting","🤧":"sneezing-face","🥵":"hot-face","🥶":"cold-face","🥴":"woozy-face","😵":"face-with-crossed-out-eyes","😵‍💫":"face-with-spiral-eyes","🤯":"exploding-head","🤠":"cowboy-hat-face","🥳":"partying-face","🥸":"disguised-face","😎":"smiling-face-with-sunglasses","🤓":"nerd-face","🧐":"face-with-monocle","😕":"confused-face","🫤":"face-with-diagonal-mouth","😟":"worried-face","🙁":"slightly-frowning-face","☹️":"frowning-face","😮":"face-with-open-mouth","😯":"hushed-face","😲":"astonished-face","😳":"flushed-face","🥺":"pleading-face","🥹":"face-holding-back-tears","😦":"frowning-face-with-open-mouth","😧":"anguished-face","😨":"fearful-face","😰":"anxious-face-with-sweat","😥":"sad-but-relieved-face","😢":"crying-face","😭":"loudly-crying-face","😱":"face-screaming-in-fear","😖":"confounded-face","😣":"persevering-face","😞":"disappointed-face","😓":"downcast-face-with-sweat","😩":"weary-face","😫":"tired-face","🥱":"yawning-face","😤":"face-with-steam-from-nose","😡":"enraged-face","😠":"angry-face","🤬":"face-with-symbols-on-mouth","😈":"smiling-face-with-horns","👿":"angry-face-with-horns","💀":"skull","☠️":"skull-and-crossbones","💩":"pile-of-poo","🤡":"clown-face","👹":"ogre","👺":"goblin","👻":"ghost","👽":"alien","👾":"alien-monster","🤖":"robot","😺":"grinning-cat","😸":"grinning-cat-with-smiling-eyes","😹":"cat-with-tears-of-joy","😻":"smiling-cat-with-heart-eyes","😼":"cat-with-wry-smile","😽":"kissing-cat","🙀":"weary-cat","😿":"crying-cat","😾":"pouting-cat","🙈":"see-no-evil-monkey","🙉":"hear-no-evil-monkey","🙊":"speak-no-evil-monkey","💌":"love-letter","💘":"heart-with-arrow","💝":"heart-with-ribbon","💖":"sparkling-heart","💗":"growing-heart","💓":"beating-heart","💞":"revolving-hearts","💕":"two-hearts","💟":"heart-decoration","❣️":"heart-exclamation","💔":"broken-heart","❤️‍🔥":"heart-on-fire","❤️‍🩹":"mending-heart","❤️":"red-heart","🩷":"pink-heart","🧡":"orange-heart","💛":"yellow-heart","💚":"green-heart","💙":"blue-heart","🩵":"light-blue-heart","💜":"purple-heart","🤎":"brown-heart","🖤":"black-heart","🩶":"grey-heart","🤍":"white-heart","💋":"kiss-mark","💯":"hundred-points","💢":"anger-symbol","💥":"collision","💫":"dizzy","💦":"sweat-droplets","💨":"dashing-away","🕳️":"hole","💬":"speech-balloon","👁️‍🗨️":"eye-in-speech-bubble","🗨️":"left-speech-bubble","🗯️":"right-anger-bubble","💭":"thought-balloon","💤":"zzz","👋":"waving-hand","🤚":"raised-back-of-hand","🖐️":"hand-with-fingers-splayed","✋":"raised-hand","🖖":"vulcan-salute","🫱":"rightwards-hand","🫲":"leftwards-hand","🫳":"palm-down-hand","🫴":"palm-up-hand","🫷":"leftwards-pushing-hand","🫸":"rightwards-pushing-hand","👌":"ok-hand","🤌":"pinched-fingers","🤏":"pinching-hand","✌️":"victory-hand","🤞":"crossed-fingers","🫰":"hand-with-index-finger-and-thumb-crossed","🤟":"love-you-gesture","🤘":"sign-of-the-horns","🤙":"call-me-hand","👈":"backhand-index-pointing-left","👉":"backhand-index-pointing-right","👆":"backhand-index-pointing-up","🖕":"middle-finger","👇":"backhand-index-pointing-down","☝️":"index-pointing-up","🫵":"index-pointing-at-the-viewer","👍":"thumbs-up","👎":"thumbs-down","✊":"raised-fist","👊":"oncoming-fist","🤛":"left-facing-fist","🤜":"right-facing-fist","👏":"clapping-hands","🙌":"raising-hands","🫶":"heart-hands","👐":"open-hands","🤲":"palms-up-together","🤝":"handshake","🙏":"folded-hands","✍️":"writing-hand","💅":"nail-polish","🤳":"selfie","💪":"flexed-biceps","🦾":"mechanical-arm","🦿":"mechanical-leg","🦵":"leg","🦶":"foot","👂":"ear","🦻":"ear-with-hearing-aid","👃":"nose","🧠":"brain","🫀":"anatomical-heart","🫁":"lungs","🦷":"tooth","🦴":"bone","👀":"eyes","👁️":"eye","👅":"tongue","👄":"mouth","🫦":"biting-lip","👶":"baby","🧒":"child","👦":"boy","👧":"girl","🧑":"person","👱":"person-blond-hair","👨":"man","🧔":"person-beard","🧔‍♂️":"man-beard","🧔‍♀️":"woman-beard","👨‍🦰":"man-red-hair","👨‍🦱":"man-curly-hair","👨‍🦳":"man-white-hair","👨‍🦲":"man-bald","👩":"woman","👩‍🦰":"woman-red-hair","🧑‍🦰":"person-red-hair","👩‍🦱":"woman-curly-hair","🧑‍🦱":"person-curly-hair","👩‍🦳":"woman-white-hair","🧑‍🦳":"person-white-hair","👩‍🦲":"woman-bald","🧑‍🦲":"person-bald","👱‍♀️":"woman-blond-hair","👱‍♂️":"man-blond-hair","🧓":"older-person","👴":"old-man","👵":"old-woman","🙍":"person-frowning","🙍‍♂️":"man-frowning","🙍‍♀️":"woman-frowning","🙎":"person-pouting","🙎‍♂️":"man-pouting","🙎‍♀️":"woman-pouting","🙅":"person-gesturing-no","🙅‍♂️":"man-gesturing-no","🙅‍♀️":"woman-gesturing-no","🙆":"person-gesturing-ok","🙆‍♂️":"man-gesturing-ok","🙆‍♀️":"woman-gesturing-ok","💁":"person-tipping-hand","💁‍♂️":"man-tipping-hand","💁‍♀️":"woman-tipping-hand","🙋":"person-raising-hand","🙋‍♂️":"man-raising-hand","🙋‍♀️":"woman-raising-hand","🧏":"deaf-person","🧏‍♂️":"deaf-man","🧏‍♀️":"deaf-woman","🙇":"person-bowing","🙇‍♂️":"man-bowing","🙇‍♀️":"woman-bowing","🤦":"person-facepalming","🤦‍♂️":"man-facepalming","🤦‍♀️":"woman-facepalming","🤷":"person-shrugging","🤷‍♂️":"man-shrugging","🤷‍♀️":"woman-shrugging","🧑‍⚕️":"health-worker","👨‍⚕️":"man-health-worker","👩‍⚕️":"woman-health-worker","🧑‍🎓":"student","👨‍🎓":"man-student","👩‍🎓":"woman-student","🧑‍🏫":"teacher","👨‍🏫":"man-teacher","👩‍🏫":"woman-teacher","🧑‍⚖️":"judge","👨‍⚖️":"man-judge","👩‍⚖️":"woman-judge","🧑‍🌾":"farmer","👨‍🌾":"man-farmer","👩‍🌾":"woman-farmer","🧑‍🍳":"cook","👨‍🍳":"man-cook","👩‍🍳":"woman-cook","🧑‍🔧":"mechanic","👨‍🔧":"man-mechanic","👩‍🔧":"woman-mechanic","🧑‍🏭":"factory-worker","👨‍🏭":"man-factory-worker","👩‍🏭":"woman-factory-worker","🧑‍💼":"office-worker","👨‍💼":"man-office-worker","👩‍💼":"woman-office-worker","🧑‍🔬":"scientist","👨‍🔬":"man-scientist","👩‍🔬":"woman-scientist","🧑‍💻":"technologist","👨‍💻":"man-technologist","👩‍💻":"woman-technologist","🧑‍🎤":"singer","👨‍🎤":"man-singer","👩‍🎤":"woman-singer","🧑‍🎨":"artist","👨‍🎨":"man-artist","👩‍🎨":"woman-artist","🧑‍✈️":"pilot","👨‍✈️":"man-pilot","👩‍✈️":"woman-pilot","🧑‍🚀":"astronaut","👨‍🚀":"man-astronaut","👩‍🚀":"woman-astronaut","🧑‍🚒":"firefighter","👨‍🚒":"man-firefighter","👩‍🚒":"woman-firefighter","👮":"police-officer","👮‍♂️":"man-police-officer","👮‍♀️":"woman-police-officer","🕵️":"detective","🕵️‍♂️":"man-detective","🕵️‍♀️":"woman-detective","💂":"guard","💂‍♂️":"man-guard","💂‍♀️":"woman-guard","🥷":"ninja","👷":"construction-worker","👷‍♂️":"man-construction-worker","👷‍♀️":"woman-construction-worker","🫅":"person-with-crown","🤴":"prince","👸":"princess","👳":"person-wearing-turban","👳‍♂️":"man-wearing-turban","👳‍♀️":"woman-wearing-turban","👲":"person-with-skullcap","🧕":"woman-with-headscarf","🤵":"person-in-tuxedo","🤵‍♂️":"man-in-tuxedo","🤵‍♀️":"woman-in-tuxedo","👰":"person-with-veil","👰‍♂️":"man-with-veil","👰‍♀️":"woman-with-veil","🤰":"pregnant-woman","🫃":"pregnant-man","🫄":"pregnant-person","🤱":"breast-feeding","👩‍🍼":"woman-feeding-baby","👨‍🍼":"man-feeding-baby","🧑‍🍼":"person-feeding-baby","👼":"baby-angel","🎅":"santa-claus","🤶":"mrs-claus","🧑‍🎄":"mx-claus","🦸":"superhero","🦸‍♂️":"man-superhero","🦸‍♀️":"woman-superhero","🦹":"supervillain","🦹‍♂️":"man-supervillain","🦹‍♀️":"woman-supervillain","🧙":"mage","🧙‍♂️":"man-mage","🧙‍♀️":"woman-mage","🧚":"fairy","🧚‍♂️":"man-fairy","🧚‍♀️":"woman-fairy","🧛":"vampire","🧛‍♂️":"man-vampire","🧛‍♀️":"woman-vampire","🧜":"merperson","🧜‍♂️":"merman","🧜‍♀️":"mermaid","🧝":"elf","🧝‍♂️":"man-elf","🧝‍♀️":"woman-elf","🧞":"genie","🧞‍♂️":"man-genie","🧞‍♀️":"woman-genie","🧟":"zombie","🧟‍♂️":"man-zombie","🧟‍♀️":"woman-zombie","🧌":"troll","💆":"person-getting-massage","💆‍♂️":"man-getting-massage","💆‍♀️":"woman-getting-massage","💇":"person-getting-haircut","💇‍♂️":"man-getting-haircut","💇‍♀️":"woman-getting-haircut","🚶":"person-walking","🚶‍♂️":"man-walking","🚶‍♀️":"woman-walking","🧍":"person-standing","🧍‍♂️":"man-standing","🧍‍♀️":"woman-standing","🧎":"person-kneeling","🧎‍♂️":"man-kneeling","🧎‍♀️":"woman-kneeling","🧑‍🦯":"person-with-white-cane","👨‍🦯":"man-with-white-cane","👩‍🦯":"woman-with-white-cane","🧑‍🦼":"person-in-motorized-wheelchair","👨‍🦼":"man-in-motorized-wheelchair","👩‍🦼":"woman-in-motorized-wheelchair","🧑‍🦽":"person-in-manual-wheelchair","👨‍🦽":"man-in-manual-wheelchair","👩‍🦽":"woman-in-manual-wheelchair","🏃":"person-running","🏃‍♂️":"man-running","🏃‍♀️":"woman-running","💃":"woman-dancing","🕺":"man-dancing","🕴️":"person-in-suit-levitating","👯":"people-with-bunny-ears","👯‍♂️":"men-with-bunny-ears","👯‍♀️":"women-with-bunny-ears","🧖":"person-in-steamy-room","🧖‍♂️":"man-in-steamy-room","🧖‍♀️":"woman-in-steamy-room","🧗":"person-climbing","🧗‍♂️":"man-climbing","🧗‍♀️":"woman-climbing","🤺":"person-fencing","🏇":"horse-racing","⛷️":"skier","🏂":"snowboarder","🏌️":"person-golfing","🏌️‍♂️":"man-golfing","🏌️‍♀️":"woman-golfing","🏄":"person-surfing","🏄‍♂️":"man-surfing","🏄‍♀️":"woman-surfing","🚣":"person-rowing-boat","🚣‍♂️":"man-rowing-boat","🚣‍♀️":"woman-rowing-boat","🏊":"person-swimming","🏊‍♂️":"man-swimming","🏊‍♀️":"woman-swimming","⛹️":"person-bouncing-ball","⛹️‍♂️":"man-bouncing-ball","⛹️‍♀️":"woman-bouncing-ball","🏋️":"person-lifting-weights","🏋️‍♂️":"man-lifting-weights","🏋️‍♀️":"woman-lifting-weights","🚴":"person-biking","🚴‍♂️":"man-biking","🚴‍♀️":"woman-biking","🚵":"person-mountain-biking","🚵‍♂️":"man-mountain-biking","🚵‍♀️":"woman-mountain-biking","🤸":"person-cartwheeling","🤸‍♂️":"man-cartwheeling","🤸‍♀️":"woman-cartwheeling","🤼":"people-wrestling","🤼‍♂️":"men-wrestling","🤼‍♀️":"women-wrestling","🤽":"person-playing-water-polo","🤽‍♂️":"man-playing-water-polo","🤽‍♀️":"woman-playing-water-polo","🤾":"person-playing-handball","🤾‍♂️":"man-playing-handball","🤾‍♀️":"woman-playing-handball","🤹":"person-juggling","🤹‍♂️":"man-juggling","🤹‍♀️":"woman-juggling","🧘":"person-in-lotus-position","🧘‍♂️":"man-in-lotus-position","🧘‍♀️":"woman-in-lotus-position","🛀":"person-taking-bath","🛌":"person-in-bed","🧑‍🤝‍🧑":"people-holding-hands","👭":"women-holding-hands","👫":"woman-and-man-holding-hands","👬":"men-holding-hands","💏":"kiss","👩‍❤️‍💋‍👨":"kiss-woman-man","👨‍❤️‍💋‍👨":"kiss-man-man","👩‍❤️‍💋‍👩":"kiss-woman-woman","💑":"couple-with-heart","👩‍❤️‍👨":"couple-with-heart-woman-man","👨‍❤️‍👨":"couple-with-heart-man-man","👩‍❤️‍👩":"couple-with-heart-woman-woman","👪":"family","👨‍👩‍👦":"family-man-woman-boy","👨‍👩‍👧":"family-man-woman-girl","👨‍👩‍👧‍👦":"family-man-woman-girl-boy","👨‍👩‍👦‍👦":"family-man-woman-boy-boy","👨‍👩‍👧‍👧":"family-man-woman-girl-girl","👨‍👨‍👦":"family-man-man-boy","👨‍👨‍👧":"family-man-man-girl","👨‍👨‍👧‍👦":"family-man-man-girl-boy","👨‍👨‍👦‍👦":"family-man-man-boy-boy","👨‍👨‍👧‍👧":"family-man-man-girl-girl","👩‍👩‍👦":"family-woman-woman-boy","👩‍👩‍👧":"family-woman-woman-girl","👩‍👩‍👧‍👦":"family-woman-woman-girl-boy","👩‍👩‍👦‍👦":"family-woman-woman-boy-boy","👩‍👩‍👧‍👧":"family-woman-woman-girl-girl","👨‍👦":"family-man-boy","👨‍👦‍👦":"family-man-boy-boy","👨‍👧":"family-man-girl","👨‍👧‍👦":"family-man-girl-boy","👨‍👧‍👧":"family-man-girl-girl","👩‍👦":"family-woman-boy","👩‍👦‍👦":"family-woman-boy-boy","👩‍👧":"family-woman-girl","👩‍👧‍👦":"family-woman-girl-boy","👩‍👧‍👧":"family-woman-girl-girl","🗣️":"speaking-head","👤":"bust-in-silhouette","👥":"busts-in-silhouette","🫂":"people-hugging","👣":"footprints","🐵":"monkey-face","🐒":"monkey","🦍":"gorilla","🦧":"orangutan","🐶":"dog-face","🐕":"dog","🦮":"guide-dog","🐕‍🦺":"service-dog","🐩":"poodle","🐺":"wolf","🦊":"fox","🦝":"raccoon","🐱":"cat-face","🐈":"cat","🐈‍⬛":"black-cat","🦁":"lion","🐯":"tiger-face","🐅":"tiger","🐆":"leopard","🐴":"horse-face","🫎":"moose","🫏":"donkey","🐎":"horse","🦄":"unicorn","🦓":"zebra","🦌":"deer","🦬":"bison","🐮":"cow-face","🐂":"ox","🐃":"water-buffalo","🐄":"cow","🐷":"pig-face","🐖":"pig","🐗":"boar","🐽":"pig-nose","🐏":"ram","🐑":"ewe","🐐":"goat","🐪":"camel","🐫":"two-hump-camel","🦙":"llama","🦒":"giraffe","🐘":"elephant","🦣":"mammoth","🦏":"rhinoceros","🦛":"hippopotamus","🐭":"mouse-face","🐁":"mouse","🐀":"rat","🐹":"hamster","🐰":"rabbit-face","🐇":"rabbit","🐿️":"chipmunk","🦫":"beaver","🦔":"hedgehog","🦇":"bat","🐻":"bear","🐻‍❄️":"polar-bear","🐨":"koala","🐼":"panda","🦥":"sloth","🦦":"otter","🦨":"skunk","🦘":"kangaroo","🦡":"badger","🐾":"paw-prints","🦃":"turkey","🐔":"chicken","🐓":"rooster","🐣":"hatching-chick","🐤":"baby-chick","🐥":"front-facing-baby-chick","🐦":"bird","🐧":"penguin","🕊️":"dove","🦅":"eagle","🦆":"duck","🦢":"swan","🦉":"owl","🦤":"dodo","🪶":"feather","🦩":"flamingo","🦚":"peacock","🦜":"parrot","🪽":"wing","🐦‍⬛":"black-bird","🪿":"goose","🐸":"frog","🐊":"crocodile","🐢":"turtle","🦎":"lizard","🐍":"snake","🐲":"dragon-face","🐉":"dragon","🦕":"sauropod","🦖":"t-rex","🐳":"spouting-whale","🐋":"whale","🐬":"dolphin","🦭":"seal","🐟":"fish","🐠":"tropical-fish","🐡":"blowfish","🦈":"shark","🐙":"octopus","🐚":"spiral-shell","🪸":"coral","🪼":"jellyfish","🐌":"snail","🦋":"butterfly","🐛":"bug","🐜":"ant","🐝":"honeybee","🪲":"beetle","🐞":"lady-beetle","🦗":"cricket","🪳":"cockroach","🕷️":"spider","🕸️":"spider-web","🦂":"scorpion","🦟":"mosquito","🪰":"fly","🪱":"worm","🦠":"microbe","💐":"bouquet","🌸":"cherry-blossom","💮":"white-flower","🪷":"lotus","🏵️":"rosette","🌹":"rose","🥀":"wilted-flower","🌺":"hibiscus","🌻":"sunflower","🌼":"blossom","🌷":"tulip","🪻":"hyacinth","🌱":"seedling","🪴":"potted-plant","🌲":"evergreen-tree","🌳":"deciduous-tree","🌴":"palm-tree","🌵":"cactus","🌾":"sheaf-of-rice","🌿":"herb","☘️":"shamrock","🍀":"four-leaf-clover","🍁":"maple-leaf","🍂":"fallen-leaf","🍃":"leaf-fluttering-in-wind","🪹":"empty-nest","🪺":"nest-with-eggs","🍄":"mushroom","🍇":"grapes","🍈":"melon","🍉":"watermelon","🍊":"tangerine","🍋":"lemon","🍌":"banana","🍍":"pineapple","🥭":"mango","🍎":"red-apple","🍏":"green-apple","🍐":"pear","🍑":"peach","🍒":"cherries","🍓":"strawberry","🫐":"blueberries","🥝":"kiwi-fruit","🍅":"tomato","🫒":"olive","🥥":"coconut","🥑":"avocado","🍆":"eggplant","🥔":"potato","🥕":"carrot","🌽":"ear-of-corn","🌶️":"hot-pepper","🫑":"bell-pepper","🥒":"cucumber","🥬":"leafy-green","🥦":"broccoli","🧄":"garlic","🧅":"onion","🥜":"peanuts","🫘":"beans","🌰":"chestnut","🫚":"ginger-root","🫛":"pea-pod","🍞":"bread","🥐":"croissant","🥖":"baguette-bread","🫓":"flatbread","🥨":"pretzel","🥯":"bagel","🥞":"pancakes","🧇":"waffle","🧀":"cheese-wedge","🍖":"meat-on-bone","🍗":"poultry-leg","🥩":"cut-of-meat","🥓":"bacon","🍔":"hamburger","🍟":"french-fries","🍕":"pizza","🌭":"hot-dog","🥪":"sandwich","🌮":"taco","🌯":"burrito","🫔":"tamale","🥙":"stuffed-flatbread","🧆":"falafel","🥚":"egg","🍳":"cooking","🥘":"shallow-pan-of-food","🍲":"pot-of-food","🫕":"fondue","🥣":"bowl-with-spoon","🥗":"green-salad","🍿":"popcorn","🧈":"butter","🧂":"salt","🥫":"canned-food","🍱":"bento-box","🍘":"rice-cracker","🍙":"rice-ball","🍚":"cooked-rice","🍛":"curry-rice","🍜":"steaming-bowl","🍝":"spaghetti","🍠":"roasted-sweet-potato","🍢":"oden","🍣":"sushi","🍤":"fried-shrimp","🍥":"fish-cake-with-swirl","🥮":"moon-cake","🍡":"dango","🥟":"dumpling","🥠":"fortune-cookie","🥡":"takeout-box","🦀":"crab","🦞":"lobster","🦐":"shrimp","🦑":"squid","🦪":"oyster","🍦":"soft-ice-cream","🍧":"shaved-ice","🍨":"ice-cream","🍩":"doughnut","🍪":"cookie","🎂":"birthday-cake","🍰":"shortcake","🧁":"cupcake","🥧":"pie","🍫":"chocolate-bar","🍬":"candy","🍭":"lollipop","🍮":"custard","🍯":"honey-pot","🍼":"baby-bottle","🥛":"glass-of-milk","☕":"hot-beverage","🫖":"teapot","🍵":"teacup-without-handle","🍶":"sake","🍾":"bottle-with-popping-cork","🍷":"wine-glass","🍸":"cocktail-glass","🍹":"tropical-drink","🍺":"beer-mug","🍻":"clinking-beer-mugs","🥂":"clinking-glasses","🥃":"tumbler-glass","🫗":"pouring-liquid","🥤":"cup-with-straw","🧋":"bubble-tea","🧃":"beverage-box","🧉":"mate","🧊":"ice","🥢":"chopsticks","🍽️":"fork-and-knife-with-plate","🍴":"fork-and-knife","🥄":"spoon","🔪":"kitchen-knife","🫙":"jar","🏺":"amphora","🌍":"globe-showing-europe-africa","🌎":"globe-showing-americas","🌏":"globe-showing-asia-australia","🌐":"globe-with-meridians","🗺️":"world-map","🗾":"map-of-japan","🧭":"compass","🏔️":"snow-capped-mountain","⛰️":"mountain","🌋":"volcano","🗻":"mount-fuji","🏕️":"camping","🏖️":"beach-with-umbrella","🏜️":"desert","🏝️":"desert-island","🏞️":"national-park","🏟️":"stadium","🏛️":"classical-building","🏗️":"building-construction","🧱":"brick","🪨":"rock","🪵":"wood","🛖":"hut","🏘️":"houses","🏚️":"derelict-house","🏠":"house","🏡":"house-with-garden","🏢":"office-building","🏣":"japanese-post-office","🏤":"post-office","🏥":"hospital","🏦":"bank","🏨":"hotel","🏩":"love-hotel","🏪":"convenience-store","🏫":"school","🏬":"department-store","🏭":"factory","🏯":"japanese-castle","🏰":"castle","💒":"wedding","🗼":"tokyo-tower","🗽":"statue-of-liberty","⛪":"church","🕌":"mosque","🛕":"hindu-temple","🕍":"synagogue","⛩️":"shinto-shrine","🕋":"kaaba","⛲":"fountain","⛺":"tent","🌁":"foggy","🌃":"night-with-stars","🏙️":"cityscape","🌄":"sunrise-over-mountains","🌅":"sunrise","🌆":"cityscape-at-dusk","🌇":"sunset","🌉":"bridge-at-night","♨️":"hot-springs","🎠":"carousel-horse","🛝":"playground-slide","🎡":"ferris-wheel","🎢":"roller-coaster","💈":"barber-pole","🎪":"circus-tent","🚂":"locomotive","🚃":"railway-car","🚄":"high-speed-train","🚅":"bullet-train","🚆":"train","🚇":"metro","🚈":"light-rail","🚉":"station","🚊":"tram","🚝":"monorail","🚞":"mountain-railway","🚋":"tram-car","🚌":"bus","🚍":"oncoming-bus","🚎":"trolleybus","🚐":"minibus","🚑":"ambulance","🚒":"fire-engine","🚓":"police-car","🚔":"oncoming-police-car","🚕":"taxi","🚖":"oncoming-taxi","🚗":"automobile","🚘":"oncoming-automobile","🚙":"sport-utility-vehicle","🛻":"pickup-truck","🚚":"delivery-truck","🚛":"articulated-lorry","🚜":"tractor","🏎️":"racing-car","🏍️":"motorcycle","🛵":"motor-scooter","🦽":"manual-wheelchair","🦼":"motorized-wheelchair","🛺":"auto-rickshaw","🚲":"bicycle","🛴":"kick-scooter","🛹":"skateboard","🛼":"roller-skate","🚏":"bus-stop","🛣️":"motorway","🛤️":"railway-track","🛢️":"oil-drum","⛽":"fuel-pump","🛞":"wheel","🚨":"police-car-light","🚥":"horizontal-traffic-light","🚦":"vertical-traffic-light","🛑":"stop-sign","🚧":"construction","⚓":"anchor","🛟":"ring-buoy","⛵":"sailboat","🛶":"canoe","🚤":"speedboat","🛳️":"passenger-ship","⛴️":"ferry","🛥️":"motor-boat","🚢":"ship","✈️":"airplane","🛩️":"small-airplane","🛫":"airplane-departure","🛬":"airplane-arrival","🪂":"parachute","💺":"seat","🚁":"helicopter","🚟":"suspension-railway","🚠":"mountain-cableway","🚡":"aerial-tramway","🛰️":"satellite","🚀":"rocket","🛸":"flying-saucer","🛎️":"bellhop-bell","🧳":"luggage","⌛":"hourglass-done","⏳":"hourglass-not-done","⌚":"watch","⏰":"alarm-clock","⏱️":"stopwatch","⏲️":"timer-clock","🕰️":"mantelpiece-clock","🕛":"twelve-o-clock","🕧":"twelve-thirty","🕐":"one-o-clock","🕜":"one-thirty","🕑":"two-o-clock","🕝":"two-thirty","🕒":"three-o-clock","🕞":"three-thirty","🕓":"four-o-clock","🕟":"four-thirty","🕔":"five-o-clock","🕠":"five-thirty","🕕":"six-o-clock","🕡":"six-thirty","🕖":"seven-o-clock","🕢":"seven-thirty","🕗":"eight-o-clock","🕣":"eight-thirty","🕘":"nine-o-clock","🕤":"nine-thirty","🕙":"ten-o-clock","🕥":"ten-thirty","🕚":"eleven-o-clock","🕦":"eleven-thirty","🌑":"new-moon","🌒":"waxing-crescent-moon","🌓":"first-quarter-moon","🌔":"waxing-gibbous-moon","🌕":"full-moon","🌖":"waning-gibbous-moon","🌗":"last-quarter-moon","🌘":"waning-crescent-moon","🌙":"crescent-moon","🌚":"new-moon-face","🌛":"first-quarter-moon-face","🌜":"last-quarter-moon-face","🌡️":"thermometer","☀️":"sun","🌝":"full-moon-face","🌞":"sun-with-face","🪐":"ringed-planet","⭐":"star","🌟":"glowing-star","🌠":"shooting-star","🌌":"milky-way","☁️":"cloud","⛅":"sun-behind-cloud","⛈️":"cloud-with-lightning-and-rain","🌤️":"sun-behind-small-cloud","🌥️":"sun-behind-large-cloud","🌦️":"sun-behind-rain-cloud","🌧️":"cloud-with-rain","🌨️":"cloud-with-snow","🌩️":"cloud-with-lightning","🌪️":"tornado","🌫️":"fog","🌬️":"wind-face","🌀":"cyclone","🌈":"rainbow","🌂":"closed-umbrella","☂️":"umbrella","☔":"umbrella-with-rain-drops","⛱️":"umbrella-on-ground","⚡":"high-voltage","❄️":"snowflake","☃️":"snowman","⛄":"snowman-without-snow","☄️":"comet","🔥":"fire","💧":"droplet","🌊":"water-wave","🎃":"jack-o-lantern","🎄":"christmas-tree","🎆":"fireworks","🎇":"sparkler","🧨":"firecracker","✨":"sparkles","🎈":"balloon","🎉":"party-popper","🎊":"confetti-ball","🎋":"tanabata-tree","🎍":"pine-decoration","🎎":"japanese-dolls","🎏":"carp-streamer","🎐":"wind-chime","🎑":"moon-viewing-ceremony","🧧":"red-envelope","🎀":"ribbon","🎁":"wrapped-gift","🎗️":"reminder-ribbon","🎟️":"admission-tickets","🎫":"ticket","🎖️":"military-medal","🏆":"trophy","🏅":"sports-medal","🥇":"1st-place-medal","🥈":"2nd-place-medal","🥉":"3rd-place-medal","⚽":"soccer-ball","⚾":"baseball","🥎":"softball","🏀":"basketball","🏐":"volleyball","🏈":"american-football","🏉":"rugby-football","🎾":"tennis","🥏":"flying-disc","🎳":"bowling","🏏":"cricket-game","🏑":"field-hockey","🏒":"ice-hockey","🥍":"lacrosse","🏓":"ping-pong","🏸":"badminton","🥊":"boxing-glove","🥋":"martial-arts-uniform","🥅":"goal-net","⛳":"flag-in-hole","⛸️":"ice-skate","🎣":"fishing-pole","🤿":"diving-mask","🎽":"running-shirt","🎿":"skis","🛷":"sled","🥌":"curling-stone","🎯":"bullseye","🪀":"yo-yo","🪁":"kite","🔫":"water-pistol","🎱":"pool-8-ball","🔮":"crystal-ball","🪄":"magic-wand","🎮":"video-game","🕹️":"joystick","🎰":"slot-machine","🎲":"game-die","🧩":"puzzle-piece","🧸":"teddy-bear","🪅":"pinata","🪩":"mirror-ball","🪆":"nesting-dolls","♠️":"spade-suit","♥️":"heart-suit","♦️":"diamond-suit","♣️":"club-suit","♟️":"chess-pawn","🃏":"joker","🀄":"mahjong-red-dragon","🎴":"flower-playing-cards","🎭":"performing-arts","🖼️":"framed-picture","🎨":"artist-palette","🧵":"thread","🪡":"sewing-needle","🧶":"yarn","🪢":"knot","👓":"glasses","🕶️":"sunglasses","🥽":"goggles","🥼":"lab-coat","🦺":"safety-vest","👔":"necktie","👕":"t-shirt","👖":"jeans","🧣":"scarf","🧤":"gloves","🧥":"coat","🧦":"socks","👗":"dress","👘":"kimono","🥻":"sari","🩱":"one-piece-swimsuit","🩲":"briefs","🩳":"shorts","👙":"bikini","👚":"woman-s-clothes","🪭":"folding-hand-fan","👛":"purse","👜":"handbag","👝":"clutch-bag","🛍️":"shopping-bags","🎒":"backpack","🩴":"thong-sandal","👞":"man-s-shoe","👟":"running-shoe","🥾":"hiking-boot","🥿":"flat-shoe","👠":"high-heeled-shoe","👡":"woman-s-sandal","🩰":"ballet-shoes","👢":"woman-s-boot","🪮":"hair-pick","👑":"crown","👒":"woman-s-hat","🎩":"top-hat","🎓":"graduation-cap","🧢":"billed-cap","🪖":"military-helmet","⛑️":"rescue-worker-s-helmet","📿":"prayer-beads","💄":"lipstick","💍":"ring","💎":"gem-stone","🔇":"muted-speaker","🔈":"speaker-low-volume","🔉":"speaker-medium-volume","🔊":"speaker-high-volume","📢":"loudspeaker","📣":"megaphone","📯":"postal-horn","🔔":"bell","🔕":"bell-with-slash","🎼":"musical-score","🎵":"musical-note","🎶":"musical-notes","🎙️":"studio-microphone","🎚️":"level-slider","🎛️":"control-knobs","🎤":"microphone","🎧":"headphone","📻":"radio","🎷":"saxophone","🪗":"accordion","🎸":"guitar","🎹":"musical-keyboard","🎺":"trumpet","🎻":"violin","🪕":"banjo","🥁":"drum","🪘":"long-drum","🪇":"maracas","🪈":"flute","📱":"mobile-phone","📲":"mobile-phone-with-arrow","☎️":"telephone","📞":"telephone-receiver","📟":"pager","📠":"fax-machine","🔋":"battery","🪫":"low-battery","🔌":"electric-plug","💻":"laptop","🖥️":"desktop-computer","🖨️":"printer","⌨️":"keyboard","🖱️":"computer-mouse","🖲️":"trackball","💽":"computer-disk","💾":"floppy-disk","💿":"optical-disk","📀":"dvd","🧮":"abacus","🎥":"movie-camera","🎞️":"film-frames","📽️":"film-projector","🎬":"clapper-board","📺":"television","📷":"camera","📸":"camera-with-flash","📹":"video-camera","📼":"videocassette","🔍":"magnifying-glass-tilted-left","🔎":"magnifying-glass-tilted-right","🕯️":"candle","💡":"light-bulb","🔦":"flashlight","🏮":"red-paper-lantern","🪔":"diya-lamp","📔":"notebook-with-decorative-cover","📕":"closed-book","📖":"open-book","📗":"green-book","📘":"blue-book","📙":"orange-book","📚":"books","📓":"notebook","📒":"ledger","📃":"page-with-curl","📜":"scroll","📄":"page-facing-up","📰":"newspaper","🗞️":"rolled-up-newspaper","📑":"bookmark-tabs","🔖":"bookmark","🏷️":"label","💰":"money-bag","🪙":"coin","💴":"yen-banknote","💵":"dollar-banknote","💶":"euro-banknote","💷":"pound-banknote","💸":"money-with-wings","💳":"credit-card","🧾":"receipt","💹":"chart-increasing-with-yen","✉️":"envelope","📧":"e-mail","📨":"incoming-envelope","📩":"envelope-with-arrow","📤":"outbox-tray","📥":"inbox-tray","📦":"package","📫":"closed-mailbox-with-raised-flag","📪":"closed-mailbox-with-lowered-flag","📬":"open-mailbox-with-raised-flag","📭":"open-mailbox-with-lowered-flag","📮":"postbox","🗳️":"ballot-box-with-ballot","✏️":"pencil","✒️":"black-nib","🖋️":"fountain-pen","🖊️":"pen","🖌️":"paintbrush","🖍️":"crayon","📝":"memo","💼":"briefcase","📁":"file-folder","📂":"open-file-folder","🗂️":"card-index-dividers","📅":"calendar","📆":"tear-off-calendar","🗒️":"spiral-notepad","🗓️":"spiral-calendar","📇":"card-index","📈":"chart-increasing","📉":"chart-decreasing","📊":"bar-chart","📋":"clipboard","📌":"pushpin","📍":"round-pushpin","📎":"paperclip","🖇️":"linked-paperclips","📏":"straight-ruler","📐":"triangular-ruler","✂️":"scissors","🗃️":"card-file-box","🗄️":"file-cabinet","🗑️":"wastebasket","🔒":"locked","🔓":"unlocked","🔏":"locked-with-pen","🔐":"locked-with-key","🔑":"key","🗝️":"old-key","🔨":"hammer","🪓":"axe","⛏️":"pick","⚒️":"hammer-and-pick","🛠️":"hammer-and-wrench","🗡️":"dagger","⚔️":"crossed-swords","💣":"bomb","🪃":"boomerang","🏹":"bow-and-arrow","🛡️":"shield","🪚":"carpentry-saw","🔧":"wrench","🪛":"screwdriver","🔩":"nut-and-bolt","⚙️":"gear","🗜️":"clamp","⚖️":"balance-scale","🦯":"white-cane","🔗":"link","⛓️":"chains","🪝":"hook","🧰":"toolbox","🧲":"magnet","🪜":"ladder","⚗️":"alembic","🧪":"test-tube","🧫":"petri-dish","🧬":"dna","🔬":"microscope","🔭":"telescope","📡":"satellite-antenna","💉":"syringe","🩸":"drop-of-blood","💊":"pill","🩹":"adhesive-bandage","🩼":"crutch","🩺":"stethoscope","🩻":"x-ray","🚪":"door","🛗":"elevator","🪞":"mirror","🪟":"window","🛏️":"bed","🛋️":"couch-and-lamp","🪑":"chair","🚽":"toilet","🪠":"plunger","🚿":"shower","🛁":"bathtub","🪤":"mouse-trap","🪒":"razor","🧴":"lotion-bottle","🧷":"safety-pin","🧹":"broom","🧺":"basket","🧻":"roll-of-paper","🪣":"bucket","🧼":"soap","🫧":"bubbles","🪥":"toothbrush","🧽":"sponge","🧯":"fire-extinguisher","🛒":"shopping-cart","🚬":"cigarette","⚰️":"coffin","🪦":"headstone","⚱️":"funeral-urn","🧿":"nazar-amulet","🪬":"hamsa","🗿":"moai","🪧":"placard","🪪":"identification-card","🏧":"atm-sign","🚮":"litter-in-bin-sign","🚰":"potable-water","♿":"wheelchair-symbol","🚹":"men-s-room","🚺":"women-s-room","🚻":"restroom","🚼":"baby-symbol","🚾":"water-closet","🛂":"passport-control","🛃":"customs","🛄":"baggage-claim","🛅":"left-luggage","⚠️":"warning","🚸":"children-crossing","⛔":"no-entry","🚫":"prohibited","🚳":"no-bicycles","🚭":"no-smoking","🚯":"no-littering","🚱":"non-potable-water","🚷":"no-pedestrians","📵":"no-mobile-phones","🔞":"no-one-under-eighteen","☢️":"radioactive","☣️":"biohazard","⬆️":"up-arrow","↗️":"up-right-arrow","➡️":"right-arrow","↘️":"down-right-arrow","⬇️":"down-arrow","↙️":"down-left-arrow","⬅️":"left-arrow","↖️":"up-left-arrow","↕️":"up-down-arrow","↔️":"left-right-arrow","↩️":"right-arrow-curving-left","↪️":"left-arrow-curving-right","⤴️":"right-arrow-curving-up","⤵️":"right-arrow-curving-down","🔃":"clockwise-vertical-arrows","🔄":"counterclockwise-arrows-button","🔙":"back-arrow","🔚":"end-arrow","🔛":"on-arrow","🔜":"soon-arrow","🔝":"top-arrow","🛐":"place-of-worship","⚛️":"atom-symbol","🕉️":"om","✡️":"star-of-david","☸️":"wheel-of-dharma","☯️":"yin-yang","✝️":"latin-cross","☦️":"orthodox-cross","☪️":"star-and-crescent","☮️":"peace-symbol","🕎":"menorah","🔯":"dotted-six-pointed-star","🪯":"khanda","♈":"aries","♉":"taurus","♊":"gemini","♋":"cancer","♌":"leo","♍":"virgo","♎":"libra","♏":"scorpio","♐":"sagittarius","♑":"capricorn","♒":"aquarius","♓":"pisces","⛎":"ophiuchus","🔀":"shuffle-tracks-button","🔁":"repeat-button","🔂":"repeat-single-button","▶️":"play-button","⏩":"fast-forward-button","⏭️":"next-track-button","⏯️":"play-or-pause-button","◀️":"reverse-button","⏪":"fast-reverse-button","⏮️":"last-track-button","🔼":"upwards-button","⏫":"fast-up-button","🔽":"downwards-button","⏬":"fast-down-button","⏸️":"pause-button","⏹️":"stop-button","⏺️":"record-button","⏏️":"eject-button","🎦":"cinema","🔅":"dim-button","🔆":"bright-button","📶":"antenna-bars","🛜":"wireless","📳":"vibration-mode","📴":"mobile-phone-off","♀️":"female-sign","♂️":"male-sign","⚧️":"transgender-symbol","✖️":"multiply","➕":"plus","➖":"minus","➗":"divide","🟰":"heavy-equals-sign","♾️":"infinity","‼️":"double-exclamation-mark","⁉️":"exclamation-question-mark","❓":"red-question-mark","❔":"white-question-mark","❕":"white-exclamation-mark","❗":"red-exclamation-mark","〰️":"wavy-dash","💱":"currency-exchange","💲":"heavy-dollar-sign","⚕️":"medical-symbol","♻️":"recycling-symbol","⚜️":"fleur-de-lis","🔱":"trident-emblem","📛":"name-badge","🔰":"japanese-symbol-for-beginner","⭕":"hollow-red-circle","✅":"check-mark-button","☑️":"check-box-with-check","✔️":"check-mark","❌":"cross-mark","❎":"cross-mark-button","➰":"curly-loop","➿":"double-curly-loop","〽️":"part-alternation-mark","✳️":"eight-spoked-asterisk","✴️":"eight-pointed-star","❇️":"sparkle","©️":"copyright","®️":"registered","™️":"trade-mark","#️⃣":"keycap-#","*️⃣":"keycap-*","0️⃣":"keycap-0","1️⃣":"keycap-1","2️⃣":"keycap-2","3️⃣":"keycap-3","4️⃣":"keycap-4","5️⃣":"keycap-5","6️⃣":"keycap-6","7️⃣":"keycap-7","8️⃣":"keycap-8","9️⃣":"keycap-9","🔟":"keycap-10","🔠":"input-latin-uppercase","🔡":"input-latin-lowercase","🔢":"input-numbers","🔣":"input-symbols","🔤":"input-latin-letters","🅰️":"a-button-blood-type","🆎":"ab-button-blood-type","🅱️":"b-button-blood-type","🆑":"cl-button","🆒":"cool-button","🆓":"free-button","ℹ️":"information","🆔":"id-button","Ⓜ️":"circled-m","🆕":"new-button","🆖":"ng-button","🅾️":"o-button-blood-type","🆗":"ok-button","🅿️":"p-button","🆘":"sos-button","🆙":"up-button","🆚":"vs-button","🈁":"japanese-here-button","🈂️":"japanese-service-charge-button","🈷️":"japanese-monthly-amount-button","🈶":"japanese-not-free-of-charge-button","🈯":"japanese-reserved-button","🉐":"japanese-bargain-button","🈹":"japanese-discount-button","🈚":"japanese-free-of-charge-button","🈲":"japanese-prohibited-button","🉑":"japanese-acceptable-button","🈸":"japanese-application-button","🈴":"japanese-passing-grade-button","🈳":"japanese-vacancy-button","㊗️":"japanese-congratulations-button","㊙️":"japanese-secret-button","🈺":"japanese-open-for-business-button","🈵":"japanese-no-vacancy-button","🔴":"red-circle","🟠":"orange-circle","🟡":"yellow-circle","🟢":"green-circle","🔵":"blue-circle","🟣":"purple-circle","🟤":"brown-circle","⚫":"black-circle","⚪":"white-circle","🟥":"red-square","🟧":"orange-square","🟨":"yellow-square","🟩":"green-square","🟦":"blue-square","🟪":"purple-square","🟫":"brown-square","⬛":"black-large-square","⬜":"white-large-square","◼️":"black-medium-square","◻️":"white-medium-square","◾":"black-medium-small-square","◽":"white-medium-small-square","▪️":"black-small-square","▫️":"white-small-square","🔶":"large-orange-diamond","🔷":"large-blue-diamond","🔸":"small-orange-diamond","🔹":"small-blue-diamond","🔺":"red-triangle-pointed-up","🔻":"red-triangle-pointed-down","💠":"diamond-with-a-dot","🔘":"radio-button","🔳":"white-square-button","🔲":"black-square-button","🏁":"chequered-flag","🚩":"triangular-flag","🎌":"crossed-flags","🏴":"black-flag","🏳️":"white-flag","🏳️‍🌈":"rainbow-flag","🏳️‍⚧️":"transgender-flag","🏴‍☠️":"pirate-flag","🇦🇨":"flag-ascension-island","🇦🇩":"flag-andorra","🇦🇪":"flag-united-arab-emirates","🇦🇫":"flag-afghanistan","🇦🇬":"flag-antigua-&-barbuda","🇦🇮":"flag-anguilla","🇦🇱":"flag-albania","🇦🇲":"flag-armenia","🇦🇴":"flag-angola","🇦🇶":"flag-antarctica","🇦🇷":"flag-argentina","🇦🇸":"flag-american-samoa","🇦🇹":"flag-austria","🇦🇺":"flag-australia","🇦🇼":"flag-aruba","🇦🇽":"flag-aland-islands","🇦🇿":"flag-azerbaijan","🇧🇦":"flag-bosnia-&-herzegovina","🇧🇧":"flag-barbados","🇧🇩":"flag-bangladesh","🇧🇪":"flag-belgium","🇧🇫":"flag-burkina-faso","🇧🇬":"flag-bulgaria","🇧🇭":"flag-bahrain","🇧🇮":"flag-burundi","🇧🇯":"flag-benin","🇧🇱":"flag-st-barthelemy","🇧🇲":"flag-bermuda","🇧🇳":"flag-brunei","🇧🇴":"flag-bolivia","🇧🇶":"flag-caribbean-netherlands","🇧🇷":"flag-brazil","🇧🇸":"flag-bahamas","🇧🇹":"flag-bhutan","🇧🇻":"flag-bouvet-island","🇧🇼":"flag-botswana","🇧🇾":"flag-belarus","🇧🇿":"flag-belize","🇨🇦":"flag-canada","🇨🇨":"flag-cocos-keeling-islands","🇨🇩":"flag-congo-kinshasa","🇨🇫":"flag-central-african-republic","🇨🇬":"flag-congo-brazzaville","🇨🇭":"flag-switzerland","🇨🇮":"flag-cote-d-ivoire","🇨🇰":"flag-cook-islands","🇨🇱":"flag-chile","🇨🇲":"flag-cameroon","🇨🇳":"flag-china","🇨🇴":"flag-colombia","🇨🇵":"flag-clipperton-island","🇨🇷":"flag-costa-rica","🇨🇺":"flag-cuba","🇨🇻":"flag-cape-verde","🇨🇼":"flag-curacao","🇨🇽":"flag-christmas-island","🇨🇾":"flag-cyprus","🇨🇿":"flag-czechia","🇩🇪":"flag-germany","🇩🇬":"flag-diego-garcia","🇩🇯":"flag-djibouti","🇩🇰":"flag-denmark","🇩🇲":"flag-dominica","🇩🇴":"flag-dominican-republic","🇩🇿":"flag-algeria","🇪🇦":"flag-ceuta-&-melilla","🇪🇨":"flag-ecuador","🇪🇪":"flag-estonia","🇪🇬":"flag-egypt","🇪🇭":"flag-western-sahara","🇪🇷":"flag-eritrea","🇪🇸":"flag-spain","🇪🇹":"flag-ethiopia","🇪🇺":"flag-european-union","🇫🇮":"flag-finland","🇫🇯":"flag-fiji","🇫🇰":"flag-falkland-islands","🇫🇲":"flag-micronesia","🇫🇴":"flag-faroe-islands","🇫🇷":"flag-france","🇬🇦":"flag-gabon","🇬🇧":"flag-united-kingdom","🇬🇩":"flag-grenada","🇬🇪":"flag-georgia","🇬🇫":"flag-french-guiana","🇬🇬":"flag-guernsey","🇬🇭":"flag-ghana","🇬🇮":"flag-gibraltar","🇬🇱":"flag-greenland","🇬🇲":"flag-gambia","🇬🇳":"flag-guinea","🇬🇵":"flag-guadeloupe","🇬🇶":"flag-equatorial-guinea","🇬🇷":"flag-greece","🇬🇸":"flag-south-georgia-&-south-sandwich-islands","🇬🇹":"flag-guatemala","🇬🇺":"flag-guam","🇬🇼":"flag-guinea-bissau","🇬🇾":"flag-guyana","🇭🇰":"flag-hong-kong-sar-china","🇭🇲":"flag-heard-&-mcdonald-islands","🇭🇳":"flag-honduras","🇭🇷":"flag-croatia","🇭🇹":"flag-haiti","🇭🇺":"flag-hungary","🇮🇨":"flag-canary-islands","🇮🇩":"flag-indonesia","🇮🇪":"flag-ireland","🇮🇱":"flag-israel","🇮🇲":"flag-isle-of-man","🇮🇳":"flag-india","🇮🇴":"flag-british-indian-ocean-territory","🇮🇶":"flag-iraq","🇮🇷":"flag-iran","🇮🇸":"flag-iceland","🇮🇹":"flag-italy","🇯🇪":"flag-jersey","🇯🇲":"flag-jamaica","🇯🇴":"flag-jordan","🇯🇵":"flag-japan","🇰🇪":"flag-kenya","🇰🇬":"flag-kyrgyzstan","🇰🇭":"flag-cambodia","🇰🇮":"flag-kiribati","🇰🇲":"flag-comoros","🇰🇳":"flag-st-kitts-&-nevis","🇰🇵":"flag-north-korea","🇰🇷":"flag-south-korea","🇰🇼":"flag-kuwait","🇰🇾":"flag-cayman-islands","🇰🇿":"flag-kazakhstan","🇱🇦":"flag-laos","🇱🇧":"flag-lebanon","🇱🇨":"flag-st-lucia","🇱🇮":"flag-liechtenstein","🇱🇰":"flag-sri-lanka","🇱🇷":"flag-liberia","🇱🇸":"flag-lesotho","🇱🇹":"flag-lithuania","🇱🇺":"flag-luxembourg","🇱🇻":"flag-latvia","🇱🇾":"flag-libya","🇲🇦":"flag-morocco","🇲🇨":"flag-monaco","🇲🇩":"flag-moldova","🇲🇪":"flag-montenegro","🇲🇫":"flag-st-martin","🇲🇬":"flag-madagascar","🇲🇭":"flag-marshall-islands","🇲🇰":"flag-north-macedonia","🇲🇱":"flag-mali","🇲🇲":"flag-myanmar-burma","🇲🇳":"flag-mongolia","🇲🇴":"flag-macao-sar-china","🇲🇵":"flag-northern-mariana-islands","🇲🇶":"flag-martinique","🇲🇷":"flag-mauritania","🇲🇸":"flag-montserrat","🇲🇹":"flag-malta","🇲🇺":"flag-mauritius","🇲🇻":"flag-maldives","🇲🇼":"flag-malawi","🇲🇽":"flag-mexico","🇲🇾":"flag-malaysia","🇲🇿":"flag-mozambique","🇳🇦":"flag-namibia","🇳🇨":"flag-new-caledonia","🇳🇪":"flag-niger","🇳🇫":"flag-norfolk-island","🇳🇬":"flag-nigeria","🇳🇮":"flag-nicaragua","🇳🇱":"flag-netherlands","🇳🇴":"flag-norway","🇳🇵":"flag-nepal","🇳🇷":"flag-nauru","🇳🇺":"flag-niue","🇳🇿":"flag-new-zealand","🇴🇲":"flag-oman","🇵🇦":"flag-panama","🇵🇪":"flag-peru","🇵🇫":"flag-french-polynesia","🇵🇬":"flag-papua-new-guinea","🇵🇭":"flag-philippines","🇵🇰":"flag-pakistan","🇵🇱":"flag-poland","🇵🇲":"flag-st-pierre-&-miquelon","🇵🇳":"flag-pitcairn-islands","🇵🇷":"flag-puerto-rico","🇵🇸":"flag-palestinian-territories","🇵🇹":"flag-portugal","🇵🇼":"flag-palau","🇵🇾":"flag-paraguay","🇶🇦":"flag-qatar","🇷🇪":"flag-reunion","🇷🇴":"flag-romania","🇷🇸":"flag-serbia","🇷🇺":"flag-russia","🇷🇼":"flag-rwanda","🇸🇦":"flag-saudi-arabia","🇸🇧":"flag-solomon-islands","🇸🇨":"flag-seychelles","🇸🇩":"flag-sudan","🇸🇪":"flag-sweden","🇸🇬":"flag-singapore","🇸🇭":"flag-st-helena","🇸🇮":"flag-slovenia","🇸🇯":"flag-svalbard-&-jan-mayen","🇸🇰":"flag-slovakia","🇸🇱":"flag-sierra-leone","🇸🇲":"flag-san-marino","🇸🇳":"flag-senegal","🇸🇴":"flag-somalia","🇸🇷":"flag-suriname","🇸🇸":"flag-south-sudan","🇸🇹":"flag-sao-tome-&-principe","🇸🇻":"flag-el-salvador","🇸🇽":"flag-sint-maarten","🇸🇾":"flag-syria","🇸🇿":"flag-eswatini","🇹🇦":"flag-tristan-da-cunha","🇹🇨":"flag-turks-&-caicos-islands","🇹🇩":"flag-chad","🇹🇫":"flag-french-southern-territories","🇹🇬":"flag-togo","🇹🇭":"flag-thailand","🇹🇯":"flag-tajikistan","🇹🇰":"flag-tokelau","🇹🇱":"flag-timor-leste","🇹🇲":"flag-turkmenistan","🇹🇳":"flag-tunisia","🇹🇴":"flag-tonga","🇹🇷":"flag-turkey","🇹🇹":"flag-trinidad-&-tobago","🇹🇻":"flag-tuvalu","🇹🇼":"flag-taiwan","🇹🇿":"flag-tanzania","🇺🇦":"flag-ukraine","🇺🇬":"flag-uganda","🇺🇲":"flag-us-outlying-islands","🇺🇳":"flag-united-nations","🇺🇸":"flag-united-states","🇺🇾":"flag-uruguay","🇺🇿":"flag-uzbekistan","🇻🇦":"flag-vatican-city","🇻🇨":"flag-st-vincent-&-grenadines","🇻🇪":"flag-venezuela","🇻🇬":"flag-british-virgin-islands","🇻🇮":"flag-us-virgin-islands","🇻🇳":"flag-vietnam","🇻🇺":"flag-vanuatu","🇼🇫":"flag-wallis-&-futuna","🇼🇸":"flag-samoa","🇽🇰":"flag-kosovo","🇾🇪":"flag-yemen","🇾🇹":"flag-mayotte","🇿🇦":"flag-south-africa","🇿🇲":"flag-zambia","🇿🇼":"flag-zimbabwe","🏴󠁧󠁢󠁥󠁮󠁧󠁿":"flag-england","🏴󠁧󠁢󠁳󠁣󠁴󠁿":"flag-scotland","🏴󠁧󠁢󠁷󠁬󠁳󠁿":"flag-wales"}
-},{}],125:[function(require,module,exports){
+},{}],124:[function(require,module,exports){
 module.exports={"10":["🔟"],"grin":["😀","😃","😄","😆","😅","😺","😸"],"face":["😀","😃","😄","😁","😆","😅","😂","🙂","🙃","🫠","😉","😊","😇","🥰","😍","😘","😗","☺️","😚","😙","🥲","😋","😛","😜","🤪","😝","🤑","🤗","🤭","🫢","🫣","🤫","🤔","🫡","🤐","🤨","😐","😑","😶","🫥","😶‍🌫️","😏","😒","🙄","😬","😮‍💨","🤥","🫨","😌","😔","😪","🤤","😴","😷","🤒","🤕","🤢","🤮","🤧","🥵","🥶","🥴","😵","😵‍💫","🤠","🥳","🥸","😎","🤓","🧐","😕","🫤","😟","🙁","☹️","😮","😯","😲","😳","🥺","🥹","😦","😧","😨","😰","😥","😢","😭","😱","😖","😣","😞","😓","😩","😫","🥱","😤","😡","😠","🤬","😈","👿","🤡","🤛","🤜","🐵","🐶","🐱","🐯","🐴","🐮","🐷","🐭","🐰","🐥","🐲","🌚","🌛","🌜","🌝","🌞","🌬️","📄"],"big":["😃"],"eyes":["😃","😄","😁","😊","😍","😚","😙","🫢","🙄","😵","😵‍💫","😸","😻","👀"],"smile":["😄","😁","🙂","😊","😇","🥰","😍","☺️","😙","🥲","🤗","😎","😈","😸","😻","😼"],"beam":["😁"],"squint":["😆","😝"],"sweat":["😅","😰","😓","💦"],"roll":["🤣","🙄","🧻"],"on":["🤣","🤬","❤️‍🔥","🍖","⛱️","🔛"],"the":["🤣","🤘","🫵"],"floor":["🤣"],"laugh":["🤣"],"tears":["😂","🥹","😹"],"joy":["😂","😹"],"slightly":["🙂","🙁"],"upside":["🙃"],"down":["🙃","🫳","👇","👎","↘️","⬇️","↙️","↕️","⤵️","⏬","🔻"],"melt":["🫠"],"wink":["😉","😜"],"halo":["😇"],"hearts":["🥰","💞","💕"],"heart":["😍","😻","💘","💝","💖","💗","💓","💟","❣️","💔","❤️‍🔥","❤️‍🩹","❤️","🩷","🧡","💛","💚","💙","🩵","💜","🤎","🖤","🩶","🤍","🫶","🫀","💑","👩‍❤️‍👨","👨‍❤️‍👨","👩‍❤️‍👩","♥️"],"star":["🤩","⭐","🌟","🌠","✡️","☪️","🔯","✴️"],"struck":["🤩"],"blow":["😘"],"kiss":["😘","😗","😚","😙","😽","💋","💏","👩‍❤️‍💋‍👨","👨‍❤️‍💋‍👨","👩‍❤️‍💋‍👩"],"closed":["😚","🌂","📕","📫","📪"],"tear":["🥲","📆"],"savore":["😋"],"food":["😋","🥘","🍲","🥫"],"tongue":["😛","😜","😝","👅"],"zany":["🤪"],"money":["🤑","💰","💸"],"mouth":["🤑","🤭","🫢","🤐","😶","🫤","😮","😦","🤬","👄"],"open":["🤗","🫢","😮","😦","👐","📖","📬","📭","📂","🈺"],"hands":["🤗","👏","🙌","🫶","👐","🙏","🧑‍🤝‍🧑","👭","👫","👬"],"hand":["🤭","🫢","👋","🤚","🖐️","✋","🫱","🫲","🫳","🫴","🫷","🫸","👌","🤏","✌️","🫰","🤙","✍️","💁","💁‍♂️","💁‍♀️","🙋","🙋‍♂️","🙋‍♀️","🪭"],"over":["🤭","🫢","🌄"],"and":["🫢","☠️","🫰","👫","🍽️","🍴","⛈️","⚒️","🛠️","🏹","🔩","🛋️","☪️"],"peek":["🫣"],"eye":["🫣","👁️‍🗨️","👁️"],"shush":["🤫"],"think":["🤔"],"salute":["🫡","🖖"],"zipper":["🤐"],"raised":["🤨","🤚","✋","✊","📫","📬"],"eyebrow":["🤨"],"neutral":["😐"],"expressionless":["😑"],"without":["😶","🍵","⛄"],"dotted":["🫥","🔯"],"line":["🫥"],"in":["😶‍🌫️","😱","👁️‍🗨️","🤵","🤵‍♂️","🤵‍♀️","🧑‍🦼","👨‍🦼","👩‍🦼","🧑‍🦽","👨‍🦽","👩‍🦽","🕴️","🧖","🧖‍♂️","🧖‍♀️","🧘","🧘‍♂️","🧘‍♀️","🛌","👤","👥","🍃","⛳","🚮"],"clouds":["😶‍🌫️"],"smirk":["😏"],"unamused":["😒"],"grimace":["😬"],"exhale":["😮‍💨"],"lying":["🤥"],"shake":["🫨"],"relieved":["😌","😥"],"pensive":["😔"],"sleepy":["😪"],"drool":["🤤"],"sleep":["😴"],"medical":["😷","⚕️"],"mask":["😷","🤿"],"thermometer":["🤒","🌡️"],"head":["🤕","🤯","🗣️"],"bandage":["🤕","🩹"],"nauseated":["🤢"],"vomite":["🤮"],"sneez":["🤧"],"hot":["🥵","🌶️","🌭","☕","♨️"],"cold":["🥶"],"woozy":["🥴"],"crossed":["😵","🤞","🫰","⚔️","🎌"],"out":["😵"],"spiral":["😵‍💫","🐚","🗒️","🗓️"],"explode":["🤯"],"cowboy":["🤠"],"hat":["🤠","👒","🎩"],"party":["🥳","🎉"],"disguised":["🥸"],"sunglasses":["😎","🕶️"],"nerd":["🤓"],"monocle":["🧐"],"confused":["😕"],"diagonal":["🫤"],"worried":["😟"],"frown":["🙁","☹️","😦","🙍","🙍‍♂️","🙍‍♀️"],"hushed":["😯"],"astonished":["😲"],"flushed":["😳"],"plead":["🥺"],"hold":["🥹","🧑‍🤝‍🧑","👭","👫","👬"],"back":["🥹","🤚","🔙"],"anguished":["😧"],"fearful":["😨"],"anxious":["😰"],"sad":["😥"],"but":["😥"],"cry":["😢","😭","😿"],"loudly":["😭"],"scream":["😱"],"fear":["😱"],"confounded":["😖"],"persever":["😣"],"disappointed":["😞"],"downcast":["😓"],"weary":["😩","🙀"],"tired":["😫"],"yawn":["🥱"],"steam":["😤","🍜"],"from":["😤"],"nose":["😤","👃","🐽"],"enraged":["😡"],"angry":["😠","👿"],"symbols":["🤬","🔣"],"horns":["😈","👿","🤘"],"skull":["💀","☠️"],"crossbones":["☠️"],"pile":["💩"],"poo":["💩"],"clown":["🤡"],"ogre":["👹"],"goblin":["👺"],"ghost":["👻"],"alien":["👽","👾"],"monster":["👾"],"robot":["🤖"],"cat":["😺","😸","😹","😻","😼","😽","🙀","😿","😾","🐱","🐈","🐈‍⬛"],"wry":["😼"],"pout":["😾","🙎","🙎‍♂️","🙎‍♀️"],"see":["🙈"],"no":["🙈","🙉","🙊","🙅","🙅‍♂️","🙅‍♀️","⛔","🚳","🚭","🚯","🚷","📵","🔞","🈵"],"evil":["🙈","🙉","🙊"],"monkey":["🙈","🙉","🙊","🐵","🐒"],"hear":["🙉","🦻"],"speak":["🙊","🗣️"],"love":["💌","🤟","🏩"],"letter":["💌"],"arrow":["💘","📲","📩","🏹","⬆️","↗️","➡️","↘️","⬇️","↙️","⬅️","↖️","↕️","↔️","↩️","↪️","⤴️","⤵️","🔙","🔚","🔛","🔜","🔝"],"ribbon":["💝","🎀","🎗️"],"sparkle":["💖","❇️"],"grow":["💗"],"beat":["💓"],"revolve":["💞"],"two":["💕","🐫","🕑","🕝"],"decoration":["💟","🎍"],"exclamation":["❣️","‼️","⁉️","❕","❗"],"broken":["💔"],"fire":["❤️‍🔥","🚒","🔥","🧯"],"mend":["❤️‍🩹"],"red":["❤️","👨‍🦰","👩‍🦰","🧑‍🦰","🍎","🧧","🀄","🏮","❓","❗","⭕","🔴","🟥","🔺","🔻"],"pink":["🩷"],"orange":["🧡","📙","🟠","🟧","🔶","🔸"],"yellow":["💛","🟡","🟨"],"green":["💚","🍏","🥬","🥗","📗","🟢","🟩"],"blue":["💙","🩵","📘","🔵","🟦","🔷","🔹"],"light":["🩵","🚈","🚨","🚥","🚦","💡"],"purple":["💜","🟣","🟪"],"brown":["🤎","🟤","🟫"],"black":["🖤","🐈‍⬛","🐦‍⬛","✒️","⚫","⬛","◼️","◾","▪️","🔲","🏴"],"grey":["🩶"],"white":["🤍","👨‍🦳","👩‍🦳","🧑‍🦳","🧑‍🦯","👨‍🦯","👩‍🦯","💮","🦯","❔","❕","⚪","⬜","◻️","◽","▫️","🔳","🏳️"],"mark":["💋","‼️","⁉️","❓","❔","❕","❗","✅","✔️","❌","❎","〽️","™️"],"hundred":["💯"],"points":["💯"],"anger":["💢","🗯️"],"symbol":["💢","♿","🚼","⚛️","☮️","⚧️","⚕️","♻️","🔰"],"collision":["💥"],"dizzy":["💫"],"droplets":["💦"],"dash":["💨","〰️"],"away":["💨"],"hole":["🕳️","⛳"],"speech":["💬","👁️‍🗨️","🗨️"],"balloon":["💬","💭","🎈"],"bubble":["👁️‍🗨️","🗨️","🗯️","🧋"],"left":["🗨️","👈","🤛","🔍","🛅","↙️","⬅️","↖️","↔️","↩️","↪️"],"right":["🗯️","👉","🤜","🔎","↗️","➡️","↘️","↔️","↩️","↪️","⤴️","⤵️"],"thought":["💭"],"zzz":["💤"],"wave":["👋","🌊"],"fingers":["🖐️","🤌","🤞"],"splayed":["🖐️"],"vulcan":["🖖"],"rightwards":["🫱","🫸"],"leftwards":["🫲","🫷"],"palm":["🫳","🫴","🌴"],"up":["🫴","👆","☝️","👍","🤲","📄","🗞️","⬆️","↗️","↖️","↕️","⤴️","⏫","🆙","🔺"],"push":["🫷","🫸"],"ok":["👌","🙆","🙆‍♂️","🙆‍♀️","🆗"],"pinched":["🤌"],"pinch":["🤏"],"victory":["✌️"],"index":["🫰","👈","👉","👆","👇","☝️","🫵","🗂️","📇"],"finger":["🫰","🖕"],"thumb":["🫰"],"you":["🤟"],"gesture":["🤟","🙅","🙅‍♂️","🙅‍♀️","🙆","🙆‍♂️","🙆‍♀️"],"sign":["🤘","🛑","🏧","🚮","♀️","♂️","🟰","💲"],"call":["🤙"],"me":["🤙"],"backhand":["👈","👉","👆","👇"],"point":["👈","👉","👆","👇","☝️","🫵"],"middle":["🖕"],"at":["🫵","🌆","🌉"],"viewer":["🫵"],"thumbs":["👍","👎"],"fist":["✊","👊","🤛","🤜"],"oncome":["👊","🚍","🚔","🚖","🚘"],"clap":["👏"],"raise":["🙌","🙋","🙋‍♂️","🙋‍♀️"],"palms":["🤲"],"together":["🤲"],"handshake":["🤝"],"folded":["🙏"],"write":["✍️"],"nail":["💅"],"polish":["💅"],"selfie":["🤳"],"flexed":["💪"],"biceps":["💪"],"mechanical":["🦾","🦿"],"arm":["🦾"],"leg":["🦿","🦵","🍗"],"foot":["🦶"],"ear":["👂","🦻","🌽"],"aid":["🦻"],"brain":["🧠"],"anatomical":["🫀"],"lungs":["🫁"],"tooth":["🦷"],"bone":["🦴","🍖"],"bite":["🫦"],"lip":["🫦"],"baby":["👶","👩‍🍼","👨‍🍼","🧑‍🍼","👼","🐤","🐥","🍼","🚼"],"child":["🧒"],"boy":["👦","👨‍👩‍👦","👨‍👩‍👧‍👦","👨‍👩‍👦‍👦","👨‍👨‍👦","👨‍👨‍👧‍👦","👨‍👨‍👦‍👦","👩‍👩‍👦","👩‍👩‍👧‍👦","👩‍👩‍👦‍👦","👨‍👦","👨‍👦‍👦","👨‍👧‍👦","👩‍👦","👩‍👦‍👦","👩‍👧‍👦"],"girl":["👧","👨‍👩‍👧","👨‍👩‍👧‍👦","👨‍👩‍👧‍👧","👨‍👨‍👧","👨‍👨‍👧‍👦","👨‍👨‍👧‍👧","👩‍👩‍👧","👩‍👩‍👧‍👦","👩‍👩‍👧‍👧","👨‍👧","👨‍👧‍👦","👨‍👧‍👧","👩‍👧","👩‍👧‍👦","👩‍👧‍👧"],"person":["🧑","👱","🧔","🧑‍🦰","🧑‍🦱","🧑‍🦳","🧑‍🦲","🧓","🙍","🙎","🙅","🙆","💁","🙋","🧏","🙇","🤦","🤷","🫅","👳","👲","🤵","👰","🫄","🧑‍🍼","💆","💇","🚶","🧍","🧎","🧑‍🦯","🧑‍🦼","🧑‍🦽","🏃","🕴️","🧖","🧗","🤺","🏌️","🏄","🚣","🏊","⛹️","🏋️","🚴","🚵","🤸","🤽","🤾","🤹","🧘","🛀","🛌"],"blond":["👱","👱‍♀️","👱‍♂️"],"hair":["👱","👨‍🦰","👨‍🦱","👨‍🦳","👩‍🦰","🧑‍🦰","👩‍🦱","🧑‍🦱","👩‍🦳","🧑‍🦳","👱‍♀️","👱‍♂️","🪮"],"man":["👨","🧔‍♂️","👨‍🦰","👨‍🦱","👨‍🦳","👨‍🦲","👱‍♂️","👴","🙍‍♂️","🙎‍♂️","🙅‍♂️","🙆‍♂️","💁‍♂️","🙋‍♂️","🧏‍♂️","🙇‍♂️","🤦‍♂️","🤷‍♂️","👨‍⚕️","👨‍🎓","👨‍🏫","👨‍⚖️","👨‍🌾","👨‍🍳","👨‍🔧","👨‍🏭","👨‍💼","👨‍🔬","👨‍💻","👨‍🎤","👨‍🎨","👨‍✈️","👨‍🚀","👨‍🚒","👮‍♂️","🕵️‍♂️","💂‍♂️","👷‍♂️","👳‍♂️","🤵‍♂️","👰‍♂️","🫃","👨‍🍼","🦸‍♂️","🦹‍♂️","🧙‍♂️","🧚‍♂️","🧛‍♂️","🧝‍♂️","🧞‍♂️","🧟‍♂️","💆‍♂️","💇‍♂️","🚶‍♂️","🧍‍♂️","🧎‍♂️","👨‍🦯","👨‍🦼","👨‍🦽","🏃‍♂️","🕺","🧖‍♂️","🧗‍♂️","🏌️‍♂️","🏄‍♂️","🚣‍♂️","🏊‍♂️","⛹️‍♂️","🏋️‍♂️","🚴‍♂️","🚵‍♂️","🤸‍♂️","🤽‍♂️","🤾‍♂️","🤹‍♂️","🧘‍♂️","👫","👩‍❤️‍💋‍👨","👨‍❤️‍💋‍👨","👩‍❤️‍👨","👨‍❤️‍👨","👨‍👩‍👦","👨‍👩‍👧","👨‍👩‍👧‍👦","👨‍👩‍👦‍👦","👨‍👩‍👧‍👧","👨‍👨‍👦","👨‍👨‍👧","👨‍👨‍👧‍👦","👨‍👨‍👦‍👦","👨‍👨‍👧‍👧","👨‍👦","👨‍👦‍👦","👨‍👧","👨‍👧‍👦","👨‍👧‍👧","👞","🇮🇲"],"beard":["🧔","🧔‍♂️","🧔‍♀️"],"woman":["🧔‍♀️","👩","👩‍🦰","👩‍🦱","👩‍🦳","👩‍🦲","👱‍♀️","👵","🙍‍♀️","🙎‍♀️","🙅‍♀️","🙆‍♀️","💁‍♀️","🙋‍♀️","🧏‍♀️","🙇‍♀️","🤦‍♀️","🤷‍♀️","👩‍⚕️","👩‍🎓","👩‍🏫","👩‍⚖️","👩‍🌾","👩‍🍳","👩‍🔧","👩‍🏭","👩‍💼","👩‍🔬","👩‍💻","👩‍🎤","👩‍🎨","👩‍✈️","👩‍🚀","👩‍🚒","👮‍♀️","🕵️‍♀️","💂‍♀️","👷‍♀️","👳‍♀️","🧕","🤵‍♀️","👰‍♀️","🤰","👩‍🍼","🦸‍♀️","🦹‍♀️","🧙‍♀️","🧚‍♀️","🧛‍♀️","🧝‍♀️","🧞‍♀️","🧟‍♀️","💆‍♀️","💇‍♀️","🚶‍♀️","🧍‍♀️","🧎‍♀️","👩‍🦯","👩‍🦼","👩‍🦽","🏃‍♀️","💃","🧖‍♀️","🧗‍♀️","🏌️‍♀️","🏄‍♀️","🚣‍♀️","🏊‍♀️","⛹️‍♀️","🏋️‍♀️","🚴‍♀️","🚵‍♀️","🤸‍♀️","🤽‍♀️","🤾‍♀️","🤹‍♀️","🧘‍♀️","👫","👩‍❤️‍💋‍👨","👩‍❤️‍💋‍👩","👩‍❤️‍👨","👩‍❤️‍👩","👨‍👩‍👦","👨‍👩‍👧","👨‍👩‍👧‍👦","👨‍👩‍👦‍👦","👨‍👩‍👧‍👧","👩‍👩‍👦","👩‍👩‍👧","👩‍👩‍👧‍👦","👩‍👩‍👦‍👦","👩‍👩‍👧‍👧","👩‍👦","👩‍👦‍👦","👩‍👧","👩‍👧‍👦","👩‍👧‍👧","👚","👡","👢","👒"],"curly":["👨‍🦱","👩‍🦱","🧑‍🦱","➰","➿"],"bald":["👨‍🦲","👩‍🦲","🧑‍🦲"],"older":["🧓"],"old":["👴","👵","🗝️"],"tip":["💁","💁‍♂️","💁‍♀️"],"deaf":["🧏","🧏‍♂️","🧏‍♀️"],"bow":["🙇","🙇‍♂️","🙇‍♀️","🏹"],"facepalm":["🤦","🤦‍♂️","🤦‍♀️"],"shrug":["🤷","🤷‍♂️","🤷‍♀️"],"health":["🧑‍⚕️","👨‍⚕️","👩‍⚕️"],"worker":["🧑‍⚕️","👨‍⚕️","👩‍⚕️","🧑‍🏭","👨‍🏭","👩‍🏭","🧑‍💼","👨‍💼","👩‍💼","👷","👷‍♂️","👷‍♀️","⛑️"],"student":["🧑‍🎓","👨‍🎓","👩‍🎓"],"teacher":["🧑‍🏫","👨‍🏫","👩‍🏫"],"judge":["🧑‍⚖️","👨‍⚖️","👩‍⚖️"],"farmer":["🧑‍🌾","👨‍🌾","👩‍🌾"],"cook":["🧑‍🍳","👨‍🍳","👩‍🍳","🍳","🇨🇰"],"mechanic":["🧑‍🔧","👨‍🔧","👩‍🔧"],"factory":["🧑‍🏭","👨‍🏭","👩‍🏭","🏭"],"office":["🧑‍💼","👨‍💼","👩‍💼","🏢","🏣","🏤"],"scientist":["🧑‍🔬","👨‍🔬","👩‍🔬"],"technologist":["🧑‍💻","👨‍💻","👩‍💻"],"singer":["🧑‍🎤","👨‍🎤","👩‍🎤"],"artist":["🧑‍🎨","👨‍🎨","👩‍🎨","🎨"],"pilot":["🧑‍✈️","👨‍✈️","👩‍✈️"],"astronaut":["🧑‍🚀","👨‍🚀","👩‍🚀"],"firefighter":["🧑‍🚒","👨‍🚒","👩‍🚒"],"police":["👮","👮‍♂️","👮‍♀️","🚓","🚔","🚨"],"officer":["👮","👮‍♂️","👮‍♀️"],"detective":["🕵️","🕵️‍♂️","🕵️‍♀️"],"guard":["💂","💂‍♂️","💂‍♀️"],"ninja":["🥷"],"construction":["👷","👷‍♂️","👷‍♀️","🏗️","🚧"],"crown":["🫅","👑"],"prince":["🤴"],"princess":["👸"],"wear":["👳","👳‍♂️","👳‍♀️"],"turban":["👳","👳‍♂️","👳‍♀️"],"skullcap":["👲"],"headscarf":["🧕"],"tuxedo":["🤵","🤵‍♂️","🤵‍♀️"],"veil":["👰","👰‍♂️","👰‍♀️"],"pregnant":["🤰","🫃","🫄"],"breast":["🤱"],"feed":["🤱","👩‍🍼","👨‍🍼","🧑‍🍼"],"angel":["👼"],"santa":["🎅"],"claus":["🎅","🤶","🧑‍🎄"],"mrs":["🤶"],"mx":["🧑‍🎄"],"superhero":["🦸","🦸‍♂️","🦸‍♀️"],"supervillain":["🦹","🦹‍♂️","🦹‍♀️"],"mage":["🧙","🧙‍♂️","🧙‍♀️"],"fairy":["🧚","🧚‍♂️","🧚‍♀️"],"vampire":["🧛","🧛‍♂️","🧛‍♀️"],"merperson":["🧜"],"merman":["🧜‍♂️"],"mermaid":["🧜‍♀️"],"elf":["🧝","🧝‍♂️","🧝‍♀️"],"genie":["🧞","🧞‍♂️","🧞‍♀️"],"zombie":["🧟","🧟‍♂️","🧟‍♀️"],"troll":["🧌"],"gett":["💆","💆‍♂️","💆‍♀️","💇","💇‍♂️","💇‍♀️"],"massage":["💆","💆‍♂️","💆‍♀️"],"haircut":["💇","💇‍♂️","💇‍♀️"],"walk":["🚶","🚶‍♂️","🚶‍♀️"],"stand":["🧍","🧍‍♂️","🧍‍♀️"],"kneel":["🧎","🧎‍♂️","🧎‍♀️"],"cane":["🧑‍🦯","👨‍🦯","👩‍🦯","🦯"],"motorized":["🧑‍🦼","👨‍🦼","👩‍🦼","🦼"],"wheelchair":["🧑‍🦼","👨‍🦼","👩‍🦼","🧑‍🦽","👨‍🦽","👩‍🦽","🦽","🦼","♿"],"manual":["🧑‍🦽","👨‍🦽","👩‍🦽","🦽"],"run":["🏃","🏃‍♂️","🏃‍♀️","🎽","👟"],"dance":["💃","🕺"],"suit":["🕴️","♠️","♥️","♦️","♣️"],"levitate":["🕴️"],"people":["👯","🤼","🧑‍🤝‍🧑","🫂"],"bunny":["👯","👯‍♂️","👯‍♀️"],"ears":["👯","👯‍♂️","👯‍♀️"],"men":["👯‍♂️","🤼‍♂️","👬","🚹"],"women":["👯‍♀️","🤼‍♀️","👭","🚺"],"steamy":["🧖","🧖‍♂️","🧖‍♀️"],"room":["🧖","🧖‍♂️","🧖‍♀️","🚹","🚺"],"climb":["🧗","🧗‍♂️","🧗‍♀️"],"fence":["🤺"],"horse":["🏇","🐴","🐎","🎠"],"race":["🏇","🏎️"],"skier":["⛷️"],"snowboarder":["🏂"],"golf":["🏌️","🏌️‍♂️","🏌️‍♀️"],"surf":["🏄","🏄‍♂️","🏄‍♀️"],"row":["🚣","🚣‍♂️","🚣‍♀️"],"boat":["🚣","🚣‍♂️","🚣‍♀️","🛥️"],"swim":["🏊","🏊‍♂️","🏊‍♀️"],"bounce":["⛹️","⛹️‍♂️","⛹️‍♀️"],"ball":["⛹️","⛹️‍♂️","⛹️‍♀️","🍙","🎊","⚽","🎱","🔮","🪩"],"lift":["🏋️","🏋️‍♂️","🏋️‍♀️"],"weights":["🏋️","🏋️‍♂️","🏋️‍♀️"],"bike":["🚴","🚴‍♂️","🚴‍♀️","🚵","🚵‍♂️","🚵‍♀️"],"mountain":["🚵","🚵‍♂️","🚵‍♀️","🏔️","⛰️","🚞","🚠"],"cartwheel":["🤸","🤸‍♂️","🤸‍♀️"],"wrestle":["🤼","🤼‍♂️","🤼‍♀️"],"play":["🤽","🤽‍♂️","🤽‍♀️","🤾","🤾‍♂️","🤾‍♀️","🎴","▶️","⏯️"],"water":["🤽","🤽‍♂️","🤽‍♀️","🐃","🌊","🔫","🚰","🚾","🚱"],"polo":["🤽","🤽‍♂️","🤽‍♀️"],"handball":["🤾","🤾‍♂️","🤾‍♀️"],"juggle":["🤹","🤹‍♂️","🤹‍♀️"],"lotus":["🧘","🧘‍♂️","🧘‍♀️","🪷"],"position":["🧘","🧘‍♂️","🧘‍♀️"],"take":["🛀"],"bath":["🛀"],"bed":["🛌","🛏️"],"couple":["💑","👩‍❤️‍👨","👨‍❤️‍👨","👩‍❤️‍👩"],"family":["👪","👨‍👩‍👦","👨‍👩‍👧","👨‍👩‍👧‍👦","👨‍👩‍👦‍👦","👨‍👩‍👧‍👧","👨‍👨‍👦","👨‍👨‍👧","👨‍👨‍👧‍👦","👨‍👨‍👦‍👦","👨‍👨‍👧‍👧","👩‍👩‍👦","👩‍👩‍👧","👩‍👩‍👧‍👦","👩‍👩‍👦‍👦","👩‍👩‍👧‍👧","👨‍👦","👨‍👦‍👦","👨‍👧","👨‍👧‍👦","👨‍👧‍👧","👩‍👦","👩‍👦‍👦","👩‍👧","👩‍👧‍👦","👩‍👧‍👧"],"bust":["👤"],"silhouette":["👤","👥"],"busts":["👥"],"hug":["🫂"],"footprints":["👣"],"gorilla":["🦍"],"orangutan":["🦧"],"dog":["🐶","🐕","🦮","🐕‍🦺","🌭"],"guide":["🦮"],"service":["🐕‍🦺","🈂️"],"poodle":["🐩"],"wolf":["🐺"],"fox":["🦊"],"raccoon":["🦝"],"lion":["🦁"],"tiger":["🐯","🐅"],"leopard":["🐆"],"moose":["🫎"],"donkey":["🫏"],"unicorn":["🦄"],"zebra":["🦓"],"deer":["🦌"],"bison":["🦬"],"cow":["🐮","🐄"],"ox":["🐂"],"buffalo":["🐃"],"pig":["🐷","🐖","🐽"],"boar":["🐗"],"ram":["🐏"],"ewe":["🐑"],"goat":["🐐"],"camel":["🐪","🐫"],"hump":["🐫"],"llama":["🦙"],"giraffe":["🦒"],"elephant":["🐘"],"mammoth":["🦣"],"rhinoceros":["🦏"],"hippopotamus":["🦛"],"mouse":["🐭","🐁","🖱️","🪤"],"rat":["🐀"],"hamster":["🐹"],"rabbit":["🐰","🐇"],"chipmunk":["🐿️"],"beaver":["🦫"],"hedgehog":["🦔"],"bat":["🦇"],"bear":["🐻","🐻‍❄️","🧸"],"polar":["🐻‍❄️"],"koala":["🐨"],"panda":["🐼"],"sloth":["🦥"],"otter":["🦦"],"skunk":["🦨"],"kangaroo":["🦘"],"badger":["🦡"],"paw":["🐾"],"prints":["🐾"],"turkey":["🦃","🇹🇷"],"chicken":["🐔"],"rooster":["🐓"],"hatch":["🐣"],"chick":["🐣","🐤","🐥"],"front":["🐥"],"bird":["🐦","🐦‍⬛"],"penguin":["🐧"],"dove":["🕊️"],"eagle":["🦅"],"duck":["🦆"],"swan":["🦢"],"owl":["🦉"],"dodo":["🦤"],"feather":["🪶"],"flamingo":["🦩"],"peacock":["🦚"],"parrot":["🦜"],"wing":["🪽"],"goose":["🪿"],"frog":["🐸"],"crocodile":["🐊"],"turtle":["🐢"],"lizard":["🦎"],"snake":["🐍"],"dragon":["🐲","🐉","🀄"],"sauropod":["🦕"],"rex":["🦖"],"spout":["🐳"],"whale":["🐳","🐋"],"dolphin":["🐬"],"seal":["🦭"],"fish":["🐟","🐠","🍥","🎣"],"tropical":["🐠","🍹"],"blowfish":["🐡"],"shark":["🦈"],"octopus":["🐙"],"shell":["🐚"],"coral":["🪸"],"jellyfish":["🪼"],"snail":["🐌"],"butterfly":["🦋"],"bug":["🐛"],"ant":["🐜"],"honeybee":["🐝"],"beetle":["🪲","🐞"],"lady":["🐞"],"cricket":["🦗","🏏"],"cockroach":["🪳"],"spider":["🕷️","🕸️"],"web":["🕸️"],"scorpion":["🦂"],"mosquito":["🦟"],"fly":["🪰","🛸","🥏"],"worm":["🪱"],"microbe":["🦠"],"bouquet":["💐"],"cherry":["🌸"],"blossom":["🌸","🌼"],"flower":["💮","🥀","🎴"],"rosette":["🏵️"],"rose":["🌹"],"wilted":["🥀"],"hibiscus":["🌺"],"sunflower":["🌻"],"tulip":["🌷"],"hyacinth":["🪻"],"seedle":["🌱"],"potted":["🪴"],"plant":["🪴"],"evergreen":["🌲"],"tree":["🌲","🌳","🌴","🎄","🎋"],"deciduous":["🌳"],"cactus":["🌵"],"sheaf":["🌾"],"rice":["🌾","🍘","🍙","🍚","🍛"],"herb":["🌿"],"shamrock":["☘️"],"four":["🍀","🕓","🕟"],"leaf":["🍀","🍁","🍂","🍃"],"clover":["🍀"],"maple":["🍁"],"fallen":["🍂"],"flutter":["🍃"],"wind":["🍃","🌬️","🎐"],"empty":["🪹"],"nest":["🪹","🪺","🪆"],"eggs":["🪺"],"mushroom":["🍄"],"grapes":["🍇"],"melon":["🍈"],"watermelon":["🍉"],"tangerine":["🍊"],"lemon":["🍋"],"banana":["🍌"],"pineapple":["🍍"],"mango":["🥭"],"apple":["🍎","🍏"],"pear":["🍐"],"peach":["🍑"],"cherries":["🍒"],"strawberry":["🍓"],"blueberries":["🫐"],"kiwi":["🥝"],"fruit":["🥝"],"tomato":["🍅"],"olive":["🫒"],"coconut":["🥥"],"avocado":["🥑"],"eggplant":["🍆"],"potato":["🥔","🍠"],"carrot":["🥕"],"corn":["🌽"],"pepper":["🌶️","🫑"],"bell":["🫑","🛎️","🔔","🔕"],"cucumber":["🥒"],"leafy":["🥬"],"broccoli":["🥦"],"garlic":["🧄"],"onion":["🧅"],"peanuts":["🥜"],"beans":["🫘"],"chestnut":["🌰"],"ginger":["🫚"],"root":["🫚"],"pea":["🫛"],"pod":["🫛"],"bread":["🍞","🥖"],"croissant":["🥐"],"baguette":["🥖"],"flatbread":["🫓","🥙"],"pretzel":["🥨"],"bagel":["🥯"],"pancakes":["🥞"],"waffle":["🧇"],"cheese":["🧀"],"wedge":["🧀"],"meat":["🍖","🥩"],"poultry":["🍗"],"cut":["🥩"],"bacon":["🥓"],"hamburger":["🍔"],"french":["🍟","🇬🇫","🇵🇫","🇹🇫"],"fries":["🍟"],"pizza":["🍕"],"sandwich":["🥪","🇬🇸"],"taco":["🌮"],"burrito":["🌯"],"tamale":["🫔"],"stuffed":["🥙"],"falafel":["🧆"],"egg":["🥚"],"shallow":["🥘"],"pan":["🥘"],"pot":["🍲","🍯"],"fondue":["🫕"],"bowl":["🥣","🍜","🎳"],"spoon":["🥣","🥄"],"salad":["🥗"],"popcorn":["🍿"],"butter":["🧈"],"salt":["🧂"],"canned":["🥫"],"bento":["🍱"],"box":["🍱","🥡","🧃","🥊","🗳️","🗃️","☑️"],"cracker":["🍘"],"cooked":["🍚"],"curry":["🍛"],"spaghetti":["🍝"],"roasted":["🍠"],"sweet":["🍠"],"oden":["🍢"],"sushi":["🍣"],"fried":["🍤"],"shrimp":["🍤","🦐"],"cake":["🍥","🥮","🎂"],"swirl":["🍥"],"moon":["🥮","🌑","🌒","🌓","🌔","🌕","🌖","🌗","🌘","🌙","🌚","🌛","🌜","🌝","🎑"],"dango":["🍡"],"dumple":["🥟"],"fortune":["🥠"],"cookie":["🥠","🍪"],"takeout":["🥡"],"crab":["🦀"],"lobster":["🦞"],"squid":["🦑"],"oyster":["🦪"],"soft":["🍦"],"ice":["🍦","🍧","🍨","🧊","🏒","⛸️"],"cream":["🍦","🍨"],"shaved":["🍧"],"doughnut":["🍩"],"birthday":["🎂"],"shortcake":["🍰"],"cupcake":["🧁"],"pie":["🥧"],"chocolate":["🍫"],"bar":["🍫","📊"],"candy":["🍬"],"lollipop":["🍭"],"custard":["🍮"],"honey":["🍯"],"bottle":["🍼","🍾","🧴"],"glass":["🥛","🍷","🍸","🥃","🔍","🔎"],"milk":["🥛"],"beverage":["☕","🧃"],"teapot":["🫖"],"teacup":["🍵"],"handle":["🍵"],"sake":["🍶"],"pop":["🍾"],"cork":["🍾"],"wine":["🍷"],"cocktail":["🍸"],"drink":["🍹"],"beer":["🍺","🍻"],"mug":["🍺"],"clink":["🍻","🥂"],"mugs":["🍻"],"glasses":["🥂","👓"],"tumbler":["🥃"],"pour":["🫗"],"liquid":["🫗"],"cup":["🥤"],"straw":["🥤"],"tea":["🧋"],"mate":["🧉"],"chopsticks":["🥢"],"fork":["🍽️","🍴"],"knife":["🍽️","🍴","🔪"],"plate":["🍽️"],"kitchen":["🔪"],"jar":["🫙"],"amphora":["🏺"],"globe":["🌍","🌎","🌏","🌐"],"show":["🌍","🌎","🌏"],"europe":["🌍"],"africa":["🌍","🇿🇦"],"americas":["🌎"],"asia":["🌏"],"australia":["🌏","🇦🇺"],"meridians":["🌐"],"world":["🗺️"],"map":["🗺️","🗾"],"japan":["🗾","🇯🇵"],"compass":["🧭"],"snow":["🏔️","🌨️","⛄"],"capped":["🏔️"],"volcano":["🌋"],"mount":["🗻"],"fuji":["🗻"],"camp":["🏕️"],"beach":["🏖️"],"umbrella":["🏖️","🌂","☂️","☔","⛱️"],"desert":["🏜️","🏝️"],"island":["🏝️","🇦🇨","🇧🇻","🇨🇵","🇨🇽","🇳🇫"],"national":["🏞️"],"park":["🏞️"],"stadium":["🏟️"],"classical":["🏛️"],"build":["🏛️","🏗️","🏢"],"brick":["🧱"],"rock":["🪨"],"wood":["🪵"],"hut":["🛖"],"houses":["🏘️"],"derelict":["🏚️"],"house":["🏚️","🏠","🏡"],"garden":["🏡"],"japanese":["🏣","🏯","🎎","🔰","🈁","🈂️","🈷️","🈶","🈯","🉐","🈹","🈚","🈲","🉑","🈸","🈴","🈳","㊗️","㊙️","🈺","🈵"],"post":["🏣","🏤"],"hospital":["🏥"],"bank":["🏦"],"hotel":["🏨","🏩"],"convenience":["🏪"],"store":["🏪","🏬"],"school":["🏫"],"department":["🏬"],"castle":["🏯","🏰"],"wed":["💒"],"tokyo":["🗼"],"tower":["🗼"],"statue":["🗽"],"liberty":["🗽"],"church":["⛪"],"mosque":["🕌"],"hindu":["🛕"],"temple":["🛕"],"synagogue":["🕍"],"shinto":["⛩️"],"shrine":["⛩️"],"kaaba":["🕋"],"fountain":["⛲","🖋️"],"tent":["⛺","🎪"],"foggy":["🌁"],"night":["🌃","🌉"],"stars":["🌃"],"cityscape":["🏙️","🌆"],"sunrise":["🌄","🌅"],"mountains":["🌄"],"dusk":["🌆"],"sunset":["🌇"],"bridge":["🌉"],"springs":["♨️"],"carousel":["🎠"],"playground":["🛝"],"slide":["🛝"],"ferris":["🎡"],"wheel":["🎡","🛞","☸️"],"roller":["🎢","🛼"],"coaster":["🎢"],"barber":["💈"],"pole":["💈","🎣"],"circus":["🎪"],"locomotive":["🚂"],"railway":["🚃","🚞","🛤️","🚟"],"car":["🚃","🚋","🚓","🚔","🏎️","🚨"],"high":["🚄","⚡","👠","🔊"],"speed":["🚄"],"train":["🚄","🚅","🚆"],"bullet":["🚅"],"metro":["🚇"],"rail":["🚈"],"station":["🚉"],"tram":["🚊","🚋"],"monorail":["🚝"],"bus":["🚌","🚍","🚏"],"trolleybus":["🚎"],"minibus":["🚐"],"ambulance":["🚑"],"engine":["🚒"],"taxi":["🚕","🚖"],"automobile":["🚗","🚘"],"sport":["🚙"],"utility":["🚙"],"vehicle":["🚙"],"pickup":["🛻"],"truck":["🛻","🚚"],"delivery":["🚚"],"articulated":["🚛"],"lorry":["🚛"],"tractor":["🚜"],"motorcycle":["🏍️"],"motor":["🛵","🛥️"],"scooter":["🛵","🛴"],"auto":["🛺"],"rickshaw":["🛺"],"bicycle":["🚲"],"kick":["🛴"],"skateboard":["🛹"],"skate":["🛼","⛸️"],"stop":["🚏","🛑","⏹️"],"motorway":["🛣️"],"track":["🛤️","⏭️","⏮️"],"oil":["🛢️"],"drum":["🛢️","🥁","🪘"],"fuel":["⛽"],"pump":["⛽"],"horizontal":["🚥"],"traffic":["🚥","🚦"],"vertical":["🚦","🔃"],"anchor":["⚓"],"ring":["🛟","💍"],"buoy":["🛟"],"sailboat":["⛵"],"canoe":["🛶"],"speedboat":["🚤"],"passenger":["🛳️"],"ship":["🛳️","🚢"],"ferry":["⛴️"],"airplane":["✈️","🛩️","🛫","🛬"],"small":["🛩️","🌤️","◾","◽","▪️","▫️","🔸","🔹"],"departure":["🛫"],"arrival":["🛬"],"parachute":["🪂"],"seat":["💺"],"helicopter":["🚁"],"suspension":["🚟"],"cableway":["🚠"],"aerial":["🚡"],"tramway":["🚡"],"satellite":["🛰️","📡"],"rocket":["🚀"],"saucer":["🛸"],"bellhop":["🛎️"],"luggage":["🧳","🛅"],"hourglass":["⌛","⏳"],"done":["⌛","⏳"],"not":["⏳","🈶"],"watch":["⌚"],"alarm":["⏰"],"clock":["⏰","⏲️","🕰️","🕛","🕐","🕑","🕒","🕓","🕔","🕕","🕖","🕗","🕘","🕙","🕚"],"stopwatch":["⏱️"],"timer":["⏲️"],"mantelpiece":["🕰️"],"twelve":["🕛","🕧"],"thirty":["🕧","🕜","🕝","🕞","🕟","🕠","🕡","🕢","🕣","🕤","🕥","🕦"],"one":["🕐","🕜","🩱","🔞"],"three":["🕒","🕞"],"five":["🕔","🕠"],"six":["🕕","🕡","🔯"],"seven":["🕖","🕢"],"eight":["🕗","🕣","✳️","✴️"],"nine":["🕘","🕤"],"ten":["🕙","🕥"],"eleven":["🕚","🕦"],"new":["🌑","🌚","🆕","🇳🇨","🇳🇿","🇵🇬"],"wax":["🌒","🌔"],"crescent":["🌒","🌘","🌙","☪️"],"first":["🌓","🌛"],"quarter":["🌓","🌗","🌛","🌜"],"gibbous":["🌔","🌖"],"full":["🌕","🌝"],"wane":["🌖","🌘"],"last":["🌗","🌜","⏮️"],"sun":["☀️","🌞","⛅","🌤️","🌥️","🌦️"],"ringed":["🪐"],"planet":["🪐"],"glow":["🌟"],"shoot":["🌠"],"milky":["🌌"],"way":["🌌"],"cloud":["☁️","⛅","⛈️","🌤️","🌥️","🌦️","🌧️","🌨️","🌩️"],"behind":["⛅","🌤️","🌥️","🌦️"],"lightning":["⛈️","🌩️"],"rain":["⛈️","🌦️","🌧️","☔"],"large":["🌥️","⬛","⬜","🔶","🔷"],"tornado":["🌪️"],"fog":["🌫️"],"cyclone":["🌀"],"rainbow":["🌈","🏳️‍🌈"],"drops":["☔"],"ground":["⛱️"],"voltage":["⚡"],"snowflake":["❄️"],"snowman":["☃️","⛄"],"comet":["☄️"],"droplet":["💧"],"jack":["🎃"],"lantern":["🎃","🏮"],"christmas":["🎄","🇨🇽"],"fireworks":["🎆"],"sparkler":["🎇"],"firecracker":["🧨"],"sparkles":["✨"],"popper":["🎉"],"confetti":["🎊"],"tanabata":["🎋"],"pine":["🎍"],"dolls":["🎎","🪆"],"carp":["🎏"],"streamer":["🎏"],"chime":["🎐"],"view":["🎑"],"ceremony":["🎑"],"envelope":["🧧","✉️","📨","📩"],"wrapped":["🎁"],"gift":["🎁"],"reminder":["🎗️"],"admission":["🎟️"],"tickets":["🎟️"],"ticket":["🎫"],"military":["🎖️","🪖"],"medal":["🎖️","🏅","🥇","🥈","🥉"],"trophy":["🏆"],"sports":["🏅"],"1st":["🥇"],"place":["🥇","🥈","🥉","🛐"],"2nd":["🥈"],"3rd":["🥉"],"soccer":["⚽"],"baseball":["⚾"],"softball":["🥎"],"basketball":["🏀"],"volleyball":["🏐"],"american":["🏈","🇦🇸"],"football":["🏈","🏉"],"rugby":["🏉"],"tennis":["🎾"],"disc":["🥏"],"game":["🏏","🎮","🎲"],"field":["🏑"],"hockey":["🏑","🏒"],"lacrosse":["🥍"],"ping":["🏓"],"pong":["🏓"],"badminton":["🏸"],"glove":["🥊"],"martial":["🥋"],"arts":["🥋","🎭"],"uniform":["🥋"],"goal":["🥅"],"net":["🥅"],"flag":["⛳","📫","📪","📬","📭","🏁","🚩","🏴","🏳️","🏳️‍🌈","🏳️‍⚧️","🏴‍☠️","🇦🇨","🇦🇩","🇦🇪","🇦🇫","🇦🇬","🇦🇮","🇦🇱","🇦🇲","🇦🇴","🇦🇶","🇦🇷","🇦🇸","🇦🇹","🇦🇺","🇦🇼","🇦🇽","🇦🇿","🇧🇦","🇧🇧","🇧🇩","🇧🇪","🇧🇫","🇧🇬","🇧🇭","🇧🇮","🇧🇯","🇧🇱","🇧🇲","🇧🇳","🇧🇴","🇧🇶","🇧🇷","🇧🇸","🇧🇹","🇧🇻","🇧🇼","🇧🇾","🇧🇿","🇨🇦","🇨🇨","🇨🇩","🇨🇫","🇨🇬","🇨🇭","🇨🇮","🇨🇰","🇨🇱","🇨🇲","🇨🇳","🇨🇴","🇨🇵","🇨🇷","🇨🇺","🇨🇻","🇨🇼","🇨🇽","🇨🇾","🇨🇿","🇩🇪","🇩🇬","🇩🇯","🇩🇰","🇩🇲","🇩🇴","🇩🇿","🇪🇦","🇪🇨","🇪🇪","🇪🇬","🇪🇭","🇪🇷","🇪🇸","🇪🇹","🇪🇺","🇫🇮","🇫🇯","🇫🇰","🇫🇲","🇫🇴","🇫🇷","🇬🇦","🇬🇧","🇬🇩","🇬🇪","🇬🇫","🇬🇬","🇬🇭","🇬🇮","🇬🇱","🇬🇲","🇬🇳","🇬🇵","🇬🇶","🇬🇷","🇬🇸","🇬🇹","🇬🇺","🇬🇼","🇬🇾","🇭🇰","🇭🇲","🇭🇳","🇭🇷","🇭🇹","🇭🇺","🇮🇨","🇮🇩","🇮🇪","🇮🇱","🇮🇲","🇮🇳","🇮🇴","🇮🇶","🇮🇷","🇮🇸","🇮🇹","🇯🇪","🇯🇲","🇯🇴","🇯🇵","🇰🇪","🇰🇬","🇰🇭","🇰🇮","🇰🇲","🇰🇳","🇰🇵","🇰🇷","🇰🇼","🇰🇾","🇰🇿","🇱🇦","🇱🇧","🇱🇨","🇱🇮","🇱🇰","🇱🇷","🇱🇸","🇱🇹","🇱🇺","🇱🇻","🇱🇾","🇲🇦","🇲🇨","🇲🇩","🇲🇪","🇲🇫","🇲🇬","🇲🇭","🇲🇰","🇲🇱","🇲🇲","🇲🇳","🇲🇴","🇲🇵","🇲🇶","🇲🇷","🇲🇸","🇲🇹","🇲🇺","🇲🇻","🇲🇼","🇲🇽","🇲🇾","🇲🇿","🇳🇦","🇳🇨","🇳🇪","🇳🇫","🇳🇬","🇳🇮","🇳🇱","🇳🇴","🇳🇵","🇳🇷","🇳🇺","🇳🇿","🇴🇲","🇵🇦","🇵🇪","🇵🇫","🇵🇬","🇵🇭","🇵🇰","🇵🇱","🇵🇲","🇵🇳","🇵🇷","🇵🇸","🇵🇹","🇵🇼","🇵🇾","🇶🇦","🇷🇪","🇷🇴","🇷🇸","🇷🇺","🇷🇼","🇸🇦","🇸🇧","🇸🇨","🇸🇩","🇸🇪","🇸🇬","🇸🇭","🇸🇮","🇸🇯","🇸🇰","🇸🇱","🇸🇲","🇸🇳","🇸🇴","🇸🇷","🇸🇸","🇸🇹","🇸🇻","🇸🇽","🇸🇾","🇸🇿","🇹🇦","🇹🇨","🇹🇩","🇹🇫","🇹🇬","🇹🇭","🇹🇯","🇹🇰","🇹🇱","🇹🇲","🇹🇳","🇹🇴","🇹🇷","🇹🇹","🇹🇻","🇹🇼","🇹🇿","🇺🇦","🇺🇬","🇺🇲","🇺🇳","🇺🇸","🇺🇾","🇺🇿","🇻🇦","🇻🇨","🇻🇪","🇻🇬","🇻🇮","🇻🇳","🇻🇺","🇼🇫","🇼🇸","🇽🇰","🇾🇪","🇾🇹","🇿🇦","🇿🇲","🇿🇼","🏴󠁧󠁢󠁥󠁮󠁧󠁿","🏴󠁧󠁢󠁳󠁣󠁴󠁿","🏴󠁧󠁢󠁷󠁬󠁳󠁿"],"dive":["🤿"],"shirt":["🎽","👕"],"skis":["🎿"],"sled":["🛷"],"curl":["🥌","📃"],"stone":["🥌","💎"],"bullseye":["🎯"],"yo":["🪀"],"kite":["🪁"],"pistol":["🔫"],"pool":["🎱"],"crystal":["🔮"],"magic":["🪄"],"wand":["🪄"],"video":["🎮","📹"],"joystick":["🕹️"],"slot":["🎰"],"machine":["🎰","📠"],"die":["🎲"],"puzzle":["🧩"],"piece":["🧩","🩱"],"teddy":["🧸"],"pinata":["🪅"],"mirror":["🪩","🪞"],"spade":["♠️"],"diamond":["♦️","🔶","🔷","🔸","🔹","💠"],"club":["♣️"],"chess":["♟️"],"pawn":["♟️"],"joker":["🃏"],"mahjong":["🀄"],"cards":["🎴"],"perform":["🎭"],"framed":["🖼️"],"picture":["🖼️"],"palette":["🎨"],"thread":["🧵"],"sew":["🪡"],"needle":["🪡"],"yarn":["🧶"],"knot":["🪢"],"goggles":["🥽"],"lab":["🥼"],"coat":["🥼","🧥"],"safety":["🦺","🧷"],"vest":["🦺"],"necktie":["👔"],"jeans":["👖"],"scarf":["🧣"],"gloves":["🧤"],"socks":["🧦"],"dress":["👗"],"kimono":["👘"],"sari":["🥻"],"swimsuit":["🩱"],"briefs":["🩲"],"shorts":["🩳"],"bikini":["👙"],"clothes":["👚"],"fold":["🪭"],"fan":["🪭"],"purse":["👛"],"handbag":["👜"],"clutch":["👝"],"bag":["👝","💰"],"shop":["🛍️","🛒"],"bags":["🛍️"],"backpack":["🎒"],"thong":["🩴"],"sandal":["🩴","👡"],"shoe":["👞","👟","🥿","👠"],"hike":["🥾"],"boot":["🥾","👢"],"flat":["🥿"],"heeled":["👠"],"ballet":["🩰"],"shoes":["🩰"],"pick":["🪮","⛏️","⚒️"],"top":["🎩","🔝"],"graduation":["🎓"],"cap":["🎓","🧢"],"billed":["🧢"],"helmet":["🪖","⛑️"],"rescue":["⛑️"],"prayer":["📿"],"beads":["📿"],"lipstick":["💄"],"gem":["💎"],"muted":["🔇"],"speaker":["🔇","🔈","🔉","🔊"],"low":["🔈","🪫"],"volume":["🔈","🔉","🔊"],"medium":["🔉","◼️","◻️","◾","◽"],"loudspeaker":["📢"],"megaphone":["📣"],"postal":["📯"],"horn":["📯"],"slash":["🔕"],"musical":["🎼","🎵","🎶","🎹"],"score":["🎼"],"note":["🎵"],"notes":["🎶"],"studio":["🎙️"],"microphone":["🎙️","🎤"],"level":["🎚️"],"slider":["🎚️"],"control":["🎛️","🛂"],"knobs":["🎛️"],"headphone":["🎧"],"radio":["📻","🔘"],"saxophone":["🎷"],"accordion":["🪗"],"guitar":["🎸"],"keyboard":["🎹","⌨️"],"trumpet":["🎺"],"violin":["🎻"],"banjo":["🪕"],"long":["🪘"],"maracas":["🪇"],"flute":["🪈"],"mobile":["📱","📲","📵","📴"],"phone":["📱","📲","📴"],"telephone":["☎️","📞"],"receiver":["📞"],"pager":["📟"],"fax":["📠"],"battery":["🔋","🪫"],"electric":["🔌"],"plug":["🔌"],"laptop":["💻"],"desktop":["🖥️"],"computer":["🖥️","🖱️","💽"],"printer":["🖨️"],"trackball":["🖲️"],"disk":["💽","💾","💿"],"floppy":["💾"],"optical":["💿"],"dvd":["📀"],"abacus":["🧮"],"movie":["🎥"],"camera":["🎥","📷","📸","📹"],"film":["🎞️","📽️"],"frames":["🎞️"],"projector":["📽️"],"clapper":["🎬"],"board":["🎬"],"television":["📺"],"flash":["📸"],"videocassette":["📼"],"magnify":["🔍","🔎"],"tilted":["🔍","🔎"],"candle":["🕯️"],"bulb":["💡"],"flashlight":["🔦"],"paper":["🏮","🧻"],"diya":["🪔"],"lamp":["🪔","🛋️"],"notebook":["📔","📓"],"decorative":["📔"],"cover":["📔"],"book":["📕","📖","📗","📘","📙"],"books":["📚"],"ledger":["📒"],"page":["📃","📄"],"scroll":["📜"],"newspaper":["📰","🗞️"],"rolled":["🗞️"],"bookmark":["📑","🔖"],"tabs":["📑"],"label":["🏷️"],"coin":["🪙"],"yen":["💴","💹"],"banknote":["💴","💵","💶","💷"],"dollar":["💵","💲"],"euro":["💶"],"pound":["💷"],"wings":["💸"],"credit":["💳"],"card":["💳","🗂️","📇","🗃️","🪪"],"receipt":["🧾"],"chart":["💹","📈","📉","📊"],"increase":["💹","📈"],"mail":["📧"],"income":["📨"],"outbox":["📤"],"tray":["📤","📥"],"inbox":["📥"],"package":["📦"],"mailbox":["📫","📪","📬","📭"],"lowered":["📪","📭"],"postbox":["📮"],"ballot":["🗳️"],"pencil":["✏️"],"nib":["✒️"],"pen":["🖋️","🖊️","🔏"],"paintbrush":["🖌️"],"crayon":["🖍️"],"memo":["📝"],"briefcase":["💼"],"file":["📁","📂","🗃️","🗄️"],"folder":["📁","📂"],"dividers":["🗂️"],"calendar":["📅","📆","🗓️"],"off":["📆","📴"],"notepad":["🗒️"],"decrease":["📉"],"clipboard":["📋"],"pushpin":["📌","📍"],"round":["📍"],"paperclip":["📎"],"linked":["🖇️"],"paperclips":["🖇️"],"straight":["📏"],"ruler":["📏","📐"],"triangular":["📐","🚩"],"scissors":["✂️"],"cabinet":["🗄️"],"wastebasket":["🗑️"],"locked":["🔒","🔏","🔐"],"unlocked":["🔓"],"key":["🔐","🔑","🗝️"],"hammer":["🔨","⚒️","🛠️"],"axe":["🪓"],"wrench":["🛠️","🔧"],"dagger":["🗡️"],"swords":["⚔️"],"bomb":["💣"],"boomerang":["🪃"],"shield":["🛡️"],"carpentry":["🪚"],"saw":["🪚"],"screwdriver":["🪛"],"nut":["🔩"],"bolt":["🔩"],"gear":["⚙️"],"clamp":["🗜️"],"balance":["⚖️"],"scale":["⚖️"],"link":["🔗"],"chains":["⛓️"],"hook":["🪝"],"toolbox":["🧰"],"magnet":["🧲"],"ladder":["🪜"],"alembic":["⚗️"],"test":["🧪"],"tube":["🧪"],"petri":["🧫"],"dish":["🧫"],"dna":["🧬"],"microscope":["🔬"],"telescope":["🔭"],"antenna":["📡","📶"],"syringe":["💉"],"drop":["🩸"],"blood":["🩸","🅰️","🆎","🅱️","🅾️"],"pill":["💊"],"adhesive":["🩹"],"crutch":["🩼"],"stethoscope":["🩺"],"ray":["🩻"],"door":["🚪"],"elevator":["🛗"],"window":["🪟"],"couch":["🛋️"],"chair":["🪑"],"toilet":["🚽"],"plunger":["🪠"],"shower":["🚿"],"bathtub":["🛁"],"trap":["🪤"],"razor":["🪒"],"lotion":["🧴"],"pin":["🧷"],"broom":["🧹"],"basket":["🧺"],"bucket":["🪣"],"soap":["🧼"],"bubbles":["🫧"],"toothbrush":["🪥"],"sponge":["🧽"],"extinguisher":["🧯"],"cart":["🛒"],"cigarette":["🚬"],"coffin":["⚰️"],"headstone":["🪦"],"funeral":["⚱️"],"urn":["⚱️"],"nazar":["🧿"],"amulet":["🧿"],"hamsa":["🪬"],"moai":["🗿"],"placard":["🪧"],"identification":["🪪"],"atm":["🏧"],"litter":["🚮","🚯"],"bin":["🚮"],"potable":["🚰","🚱"],"restroom":["🚻"],"closet":["🚾"],"passport":["🛂"],"customs":["🛃"],"baggage":["🛄"],"claim":["🛄"],"warn":["⚠️"],"children":["🚸"],"cross":["🚸","✝️","☦️","❌","❎"],"entry":["⛔"],"prohibited":["🚫","🈲"],"bicycles":["🚳"],"smoke":["🚭"],"non":["🚱"],"pedestrians":["🚷"],"phones":["📵"],"under":["🔞"],"eighteen":["🔞"],"radioactive":["☢️"],"biohazard":["☣️"],"curve":["↩️","↪️","⤴️","⤵️"],"clockwise":["🔃"],"arrows":["🔃","🔄"],"counterclockwise":["🔄"],"button":["🔄","🔀","🔁","🔂","▶️","⏩","⏭️","⏯️","◀️","⏪","⏮️","🔼","⏫","🔽","⏬","⏸️","⏹️","⏺️","⏏️","🔅","🔆","✅","❎","🅰️","🆎","🅱️","🆑","🆒","🆓","🆔","🆕","🆖","🅾️","🆗","🅿️","🆘","🆙","🆚","🈁","🈂️","🈷️","🈶","🈯","🉐","🈹","🈚","🈲","🉑","🈸","🈴","🈳","㊗️","㊙️","🈺","🈵","🔘","🔳","🔲"],"end":["🔚"],"soon":["🔜"],"worship":["🛐"],"atom":["⚛️"],"om":["🕉️"],"david":["✡️"],"dharma":["☸️"],"yin":["☯️"],"yang":["☯️"],"latin":["✝️","🔠","🔡","🔤"],"orthodox":["☦️"],"peace":["☮️"],"menorah":["🕎"],"pointed":["🔯","✴️","🔺","🔻"],"khanda":["🪯"],"aries":["♈"],"taurus":["♉"],"gemini":["♊"],"cancer":["♋"],"leo":["♌"],"virgo":["♍"],"libra":["♎"],"scorpio":["♏"],"sagittarius":["♐"],"capricorn":["♑"],"aquarius":["♒"],"pisces":["♓"],"ophiuchus":["⛎"],"shuffle":["🔀"],"tracks":["🔀"],"repeat":["🔁","🔂"],"single":["🔂"],"fast":["⏩","⏪","⏫","⏬"],"forward":["⏩"],"next":["⏭️"],"or":["⏯️"],"pause":["⏯️","⏸️"],"reverse":["◀️","⏪"],"upwards":["🔼"],"downwards":["🔽"],"record":["⏺️"],"eject":["⏏️"],"cinema":["🎦"],"dim":["🔅"],"bright":["🔆"],"bars":["📶"],"wireless":["🛜"],"vibration":["📳"],"mode":["📳"],"female":["♀️"],"male":["♂️"],"transgender":["⚧️","🏳️‍⚧️"],"multiply":["✖️"],"plus":["➕"],"minus":["➖"],"divide":["➗"],"heavy":["🟰","💲"],"equals":["🟰"],"infinity":["♾️"],"double":["‼️","➿"],"question":["⁉️","❓","❔"],"wavy":["〰️"],"currency":["💱"],"exchange":["💱"],"recycle":["♻️"],"fleur":["⚜️"],"de":["⚜️"],"lis":["⚜️"],"trident":["🔱"],"emblem":["🔱"],"name":["📛"],"badge":["📛"],"for":["🔰","🈺"],"beginner":["🔰"],"hollow":["⭕"],"circle":["⭕","🔴","🟠","🟡","🟢","🔵","🟣","🟤","⚫","⚪"],"check":["✅","☑️","✔️"],"loop":["➰","➿"],"part":["〽️"],"alternation":["〽️"],"spoked":["✳️"],"asterisk":["✳️"],"copyright":["©️"],"registered":["®️"],"trade":["™️"],"keycap":["#️⃣","*️⃣","0️⃣","1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣","🔟"],"input":["🔠","🔡","🔢","🔣","🔤"],"uppercase":["🔠"],"lowercase":["🔡"],"numbers":["🔢"],"letters":["🔤"],"type":["🅰️","🆎","🅱️","🅾️"],"ab":["🆎"],"cl":["🆑"],"cool":["🆒"],"free":["🆓","🈶","🈚"],"information":["ℹ️"],"id":["🆔"],"circled":["Ⓜ️"],"ng":["🆖"],"sos":["🆘"],"vs":["🆚"],"here":["🈁"],"charge":["🈂️","🈶","🈚"],"monthly":["🈷️"],"amount":["🈷️"],"reserved":["🈯"],"bargain":["🉐"],"discount":["🈹"],"acceptable":["🉑"],"application":["🈸"],"pass":["🈴"],"grade":["🈴"],"vacancy":["🈳","🈵"],"congratulations":["㊗️"],"secret":["㊙️"],"business":["🈺"],"square":["🟥","🟧","🟨","🟩","🟦","🟪","🟫","⬛","⬜","◼️","◻️","◾","◽","▪️","▫️","🔳","🔲"],"triangle":["🔺","🔻"],"dot":["💠"],"chequered":["🏁"],"flags":["🎌"],"pirate":["🏴‍☠️"],"ascension":["🇦🇨"],"andorra":["🇦🇩"],"united":["🇦🇪","🇬🇧","🇺🇳","🇺🇸"],"arab":["🇦🇪"],"emirates":["🇦🇪"],"afghanistan":["🇦🇫"],"antigua":["🇦🇬"],"barbuda":["🇦🇬"],"anguilla":["🇦🇮"],"albania":["🇦🇱"],"armenia":["🇦🇲"],"angola":["🇦🇴"],"antarctica":["🇦🇶"],"argentina":["🇦🇷"],"samoa":["🇦🇸","🇼🇸"],"austria":["🇦🇹"],"aruba":["🇦🇼"],"aland":["🇦🇽"],"islands":["🇦🇽","🇨🇨","🇨🇰","🇫🇰","🇫🇴","🇬🇸","🇭🇲","🇮🇨","🇰🇾","🇲🇭","🇲🇵","🇵🇳","🇸🇧","🇹🇨","🇺🇲","🇻🇬","🇻🇮"],"azerbaijan":["🇦🇿"],"bosnia":["🇧🇦"],"herzegovina":["🇧🇦"],"barbados":["🇧🇧"],"bangladesh":["🇧🇩"],"belgium":["🇧🇪"],"burkina":["🇧🇫"],"faso":["🇧🇫"],"bulgaria":["🇧🇬"],"bahrain":["🇧🇭"],"burundi":["🇧🇮"],"benin":["🇧🇯"],"st":["🇧🇱","🇰🇳","🇱🇨","🇲🇫","🇵🇲","🇸🇭","🇻🇨"],"barthelemy":["🇧🇱"],"bermuda":["🇧🇲"],"brunei":["🇧🇳"],"bolivia":["🇧🇴"],"caribbean":["🇧🇶"],"netherlands":["🇧🇶","🇳🇱"],"brazil":["🇧🇷"],"bahamas":["🇧🇸"],"bhutan":["🇧🇹"],"bouvet":["🇧🇻"],"botswana":["🇧🇼"],"belarus":["🇧🇾"],"belize":["🇧🇿"],"canada":["🇨🇦"],"cocos":["🇨🇨"],"keel":["🇨🇨"],"congo":["🇨🇩","🇨🇬"],"kinshasa":["🇨🇩"],"central":["🇨🇫"],"african":["🇨🇫"],"republic":["🇨🇫","🇩🇴"],"brazzaville":["🇨🇬"],"switzerland":["🇨🇭"],"cote":["🇨🇮"],"ivoire":["🇨🇮"],"chile":["🇨🇱"],"cameroon":["🇨🇲"],"china":["🇨🇳","🇭🇰","🇲🇴"],"colombia":["🇨🇴"],"clipperton":["🇨🇵"],"costa":["🇨🇷"],"rica":["🇨🇷"],"cuba":["🇨🇺"],"cape":["🇨🇻"],"verde":["🇨🇻"],"curacao":["🇨🇼"],"cyprus":["🇨🇾"],"czechia":["🇨🇿"],"germany":["🇩🇪"],"diego":["🇩🇬"],"garcia":["🇩🇬"],"djibouti":["🇩🇯"],"denmark":["🇩🇰"],"dominica":["🇩🇲"],"dominican":["🇩🇴"],"algeria":["🇩🇿"],"ceuta":["🇪🇦"],"melilla":["🇪🇦"],"ecuador":["🇪🇨"],"estonia":["🇪🇪"],"egypt":["🇪🇬"],"western":["🇪🇭"],"sahara":["🇪🇭"],"eritrea":["🇪🇷"],"spain":["🇪🇸"],"ethiopia":["🇪🇹"],"european":["🇪🇺"],"union":["🇪🇺"],"finland":["🇫🇮"],"fiji":["🇫🇯"],"falkland":["🇫🇰"],"micronesia":["🇫🇲"],"faroe":["🇫🇴"],"france":["🇫🇷"],"gabon":["🇬🇦"],"kingdom":["🇬🇧"],"grenada":["🇬🇩"],"georgia":["🇬🇪","🇬🇸"],"guiana":["🇬🇫"],"guernsey":["🇬🇬"],"ghana":["🇬🇭"],"gibraltar":["🇬🇮"],"greenland":["🇬🇱"],"gambia":["🇬🇲"],"guinea":["🇬🇳","🇬🇶","🇬🇼","🇵🇬"],"guadeloupe":["🇬🇵"],"equatorial":["🇬🇶"],"greece":["🇬🇷"],"south":["🇬🇸","🇰🇷","🇸🇸","🇿🇦"],"guatemala":["🇬🇹"],"guam":["🇬🇺"],"bissau":["🇬🇼"],"guyana":["🇬🇾"],"hong":["🇭🇰"],"kong":["🇭🇰"],"sar":["🇭🇰","🇲🇴"],"heard":["🇭🇲"],"mcdonald":["🇭🇲"],"honduras":["🇭🇳"],"croatia":["🇭🇷"],"haiti":["🇭🇹"],"hungary":["🇭🇺"],"canary":["🇮🇨"],"indonesia":["🇮🇩"],"ireland":["🇮🇪"],"israel":["🇮🇱"],"isle":["🇮🇲"],"india":["🇮🇳"],"british":["🇮🇴","🇻🇬"],"indian":["🇮🇴"],"ocean":["🇮🇴"],"territory":["🇮🇴"],"iraq":["🇮🇶"],"iran":["🇮🇷"],"iceland":["🇮🇸"],"italy":["🇮🇹"],"jersey":["🇯🇪"],"jamaica":["🇯🇲"],"jordan":["🇯🇴"],"kenya":["🇰🇪"],"kyrgyzstan":["🇰🇬"],"cambodia":["🇰🇭"],"kiribati":["🇰🇮"],"comoros":["🇰🇲"],"kitts":["🇰🇳"],"nevis":["🇰🇳"],"north":["🇰🇵","🇲🇰"],"korea":["🇰🇵","🇰🇷"],"kuwait":["🇰🇼"],"cayman":["🇰🇾"],"kazakhstan":["🇰🇿"],"laos":["🇱🇦"],"lebanon":["🇱🇧"],"lucia":["🇱🇨"],"liechtenstein":["🇱🇮"],"sri":["🇱🇰"],"lanka":["🇱🇰"],"liberia":["🇱🇷"],"lesotho":["🇱🇸"],"lithuania":["🇱🇹"],"luxembourg":["🇱🇺"],"latvia":["🇱🇻"],"libya":["🇱🇾"],"morocco":["🇲🇦"],"monaco":["🇲🇨"],"moldova":["🇲🇩"],"montenegro":["🇲🇪"],"martin":["🇲🇫"],"madagascar":["🇲🇬"],"marshall":["🇲🇭"],"macedonia":["🇲🇰"],"mali":["🇲🇱"],"myanmar":["🇲🇲"],"burma":["🇲🇲"],"mongolia":["🇲🇳"],"macao":["🇲🇴"],"northern":["🇲🇵"],"mariana":["🇲🇵"],"martinique":["🇲🇶"],"mauritania":["🇲🇷"],"montserrat":["🇲🇸"],"malta":["🇲🇹"],"mauritius":["🇲🇺"],"maldives":["🇲🇻"],"malawi":["🇲🇼"],"mexico":["🇲🇽"],"malaysia":["🇲🇾"],"mozambique":["🇲🇿"],"namibia":["🇳🇦"],"caledonia":["🇳🇨"],"niger":["🇳🇪"],"norfolk":["🇳🇫"],"nigeria":["🇳🇬"],"nicaragua":["🇳🇮"],"norway":["🇳🇴"],"nepal":["🇳🇵"],"nauru":["🇳🇷"],"niue":["🇳🇺"],"zealand":["🇳🇿"],"oman":["🇴🇲"],"panama":["🇵🇦"],"peru":["🇵🇪"],"polynesia":["🇵🇫"],"papua":["🇵🇬"],"philippines":["🇵🇭"],"pakistan":["🇵🇰"],"poland":["🇵🇱"],"pierre":["🇵🇲"],"miquelon":["🇵🇲"],"pitcairn":["🇵🇳"],"puerto":["🇵🇷"],"rico":["🇵🇷"],"palestinian":["🇵🇸"],"territories":["🇵🇸","🇹🇫"],"portugal":["🇵🇹"],"palau":["🇵🇼"],"paraguay":["🇵🇾"],"qatar":["🇶🇦"],"reunion":["🇷🇪"],"romania":["🇷🇴"],"serbia":["🇷🇸"],"russia":["🇷🇺"],"rwanda":["🇷🇼"],"saudi":["🇸🇦"],"arabia":["🇸🇦"],"solomon":["🇸🇧"],"seychelles":["🇸🇨"],"sudan":["🇸🇩","🇸🇸"],"sweden":["🇸🇪"],"singapore":["🇸🇬"],"helena":["🇸🇭"],"slovenia":["🇸🇮"],"svalbard":["🇸🇯"],"jan":["🇸🇯"],"mayen":["🇸🇯"],"slovakia":["🇸🇰"],"sierra":["🇸🇱"],"leone":["🇸🇱"],"san":["🇸🇲"],"marino":["🇸🇲"],"senegal":["🇸🇳"],"somalia":["🇸🇴"],"suriname":["🇸🇷"],"sao":["🇸🇹"],"tome":["🇸🇹"],"principe":["🇸🇹"],"el":["🇸🇻"],"salvador":["🇸🇻"],"sint":["🇸🇽"],"maarten":["🇸🇽"],"syria":["🇸🇾"],"eswatini":["🇸🇿"],"tristan":["🇹🇦"],"da":["🇹🇦"],"cunha":["🇹🇦"],"turks":["🇹🇨"],"caicos":["🇹🇨"],"chad":["🇹🇩"],"southern":["🇹🇫"],"togo":["🇹🇬"],"thailand":["🇹🇭"],"tajikistan":["🇹🇯"],"tokelau":["🇹🇰"],"timor":["🇹🇱"],"leste":["🇹🇱"],"turkmenistan":["🇹🇲"],"tunisia":["🇹🇳"],"tonga":["🇹🇴"],"trinidad":["🇹🇹"],"tobago":["🇹🇹"],"tuvalu":["🇹🇻"],"taiwan":["🇹🇼"],"tanzania":["🇹🇿"],"ukraine":["🇺🇦"],"uganda":["🇺🇬"],"us":["🇺🇲","🇻🇮"],"outly":["🇺🇲"],"nations":["🇺🇳"],"states":["🇺🇸"],"uruguay":["🇺🇾"],"uzbekistan":["🇺🇿"],"vatican":["🇻🇦"],"city":["🇻🇦"],"vincent":["🇻🇨"],"grenadines":["🇻🇨"],"venezuela":["🇻🇪"],"virgin":["🇻🇬","🇻🇮"],"vietnam":["🇻🇳"],"vanuatu":["🇻🇺"],"wallis":["🇼🇫"],"futuna":["🇼🇫"],"kosovo":["🇽🇰"],"yemen":["🇾🇪"],"mayotte":["🇾🇹"],"zambia":["🇿🇲"],"zimbabwe":["🇿🇼"],"england":["🏴󠁧󠁢󠁥󠁮󠁧󠁿"],"scotland":["🏴󠁧󠁢󠁳󠁣󠁴󠁿"],"wales":["🏴󠁧󠁢󠁷󠁬󠁳󠁿"]}
-},{}],126:[function(require,module,exports){
-arguments[4][78][0].apply(exports,arguments)
-},{"dup":78}],127:[function(require,module,exports){
-arguments[4][85][0].apply(exports,arguments)
-},{"dup":85}],128:[function(require,module,exports){
+},{}],125:[function(require,module,exports){
+arguments[4][77][0].apply(exports,arguments)
+},{"dup":77}],126:[function(require,module,exports){
+arguments[4][84][0].apply(exports,arguments)
+},{"dup":84}],127:[function(require,module,exports){
 /*
 	String Kit
 
@@ -46683,7 +46094,7 @@ module.exports = function( str ) {
 
 
 
-},{"./json-data/latinize-map.json":126}],129:[function(require,module,exports){
+},{"./json-data/latinize-map.json":125}],128:[function(require,module,exports){
 /*
 	String Kit
 
@@ -47045,7 +46456,7 @@ unicode.isEmojiModifierCodePoint = code =>
 	code === 0xfe0f ;	// VARIATION SELECTOR-16 [VS16] {emoji variation selector}
 
 
-},{"./json-data/unicode-emoji-width-ranges.json":127}],130:[function(require,module,exports){
+},{"./json-data/unicode-emoji-width-ranges.json":126}],129:[function(require,module,exports){
 module.exports={
   "name": "svg-kit",
   "version": "0.8.2",
@@ -47098,9 +46509,9 @@ module.exports={
   }
 }
 
-},{}],131:[function(require,module,exports){
+},{}],130:[function(require,module,exports){
 
-},{}],132:[function(require,module,exports){
+},{}],131:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -47252,7 +46663,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],133:[function(require,module,exports){
+},{}],132:[function(require,module,exports){
 (function (Buffer){(function (){
 /*!
  * The buffer module from node.js, for the browser.
@@ -49033,7 +48444,7 @@ function numberIsNaN (obj) {
 }
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"base64-js":132,"buffer":133,"ieee754":134}],134:[function(require,module,exports){
+},{"base64-js":131,"buffer":132,"ieee754":133}],133:[function(require,module,exports){
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
@@ -49120,7 +48531,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],135:[function(require,module,exports){
+},{}],134:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -49143,7 +48554,7 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],136:[function(require,module,exports){
+},{}],135:[function(require,module,exports){
 (function (process){(function (){
 // 'path' module extracted from Node.js v8.11.1 (only the posix part)
 // transplited with Babel
@@ -49676,7 +49087,7 @@ posix.posix = posix;
 module.exports = posix;
 
 }).call(this)}).call(this,require('_process'))
-},{"_process":137}],137:[function(require,module,exports){
+},{"_process":136}],136:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -49862,7 +49273,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],138:[function(require,module,exports){
+},{}],137:[function(require,module,exports){
 (function (setImmediate,clearImmediate){(function (){
 var nextTick = require('process/browser.js').nextTick;
 var apply = Function.prototype.apply;
@@ -49941,5 +49352,5 @@ exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate :
   delete immediateIds[id];
 };
 }).call(this)}).call(this,require("timers").setImmediate,require("timers").clearImmediate)
-},{"process/browser.js":137,"timers":138}]},{},[7])(7)
+},{"process/browser.js":136,"timers":137}]},{},[7])(7)
 });
