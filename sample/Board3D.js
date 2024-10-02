@@ -200,8 +200,8 @@ async function createTile3d( scene , id = null ) {
 	var shapeScale = 0.02 ,
 		thickness = 1 ;
 
-	var tileVg = createTileVg( id ) ;
-	//var tileVg = createPathBasedTileVg( id ) ;
+	//var tileVg = createTileVg( id ) ;
+	var tileVg = createPathBasedTileVg( id ) ;
 	var tileSideVg = createTileSideVg() ;
 
 	// Shape profile in XZ plane, we use Z=-Y because images have Y-down
@@ -210,14 +210,12 @@ async function createTile3d( scene , id = null ) {
 	// Ensure a trigonometric orientation of points, since the mesh builder expect that points are produced
 	// in the correct orientation/rotation (counter-clockwise)
 	svgKit.Polygon.ensureOrientation( extrusionShape , 1 ) ;
-	var shapeXZ = extrusionShape.map( point => new BABYLON.Vector3( point.x * shapeScale , 0 , point.y * shapeScale ) ) ;
 	var shapeXY = extrusionShape.map( point => new BABYLON.Vector2( point.x * shapeScale , point.y * shapeScale ) ) ;
 
 	// It is not possible to have multiple material/texture for the same mesh,
 	// so we have to construct one single texture out of multiple VG and compute the UV mapping.
-	var faceUV = [] ,
-		faceCount = shapeXZ.length + 2 ,
-		spacing = 1 ,
+	var spacing = 1 ,
+		//faceCount = shapeXZ.length + 2 ,
 		textureWidth = tileVg.viewBox.width + tileSideVg.viewBox.width + spacing ,
 		textureHeight = Math.max( tileVg.viewBox.height , tileSideVg.viewBox.height ) ;
 
@@ -226,7 +224,7 @@ async function createTile3d( scene , id = null ) {
 	const epsilonTx = 3 ;	// This is a security in pixels to avoid texture seams at the edge of the geometry
 
 	// Top face
-	faceUV[ 0 ] = new BABYLON.Vector4(
+	const topFaceUV = new BABYLON.Vector4(
 		epsilonTx / textureWidth ,
 		1 - ( ( tileVg.viewBox.height - epsilonTx ) / textureHeight ) ,
 		( tileVg.viewBox.width - epsilonTx ) / textureWidth ,
@@ -234,7 +232,7 @@ async function createTile3d( scene , id = null ) {
 	) ;
 
 	// There is only 1 UV for all the side-faces, it cannot be customized -_-'
-	faceUV[ 1 ] = new BABYLON.Vector4(
+	const sideFaceUV = new BABYLON.Vector4(
 		( tileVg.viewBox.width + spacing + epsilonTx ) / textureWidth ,
 		1 - ( ( tileSideVg.viewBox.height - epsilonTx ) / textureHeight ) ,
 		1 - epsilonTx / textureWidth ,
@@ -242,7 +240,7 @@ async function createTile3d( scene , id = null ) {
 	) ;
 
 	// Bottom face, for instance we will use the top-face UV, it is flipped for both U and V so it is symetrical to the top face
-	faceUV[ 2 ] = new BABYLON.Vector4(
+	const bottomFaceUV = new BABYLON.Vector4(
 		( tileVg.viewBox.width - epsilonTx ) / textureWidth ,
 		1 - epsilonTx / textureHeight ,
 		epsilonTx / textureWidth ,
@@ -270,10 +268,7 @@ async function createTile3d( scene , id = null ) {
 			//bottom: false ,
 			//side: false ,
 			//sideOrientation: BABYLON.Mesh.DOUBLESIDE ,
-			faceUV ,
-			topFaceUV: faceUV[ 0 ] ,
-			sideFaceUV: faceUV[ 1 ] ,
-			bottomFaceUV: faceUV[ 2 ] ,
+			topFaceUV , sideFaceUV , bottomFaceUV ,
 			//wrapSideUV: true ,
 			updatable: true
 		} ,
@@ -398,9 +393,9 @@ async function createScene() {
 
 
 
-	let board3d = await createBoard3d( scene ) ;
+	//let board3d = await createBoard3d( scene ) ;
 
-	//let tile3d = await createTile3d( scene , 0 ) ;
+	let tile3d = await createTile3d( scene , 0 ) ;
 
 	/*
 	for ( let i = 0 ; i < 1 ; i ++ ) {
