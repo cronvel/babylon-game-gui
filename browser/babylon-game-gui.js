@@ -1898,6 +1898,7 @@ helpers.areControlsOverlaping = ( control1 , control2 ) => {
 
 const svgKit = require( 'svg-kit' ) ;
 const BoundingBox = svgKit.BoundingBox ;
+const Vector4 = BABYLON.Vector4 ;
 
 
 
@@ -1914,13 +1915,49 @@ class Atlas {
 
 
 
-	get width() { return this._width ; }
-	get height() { return this._height ; }
-
-
-
 	constructor( options = {} ) {
 		this._wastedThreshold = options.wastedThreshold !== undefined ? + options.wastedThreshold || 0 : 20 ;
+	}
+
+
+
+	get width() { return this._width ; }
+	get height() { return this._height ; }
+	getArea( name ) { return this._byName[ name ] || null ; }
+
+
+
+	/*
+		Automatically compute face UV coordinates for an area.
+		
+		Arguments:
+			epsilon: (in pixel) ensure there is no leak, by reducing the UV window by that amount of pixel, on all 4 direction,
+			  3 (the default) is a good value
+			invertY: (default: true) most of time you should have it set to true, because 2D canvas is Y-down but UV is Y-up (i.e. V-up)
+	*/
+	getAreaUV( name , epsilon = 3 , invertY = true ) {
+		let area = this._byName[ name ] ;
+		if ( ! area ) { return null ; }
+
+		// Ensure epsilon would not cause issues
+		epsilon = Math.min( + epsilon || 0 , Math.floor( area.width / 2 ) , Math.floor( area.height / 2 ) ) ;
+		
+		if ( invertY ) {
+			return new Vector4(
+				( area.xmin + epsilon ) / this._width ,
+				1 - ( area.ymax - epsilon ) / this._height ,
+				( area.xmax - epsilon ) / this._width ,
+				1 - ( area.ymin + epsilon ) / this._height
+			) ;
+		}
+		else {
+			return new Vector4(
+				( area.xmin + epsilon ) / this._width ,
+				( area.ymin + epsilon ) / this._height ,
+				( area.xmax - epsilon ) / this._width ,
+				( area.ymax - epsilon ) / this._height
+			) ;
+		}
 	}
 
 
@@ -1938,6 +1975,7 @@ class Atlas {
 			height = width.height ;
 			width = width.width ;
 		}
+		//console.warn( "Adding area '" + name + "': " + width + "x" + height + " to atlas " + this._width + "x" + this._height ) ;
 
 
 		// First try to recycle an existing area
@@ -1973,6 +2011,23 @@ class Atlas {
 
 
 	_enlargeWidth( name , width , height ) {
+		if ( height > this._height ) {
+			if ( this._width > 0 ) {
+				// Height should also be enlarged, so create an extra unused area below existing atlas area
+				let extraUnusedArea = new BoundingBox( {
+					x: 0 ,
+					y: this._height ,
+					width: this._width ,
+					height: height - this._height
+				} ) ;
+
+				//console.log( "Add new unused area (enlarge width extra): " , extraUnusedArea.export() ) ;
+				this._unusedAreas.add( extraUnusedArea ) ;
+			}
+
+			this._height = height ;
+		}
+
 		// The simplest way is to make it so we are adding a new recycling area, so it will reuse the column/row recycling
 		let unusedArea = new BoundingBox( {
 			x: this._width ,
@@ -1981,14 +2036,34 @@ class Atlas {
 			height: this._height
 		} ) ;
 
+		//console.log( "Add new temporary unused area (enlarge width): " , unusedArea.export() ) ;
 		this._unusedAreas.add( unusedArea ) ;
 		this._width += width ;
+		//console.log( "Enlarging width of atlas to " + this._width + "x" + this._height ) ;
 		this._recycleArea( name , width , height , unusedArea ) ;
 	}
 
 
 
 	_enlargeHeight( name , width , height ) {
+		if ( width > this._width ) {
+			if ( this._height > 0 ) {
+				// Width should also be enlarged, so create an extra unused area to the left of the existing atlas area
+				let extraUnusedArea = new BoundingBox( {
+					x: this._width ,
+					y: 0 ,
+					width: width - this._width ,
+					height: this._height
+				} ) ;
+
+				//console.log( "Add new unused area (enlarge height extra): " , extraUnusedArea.export() ) ;
+				this._unusedAreas.add( extraUnusedArea ) ;
+			}
+
+			this._width = width ;
+		}
+
+
 		// The simplest way is to make it so we are adding a new recycling area, so it will reuse the column/row recycling
 		let unusedArea = new BoundingBox( {
 			x: 0 ,
@@ -1997,8 +2072,10 @@ class Atlas {
 			height
 		} ) ;
 
+		//console.log( "Add new temporary unused area (enlarge height): " , unusedArea.export() ) ;
 		this._unusedAreas.add( unusedArea ) ;
 		this._height += height ;
+		//console.log( "Enlarging height of atlas to " + this._width + "x" + this._height ) ;
 		this._recycleArea( name , width , height , unusedArea ) ;
 	}
 
@@ -2033,6 +2110,8 @@ class Atlas {
 
 
 	_recycleArea( name , width , height , recyclingArea ) {
+		//console.log( "Recycle area: " , recyclingArea.export() ) ;
+
 		// Create the new area from the recycling unused area
 
 		let area = recyclingArea.dup() ;
@@ -2047,36 +2126,44 @@ class Atlas {
 		let extraWidth = recyclingArea.width - area.width ;
 		let extraHeight = recyclingArea.height - area.height ;
 
-		if ( extraWidth >= this._wastedThreshold || extraHeight >= this._wastedThreshold ) {
+		if ( 
+			//extraWidth >= 0 && extraHeight >= 0 &&
+			( extraWidth >= this._wastedThreshold || extraHeight >= this._wastedThreshold )
+		) {
 			let columnPixels = ( recyclingArea.width - area.width ) * recyclingArea.height ;
 			let rowPixels = recyclingArea.width * ( recyclingArea.height - area.height ) ;
 			let newUnusedArea = recyclingArea.dup() ;
+			//console.log( "Recycling... row pixels: " + rowPixels + "   column pixels: " + columnPixels ) ;
 
 			if ( rowPixels >= columnPixels ) {
 				// Reuse the bottom row
 				recyclingArea.ymin += area.height ;
 
-				if ( extraWidth >= this._wastedThreshold && extraHeight >= this._wastedThreshold ) {
+				if ( extraWidth >= this._wastedThreshold && area.height >= this._wastedThreshold ) {
 					// Also add the left-over small rectangle
 					recyclingArea.xmin += area.width ;
 					newUnusedArea.height = area.height ;
 					this._unusedAreas.add( newUnusedArea ) ;
+					//console.log( "Add new unused area (row left-over): " , newUnusedArea.export() ) ;
 				}
 			}
 			else {
 				// Reuse the right column
 				recyclingArea.xmin += area.width ;
 
-				if ( extraWidth >= this._wastedThreshold && extraHeight >= this._wastedThreshold ) {
+				if ( area.width >= this._wastedThreshold && extraHeight >= this._wastedThreshold ) {
 					// Also add the left-over small rectangle
 					newUnusedArea.ymin += area.height ;
 					newUnusedArea.width = area.width ;
 					this._unusedAreas.add( newUnusedArea ) ;
+					//console.log( "Add new unused area (column left-over): " , newUnusedArea.export() ) ;
 				}
 			}
+			//console.log( "Resized recycling area: " , recyclingArea.export() ) ;
 		}
 		else {
 			// Don't recycle, remove it
+			//console.log( "Remove unused area: " , recyclingArea.export() ) ;
 			this._unusedAreas.delete( recyclingArea ) ;
 		}
 
@@ -5570,7 +5657,7 @@ BoundingBox.prototype.setMinMax = function( xmin = 0 , ymin = 0 , xmax = xmin , 
 
 
 
-// Prepare a bounding box for a sequence of .merge()/.ensurePoint(), making it invert-infinitely large
+// Prepare a bounding box for a sequence of .merge()/.ensurePoint(), making it negatively infinitely large
 BoundingBox.prototype.nullify = function() {
     this.xmin = Infinity ;
     this.xmax = - Infinity ;
@@ -5580,8 +5667,17 @@ BoundingBox.prototype.nullify = function() {
 
 
 
+// A null bounding box is a neutral bounding box ready for any .merge()/.ensurePoint() operation
 BoundingBox.prototype.isNull = function() {
 	return this.xmin === Infinity && this.xmax === - Infinity && this.ymin === Infinity && this.ymax === - Infinity ;
+} ;
+
+
+
+
+// A zero bounding box is has no area (or a negative one)
+BoundingBox.prototype.isZero = function() {
+	return this.xmin >= this.xmax || this.ymin >= this.ymax ;
 } ;
 
 
@@ -5635,12 +5731,24 @@ BoundingBox.prototype.clone = function() {
 
 
 
+// Floor min and ceil max
+BoundingBox.prototype.round = function( bbox ) {
+	this.xmin = Math.floor( this.xmin ) ;
+	this.ymin = Math.floor( this.ymin ) ;
+	this.xmax = Math.ceil( this.xmax ) ;
+	this.ymax = Math.ceil( this.ymax ) ;
+	return this ;
+} ;
+
+
+
 // Merge two bounding box
 BoundingBox.prototype.merge = function( bbox ) {
 	this.xmin = Math.min( this.xmin , bbox.xmin ) ;
 	this.ymin = Math.min( this.ymin , bbox.ymin ) ;
 	this.xmax = Math.max( this.xmax , bbox.xmax ) ;
 	this.ymax = Math.max( this.ymax , bbox.ymax ) ;
+	return this ;
 } ;
 
 
@@ -5652,6 +5760,8 @@ BoundingBox.prototype.mergeArray = function( bboxList ) {
 		this.xmax = Math.max( this.xmax , bbox.xmax ) ;
 		this.ymax = Math.max( this.ymax , bbox.ymax ) ;
 	}
+
+	return this ;
 } ;
 
 
@@ -5662,6 +5772,7 @@ BoundingBox.prototype.ensurePoint = function( point ) {
 	this.ymin = Math.min( this.ymin , point.y ) ;
 	this.xmax = Math.max( this.xmax , point.x ) ;
 	this.ymax = Math.max( this.ymax , point.y ) ;
+	return this ;
 } ;
 
 
@@ -5673,6 +5784,8 @@ BoundingBox.prototype.ensurePointArray = function( pointList ) {
 		this.xmax = Math.max( this.xmax , point.x ) ;
 		this.ymax = Math.max( this.ymax , point.y ) ;
 	}
+
+	return this ;
 } ;
 
 
@@ -5711,6 +5824,8 @@ BoundingBox.prototype.enlarge = function( value ) {
 	this.xmax += value ;
 	this.ymin -= value ;
 	this.ymax += value ;
+
+	return this ;
 } ;
 
 
@@ -5739,6 +5854,8 @@ BoundingBox.prototype.shrink = function( value , min = 0 ) {
 		this.ymin += value ;
 		this.ymax -= value ;
 	}
+
+	return this ;
 } ;
 
 

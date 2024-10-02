@@ -34,7 +34,7 @@ function createTileVg( id = null ) {
 
 	// We will set the VG viewbox to the polygon bounding box
 	let boundingBox = hexTile.boundingBox ;
-	boundingBox.shrink( 2 , 1 ) ;	// We have to shrink the boundingBox by 2 pixels each side to avoid aliasing on the boundary of the shape (1 pixel is not enough)
+	boundingBox.shrink( 2 , 1 ).round() ;	// We have to shrink the boundingBox by 2 pixels each side to avoid aliasing on the boundary of the shape (1 pixel is not enough)
 	vg.viewBox.set( boundingBox ) ;
 	console.warn( vg ) ;
 
@@ -126,7 +126,7 @@ function createPathBasedTileVg( id = null ) {
 	//polygon.ensureOrientation( 1 ) ;
 
 	let boundingBox = vgPath.boundingBox ;
-	boundingBox.shrink( 2 , 1 ) ;	// We have to shrink the boundingBox by 2 pixels each side to avoid aliasing on the boundary of the shape (1 pixel is not enough)
+	boundingBox.shrink( 2 , 1 ).round() ;	// We have to shrink the boundingBox by 2 pixels each side to avoid aliasing on the boundary of the shape (1 pixel is not enough)
 	vg.viewBox.set( boundingBox ) ;
 
 	vg.set( {
@@ -174,7 +174,7 @@ function createTileSideVg() {
 
 	// We will set the VG viewbox to the polygon bounding box
 	let boundingBox = side.boundingBox ;
-	boundingBox.shrink( 1 , 1 ) ;
+	boundingBox.shrink( 1 , 1 ).round() ;
 	vg.viewBox.set( boundingBox ) ;
 
 	return vg ;
@@ -215,11 +215,6 @@ async function createTile3d( scene , id = null ) {
 
 	// It is not possible to have multiple material/texture for the same mesh,
 	// so we have to construct one single texture out of multiple VG and compute the UV mapping.
-	var spacing = 1 ,
-		//faceCount = shapeXZ.length + 2 ,
-		textureWidth = tileVg.viewBox.width + tileSideVg.viewBox.width + spacing ,
-		textureHeight = Math.max( tileVg.viewBox.height , tileSideVg.viewBox.height ) ;
-
 	var atlas = new Atlas() ;
 	atlas.addArea( 'top' , tileVg.viewBox ) ;
 	atlas.addArea( 'side' , tileSideVg.viewBox ) ;
@@ -227,37 +222,15 @@ async function createTile3d( scene , id = null ) {
 	
 	// BE CAREFUL, VG coordinates has Y-down, while UV has Y-up, so it is more complicated...
 
-	const epsilonTx = 3 ;	// This is a security in pixels to avoid texture seams at the edge of the geometry
+	const topFaceUV = atlas.getAreaUV( 'top' ) ;
+	const sideFaceUV = atlas.getAreaUV( 'side' ) ;
+	const bottomFaceUV = atlas.getAreaUV( 'top' ) ;
 
-	// Top face
-	const topFaceUV = new BABYLON.Vector4(
-		epsilonTx / textureWidth ,
-		1 - ( ( tileVg.viewBox.height - epsilonTx ) / textureHeight ) ,
-		( tileVg.viewBox.width - epsilonTx ) / textureWidth ,
-		1 - epsilonTx / textureHeight
-	) ;
-
-	// There is only 1 UV for all the side-faces, it cannot be customized -_-'
-	const sideFaceUV = new BABYLON.Vector4(
-		( tileVg.viewBox.width + spacing + epsilonTx ) / textureWidth ,
-		1 - ( ( tileSideVg.viewBox.height - epsilonTx ) / textureHeight ) ,
-		1 - epsilonTx / textureWidth ,
-		1 - epsilonTx / textureHeight
-	) ;
-
-	// Bottom face, for instance we will use the top-face UV, it is flipped for both U and V so it is symetrical to the top face
-	const bottomFaceUV = new BABYLON.Vector4(
-		( tileVg.viewBox.width - epsilonTx ) / textureWidth ,
-		1 - epsilonTx / textureHeight ,
-		epsilonTx / textureWidth ,
-		1 - ( ( tileVg.viewBox.height - epsilonTx ) / textureHeight )
-	) ;
-
-	var dynamicTexture = new BABYLON.DynamicTexture( "vgTexture" , { width: textureWidth , height: textureHeight } , scene ) ;
+	var dynamicTexture = new BABYLON.DynamicTexture( "vgTexture" , { width: atlas.width , height: atlas.height } , scene ) ;
 	//var dynamicTexture = new BABYLON.DynamicTexture("vgTexture", 256, scene ) ;
 	var ctx = dynamicTexture.getContext() ;
-	await tileVg.renderCanvas( ctx , { stretch: true , viewport: { width: tileVg.viewBox.width , height: tileVg.viewBox.height } } ) ;
-	await tileSideVg.renderCanvas( ctx , { stretch: true , viewport: { x: tileVg.viewBox.width + spacing , width: tileSideVg.viewBox.width , height: tileSideVg.viewBox.height } } ) ;
+	await tileVg.renderCanvas( ctx , { stretch: true , viewport: atlas.getArea( 'top' ) } ) ;
+	await tileSideVg.renderCanvas( ctx , { stretch: true , viewport: atlas.getArea( 'side' ) } ) ;
 	dynamicTexture.update() ;
 
 	var material = new BABYLON.StandardMaterial( "material" , scene ) ;
