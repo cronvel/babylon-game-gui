@@ -141,7 +141,7 @@ function createPathBasedTileVg( id = null ) {
 
 
 
-function createTileSideVg() {
+function createTileSideVg( fillColor = '#5c7' , strokeColor = '#0f0' ) {
 	var vg = new svgKit.VG( {
 		//viewBox: { x: 0 , y: 0 , width: 2 * radius , height: 2 * radius }
 		//invertY: true
@@ -153,8 +153,8 @@ function createTileSideVg() {
 		width: 50 ,
 		height: 50 ,
 		style: {
-			fill: '#5c7' ,
-			stroke: '#0f0' ,
+			fill: fillColor ,
+			stroke: strokeColor ,
 			strokeWidth: 4
 		}
 	} ) ;
@@ -201,9 +201,16 @@ async function createTile3d( scene , id = null ) {
 	var shapeScale = 0.02 ,
 		thickness = 1 ;
 
-	//var tileVg = createTileVg( id ) ;
-	var tileVg = createPathBasedTileVg( id ) ;
-	var tileSideVg = createTileSideVg() ;
+	var tileVg = createTileVg( id ) ;
+	//var tileVg = createPathBasedTileVg( id ) ;
+	var tileSideVg = [
+		createTileSideVg( '#4ea' , '#488' ) ,
+		createTileSideVg( '#64e' , '#448' ) ,
+		createTileSideVg( '#e64' , '#844' ) ,
+		createTileSideVg( '#f90' , '#884' ) ,
+		createTileSideVg( '#ae4' , '#884' ) ,
+		createTileSideVg( '#4f6' , '#484' ) ,
+	] ;
 
 	// Shape profile in XZ plane, we use Z=-Y because images have Y-down
 	// First, revert Y
@@ -217,20 +224,25 @@ async function createTile3d( scene , id = null ) {
 	// so we have to construct one single texture out of multiple VG and compute the UV mapping.
 	var atlas = new Atlas() ;
 	atlas.addArea( 'top' , tileVg.viewBox ) ;
-	atlas.addArea( 'side' , tileSideVg.viewBox ) ;
+	tileSideVg.forEach( vg => atlas.addArea( 'side' , vg.viewBox ) ) ;
 	console.warn( "ATLAS:" , atlas ) ;
 	
 	// BE CAREFUL, VG coordinates has Y-down, while UV has Y-up, so it is more complicated...
 
 	const topFaceUV = atlas.getAreaUV( 'top' ) ;
-	const sideFaceUV = atlas.getAreaUV( 'side' ) ;
+	const sideFaceUV =  atlas.getAreaUV( 'side' ) ;
 	const bottomFaceUV = atlas.getAreaUV( 'top' ) ;
 
 	var dynamicTexture = new BABYLON.DynamicTexture( "vgTexture" , { width: atlas.width , height: atlas.height } , scene ) ;
 	//var dynamicTexture = new BABYLON.DynamicTexture("vgTexture", 256, scene ) ;
 	var ctx = dynamicTexture.getContext() ;
 	await tileVg.renderCanvas( ctx , { stretch: true , viewport: atlas.getArea( 'top' ) } ) ;
-	await tileSideVg.renderCanvas( ctx , { stretch: true , viewport: atlas.getArea( 'side' ) } ) ;
+
+	var sideAreaList = atlas.getArea( 'side' ) ;
+	for ( let i = 0 ; i < tileSideVg.length ; i ++ ) {
+		await tileSideVg[ i ].renderCanvas( ctx , { stretch: true , viewport: sideAreaList[ i ] } ) ;
+	}
+
 	dynamicTexture.update() ;
 
 	var material = new BABYLON.StandardMaterial( "material" , scene ) ;
@@ -260,8 +272,34 @@ async function createTile3d( scene , id = null ) {
 	tile.material = material ;
 
 	console.warn( "Tile" , tile ) ;
+	
+	//addTexturePlane( scene , dynamicTexture ) ;
 
 	return tile ;
+}
+
+
+
+// Used to debug dynamic texture, and texture Atlas
+function addTexturePlane( scene , texture ) {
+	var width = 10 ,
+		height = 10 ,
+		txSize = texture.getSize() ;
+	
+	if ( txSize.width !== txSize.height ) {
+		let ratio = Math.sqrt( txSize.width / txSize.height ) ;
+		width *= ratio ;
+		height /= ratio ;
+	}
+	
+	var ground = BABYLON.MeshBuilder.CreateGround( "ground" , { width , height } , scene ) ;
+	var material = new BABYLON.StandardMaterial( "material" , scene ) ;
+	material.diffuseTexture = texture ;
+	//material.ambientColor = new BABYLON.Color3(1, 1, 1) ;
+	ground.material = material ;
+	ground.position.x = -10 ;
+	ground.position.y = -2 ;
+	return ground ;
 }
 
 
@@ -372,9 +410,9 @@ async function createScene() {
 
 
 
-	//let board3d = await createBoard3d( scene ) ;
+	let board3d = await createBoard3d( scene ) ;
 
-	let tile3d = await createTile3d( scene , 0 ) ;
+	//let tile3d = await createTile3d( scene , 0 ) ;
 
 	/*
 	for ( let i = 0 ; i < 1 ; i ++ ) {

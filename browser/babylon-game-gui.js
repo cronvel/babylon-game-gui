@@ -1910,7 +1910,7 @@ class Atlas {
 	_height = 0 ;
 	_areas = [] ;
 	_unusedAreas = new Set() ;
-	_byName = {} ;	// Areas by name
+	_byName = {} ;	// Areas by name, each value is either a bonding box OR an array of bounding box if multiple names
 	_wastedThreshold = 20 ;	// The threshold for wasted size (either width or height), if it exceed, an unused area is recycled
 
 
@@ -1936,9 +1936,16 @@ class Atlas {
 			invertY: (default: true) most of time you should have it set to true, because 2D canvas is Y-down but UV is Y-up (i.e. V-up)
 	*/
 	getAreaUV( name , epsilon = 3 , invertY = true ) {
-		let area = this._byName[ name ] ;
-		if ( ! area ) { return null ; }
+		if ( ! this._byName[ name ] ) { return null ; }
+		if ( Array.isArray( this._byName[ name ] ) ) {
+			return this._byName[ name ].map( area => this._getOneAreaUV( area , epsilon , invertY ) ) ;
+		}
+		return this._getOneAreaUV( this._byName[ name ] , epsilon , invertY ) ;
+	}
 
+
+
+	_getOneAreaUV( area , epsilon , invertY ) {
 		// Ensure epsilon would not cause issues
 		epsilon = Math.min( + epsilon || 0 , Math.floor( area.width / 2 ) , Math.floor( area.height / 2 ) ) ;
 		
@@ -1962,15 +1969,26 @@ class Atlas {
 
 
 
+	_addNamedArea( name , area ) {
+		if ( this._byName[ name ] ) {
+			if ( Array.isArray( this._byName[ name ] ) ) {
+				this._byName[ name ].push( area ) ;
+			}
+			else {
+				this._byName[ name ] = [ this._byName[ name ] , area ] ;
+			}
+		}
+		else {
+			this._byName[ name ] = area ;
+		}
+	}
+	
+	
+	
 	// .addArea( name , width , height )
 	// .addArea( name , viewbox )
 	addArea( name , width , height ) {
 		// Manage arguments
-		if ( this._byName[ name ] ) {
-			console.warn( "Area name already existing:" , name ) ;
-			return false ;
-		}
-
 		if ( width && typeof width ==='object' ) {
 			height = width.height ;
 			width = width.width ;
@@ -2118,7 +2136,7 @@ class Atlas {
 		area.width = width ;
 		area.height = height ;
 		this._areas.push( area ) ;
-		this._byName[ name ] = area ;
+		this._addNamedArea( name , area ) ;
 
 
 		// Keep left-over as recycling area?
@@ -2270,8 +2288,12 @@ class PolygonMeshBuilder {
 		this._topFaceColor = options.topFaceColor ;
 		this._bottomFaceUV = options.bottomFaceUV ;
 		this._bottomFaceColor = options.bottomFaceColor ;
-		this._sideFaceUV = options.sideFaceUV ;
-		this._sideFaceColor = options.sideFaceColor ;
+		this._sideFaceUV = ! options.sideFaceUV ? null :
+			Array.isArray( options.sideFaceUV ) ? options.sideFaceUV :
+			[ options.sideFaceUV ] ;
+		this._sideFaceColor = ! options.sideFaceColor ? null :
+			Array.isArray( options.sideFaceColor ) ? options.sideFaceColor :
+			[ options.sideFaceColor ] ;
 		this._wrapSideUV = !! options.wrapSideUV ;	// options.wrap
 		this._updatable = !! options.updatable ;
 
@@ -2406,8 +2428,6 @@ class PolygonMeshBuilder {
 	// flip: flip normals, indices, etc...
 	_buildSideFacesVertexData( flip ) {
 		const { positions , normals , indices , colors } = this._vertexData ;
-		let faceUV = this._sideFaceUV ;
-		let faceColor = this._sideFaceColor ;
 		let indiceOffset = positions.length / 3 ;	// There is 1 indice for 3 positions
 
 		for ( let i = 0 ; i < this._shapePoints.length ; i ++ ) {
@@ -2420,6 +2440,8 @@ class PolygonMeshBuilder {
 			const p2 = this._shapePoints[( i + 2 ) % this._shapePoints.length] ;
 			const perimeterOffset0 = i > 0 ? this._perimeterOffsets[ i - 1 ] : 0 ;
 			const perimeterOffset1 = this._perimeterOffsets[ i ] ;
+			const faceUV = this._sideFaceUV?.[ i % this._sideFaceUV.length ] ;
+			const faceColor = this._sideFaceColor?.[ i % this._sideFaceColor.length ] ;
 
 
 			// Positions
