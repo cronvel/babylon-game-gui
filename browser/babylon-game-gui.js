@@ -563,7 +563,6 @@ class Dialog extends DecoratedContainer {
 			content.textDynamicStyles = this._contentProperties.textDynamicStyles ;
 		}
 
-		// ------------------------------------------- WIP: ---------------------------------------------
 		if ( this._contentProperties.fx ) {
 			content.fx = this._contentProperties.fx ;
 		}
@@ -608,8 +607,11 @@ DecoratedContainer.createCommonContentGetterSetter( Dialog.prototype , {
 	textPaddingRight: 'paddingRight' ,
 
 	textAttr: 'textAttr' ,
+	textLineSpacing: 'lineSpacing' ,
+	textWrapping: 'textWrapping' ,
+	textVerticalAlignment: 'textVerticalAlignment' ,
+	textHorizontalAlignment: 'textHorizontalAlignment' ,
 	textDynamicStyles: 'textDynamicStyles' ,
-
 	textFx: 'fx'
 } ) ;
 
@@ -897,6 +899,11 @@ class FlowingText extends VG {
 	_markupText = null ;
 	_structuredText = null ;
 
+	_lineSpacing = 0 ;
+	_textWrapping = 'wordwrap' ;
+	_textVerticalAlignment = 'top' ;
+	_textHorizontalAlignment = 'left' ;
+
 	_textAttr = new svgKit.TextAttribute( {
 		fontSize: 30 ,
 		color: '#fff' ,
@@ -943,7 +950,7 @@ class FlowingText extends VG {
 	}
 
 	_getTypeName() { return 'FlowingText' ; }
-	
+
 	set width( w ) {
 		super.width = w ;
 		if ( this._autoScale ) { this._adaptVgSize() ; }
@@ -981,6 +988,30 @@ class FlowingText extends VG {
 	get textAttr() { return this._textAttr ; }
 	set textAttr( _textAttr ) {
 		this._textAttr.set( _textAttr ) ;
+		this._generateVg() ;
+	}
+
+	get lineSpacing() { return this._lineSpacing ; }
+	set lineSpacing( _lineSpacing ) {
+		this._lineSpacing = _lineSpacing ;
+		this._generateVg() ;
+	}
+
+	get textWrapping() { return this._textWrapping ; }
+	set textWrapping( _textWrapping ) {
+		this._textWrapping = _textWrapping ;
+		this._generateVg() ;
+	}
+
+	get textVerticalAlignment() { return this._textVerticalAlignment ; }
+	set textVerticalAlignment( _textVerticalAlignment ) {
+		this._textVerticalAlignment = _textVerticalAlignment ;
+		this._generateVg() ;
+	}
+
+	get textHorizontalAlignment() { return this._textHorizontalAlignment ; }
+	set textHorizontalAlignment( _textHorizontalAlignment ) {
+		this._textHorizontalAlignment = _textHorizontalAlignment ;
 		this._generateVg() ;
 	}
 
@@ -1023,9 +1054,12 @@ class FlowingText extends VG {
 			width: this.widthInPixels ,
 			height: this.heightInPixels ,
 			attr: this._textAttr ,
-			dynamicStyles: this._textDynamicStyles ,
 			clip: false ,
-			textWrapping: 'wordWrap' ,
+			lineSpacing: 10 ,//this._lineSpacing ,
+			textWrapping: this._textWrapping ,
+			textVerticalAlignment: this._textVerticalAlignment ,
+			textHorizontalAlignment: this._textHorizontalAlignment ,
+			dynamicStyles: this._textDynamicStyles ,
 			fx: this._fx
 		} ;
 

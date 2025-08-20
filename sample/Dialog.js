@@ -42,10 +42,13 @@ async function createScene() {
 	svgKit.fontLib.setFontUrl( 'serif' , 'bold' , './serif-bold.ttf' ) ;
 	svgKit.fontLib.setFontUrl( 'serif' , 'bold' , 'italic' , './serif-bold+italic.ttf' ) ;
 
+	/*
 	createDialog(
 		"[Hello]<green> *my* **friend**, ***stay*** [awhile]<bg:blue> and _listen_... "
 		+ "Once upon a time, there was a [fearsome]<fx:quiver> ?[dragon][A dragon is a big lizard with wings and breathing fire!] that was devastating the country..."
 	) ;
+	*/
+	createDialog( "Blah ".repeat( 22 ) + "..." ) ;
 	
 	dialog.onPointerUpObservable.addOnce( () => {
 		createDialog(
@@ -113,7 +116,8 @@ function createDialog( markupText ) {
 	} ;
 	dialog.autoScale = true ;
 
-	// ------------------------------------------- WIP: ---------------------------------------------
+	dialog.textLineSpacing = 10 ;
+	dialog.textHorizontalAlignment = 'right' ;
 	dialog.textFx = { slowTyping: { speed: 2 } } ;
 	
 	advancedTexture.addControl( dialog ) ;
