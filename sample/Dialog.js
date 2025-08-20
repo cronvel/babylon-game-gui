@@ -112,6 +112,9 @@ function createDialog( markupText ) {
 		outlineColor: '#fff'
 	} ;
 	dialog.autoScale = true ;
+
+	// ------------------------------------------- WIP: ---------------------------------------------
+	dialog.textFx = { slowTyping: { speed: 2 } } ;
 	
 	advancedTexture.addControl( dialog ) ;
 
