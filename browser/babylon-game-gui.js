@@ -492,6 +492,16 @@ const Promise = require( 'seventh' ) ;
 
 
 
+/*
+	To support new SVG Kit properties:
+
+	* Add mapping for Dialog to Dialog's content (FlowingText) in the DecoratedContainer.createCommonContentGetterSetter() call (this file)
+	* Add a getter and a setter to FlowingText (FlowingText file)
+	* Add support for that new property in _setContentPropertiesNow() (this file)
+*/
+
+
+
 class Dialog extends DecoratedContainer {
 	_text = null ;
 	_markupText = null ;
@@ -553,19 +563,13 @@ class Dialog extends DecoratedContainer {
 			content.text = this._contentProperties.text ;
 		}
 
-		content.textWrapping = 'wordWrap' ;
-
-		if ( this._contentProperties.textAttr ) {
-			content.textAttr = this._contentProperties.textAttr ;
-		}
-
-		if ( this._contentProperties.textDynamicStyles ) {
-			content.textDynamicStyles = this._contentProperties.textDynamicStyles ;
-		}
-
-		if ( this._contentProperties.fx ) {
-			content.fx = this._contentProperties.fx ;
-		}
+		if ( this._contentProperties.textAttr ) { content.textAttr = this._contentProperties.textAttr ; }
+		if ( this._contentProperties.lineSpacing ) { content.lineSpacing = this._contentProperties.lineSpacing ; }
+		if ( this._contentProperties.textWrapping ) { content.textWrapping = this._contentProperties.textWrapping ; }
+		if ( this._contentProperties.textVerticalAlignment ) { content.textVerticalAlignment = this._contentProperties.textVerticalAlignment ; }
+		if ( this._contentProperties.textHorizontalAlignment ) { content.textHorizontalAlignment = this._contentProperties.textHorizontalAlignment ; }
+		if ( this._contentProperties.textDynamicStyles ) { content.textDynamicStyles = this._contentProperties.textDynamicStyles ; }
+		if ( this._contentProperties.fx ) { content.fx = this._contentProperties.fx ; }
 
 		content.clip = false ;
 
@@ -581,7 +585,6 @@ class Dialog extends DecoratedContainer {
 
 		//this._setContentProperties( flowingText ) ;
 		this._setContentPropertiesNow( flowingText ) ;
-		//return Promise.resolved ;
 	}
 
 	/*
@@ -899,7 +902,7 @@ class FlowingText extends VG {
 	_markupText = null ;
 	_structuredText = null ;
 
-	_lineSpacing = 0 ;
+	_lineSpacing = 5 ;
 	_textWrapping = 'wordwrap' ;
 	_textVerticalAlignment = 'top' ;
 	_textHorizontalAlignment = 'left' ;
@@ -1055,7 +1058,7 @@ class FlowingText extends VG {
 			height: this.heightInPixels ,
 			attr: this._textAttr ,
 			clip: false ,
-			lineSpacing: 10 ,//this._lineSpacing ,
+			lineSpacing: this._lineSpacing ,
 			textWrapping: this._textWrapping ,
 			textVerticalAlignment: this._textVerticalAlignment ,
 			textHorizontalAlignment: this._textHorizontalAlignment ,
@@ -28261,7 +28264,7 @@ Promise.some = ( iterable , iterator ) => {
 
 
 /*
-	More closed to Array#filter().
+	More close to Array#filter().
 	The iterator should return truthy if the array element should be kept,
 	or falsy if the element should be filtered out.
 	Any rejection reject the whole promise.
@@ -28640,7 +28643,7 @@ Promise.prototype._exec = function() {
 	try {
 		this.fn(
 			// Don't return anything, it would create nasty bugs! E.g.:
-			// bad: error => this.reject( error_ )
+			// bad: error_ => this.reject( error_ )
 			// good: error_ => { this.reject( error_ ) ; }
 			result_ => { this.resolve( result_ ) ; } ,
 			error_ => { this.reject( error_ ) ; }
@@ -29091,11 +29094,19 @@ Promise.reject = function( error ) {
 
 
 
+Promise.prototype.resolveTimeout = Promise.prototype.fulfillTimeout = function( timeout , value ) {
+	setTimeout( () => this.resolve( value ) , timeout ) ;
+} ;
+
 Promise.resolveTimeout = Promise.fulfillTimeout = function( timeout , value ) {
 	return new Promise( resolve => setTimeout( () => resolve( value ) , timeout ) ) ;
 } ;
 
 
+
+Promise.prototype.rejectTimeout = function( timeout , error ) {
+	setTimeout( () => this.reject( error ) , timeout ) ;
+} ;
 
 Promise.rejectTimeout = function( timeout , error ) {
 	return new Promise( ( resolve , reject ) => setTimeout( () => reject( error ) , timeout ) ) ;
@@ -29125,9 +29136,9 @@ Promise.dormant = function( fn ) {
 
 
 // Try-catched Promise.resolve( fn() )
-Promise.try = function( fn ) {
+Promise.try = function( fn , ... args ) {
 	try {
-		return Promise.resolve( fn() ) ;
+		return Promise.resolve( fn( ... args ) ) ;
 	}
 	catch ( error ) {
 		return Promise.reject( error ) ;
@@ -29292,6 +29303,23 @@ Promise.prototype.inspect = function() {
 
 // A shared dummy promise, when you just want to return an immediately thenable
 Promise.resolved = Promise.dummy = Promise.resolve() ;
+
+
+
+
+
+/*
+	Vanilla Promise compatibility.
+*/
+
+
+
+// This method merely achieves what this lib is doing right from the begining:
+// allowing one to pass a promise and process it elsewhere.
+Promise.withResolvers = () => {
+	var promise = new Promise() ;
+	return { promise , resolve: promise.resolve.bind( promise ) , reject: promise.reject.bind( promise ) } ;
+} ;
 
 
 
@@ -29708,6 +29736,7 @@ Promise.debounceNextTick = ( asyncFn , thisBinding ) => {
 		* delay: `number` a delay before calling again the decoratee
 		* delayFn: async `function` called before calling again the decoratee
 		* waitFn: async `function` called before calling the decoratee (even the first try), use-case: Window.requestAnimationFrame()
+		* waitNextTick: if true, wait for the next tick before updating, it's the same than:  options.waitFn = Promise.resolveNextTick
 */
 Promise.debounceUpdate = ( options , asyncFn , thisBinding ) => {
 	var inWrapper = null ,
@@ -42098,12 +42127,13 @@ VGFlowingText.prototype.computeContentSize = function() {
 	this.contentWidth = 0 ;
 	this.contentHeight = 0 ;
 
-	var lastStructuredTextLine = null ;
+	var first = true ;
 
 	for ( let structuredTextLine of this.structuredTextLines ) {
-		if ( lastStructuredTextLine ) { this.contentHeight += this.lineSpacing ; }
+		if ( ! first ) { this.contentHeight += this.lineSpacing ; }
 		this.contentHeight += structuredTextLine.metrics.ascender - structuredTextLine.metrics.descender + structuredTextLine.metrics.lineGap ;
 		if ( structuredTextLine.metrics.width > this.contentWidth ) { this.contentWidth = structuredTextLine.metrics.width ; }
+		first = false ;
 	}
 } ;
 
@@ -46841,7 +46871,7 @@ unicode.isEmojiModifierCodePoint = code =>
 },{"./json-data/unicode-emoji-width-ranges.json":118}],120:[function(require,module,exports){
 module.exports={
   "name": "svg-kit",
-  "version": "0.8.4",
+  "version": "0.8.5",
   "description": "A SVG toolkit, with its own Vector Graphics structure, multiple renderers (svg text, DOM svg, canvas), and featuring Flowing Text.",
   "main": "lib/svg-kit.js",
   "directories": {
