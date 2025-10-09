@@ -2,7 +2,7 @@
 /*
 	Babylon Game GUI
 
-	Copyright (c) 2023 Cédric Ronvel
+	Copyright (c) 2024 - 2025 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -41,7 +41,7 @@ const Promise = require( 'seventh' ) ;
 
 
 class Card extends VG {
-	
+
 	layoutTopInPixels = 0 ;
 	layoutLeftInPixels = 0 ;
 	layoutRotation = 0 ;
@@ -68,7 +68,7 @@ BABYLON.RegisterClass( 'BABYLON.GUI.Card' , Card ) ;
 /*
 	Babylon Game GUI
 
-	Copyright (c) 2023 Cédric Ronvel
+	Copyright (c) 2024 - 2025 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -154,7 +154,7 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 	}
 
 	_getTypeName() { return 'DecoratedContainer' ; }
-	
+
 	get idealWidthInPixels() { return this._idealWidthInPixels ; }
 	set idealWidthInPixels( w ) {
 		this._idealWidthInPixels = w ;
@@ -384,14 +384,14 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		// Call the setter
 		this.decoration = image ;
 	}
-	
+
 	async _onContentSizeUpdated( size ) {
 		if ( ! this._autoScale || ! this._content || ! this._idealWidthInPixels || ! this._idealHeightInPixels ) { return ; }
 		if ( ! size ) { size = await this._content._getSizes() ; }
 
 		// When it's zero sized, it's probably in progress
 		if ( ! size || ! size.width || ! size.height || ! size.innerWidth || ! size.innerHeight  ) { return ; }
-		
+
 		var width = size.innerWidth ,
 			height = size.innerHeight ;
 
@@ -410,7 +410,7 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 			}
 		}
 	}
-	
+
 	/*
 	_layout( parentMeasure , context ) {
 		console.warn( "Calling DecoratedContainer _layout()" ) ;
@@ -455,7 +455,7 @@ BABYLON.RegisterClass( 'BABYLON.GUI.DecoratedContainer' , DecoratedContainer ) ;
 /*
 	Babylon Game GUI
 
-	Copyright (c) 2023 Cédric Ronvel
+	Copyright (c) 2024 - 2025 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -651,7 +651,7 @@ Dialog.autoInfotip = ( advancedTexture , control , infotipParams , openAllOnInit
 				}
 				*/
 			}
-			
+
 			/*
 				/!\ For some reason, we have to apply a somewhat big timeout, since there is
 				too much asyncness and no event exists that fire when things are stabilized.
@@ -695,7 +695,7 @@ Dialog.autoInfotip = ( advancedTexture , control , infotipParams , openAllOnInit
 			} ) ;
 		}
 	}
-	
+
 	const deoverlap = () => {
 		if ( overlapGroup === null ) { return ; }
 
@@ -859,7 +859,7 @@ BABYLON.RegisterClass( 'BABYLON.GUI.Dialog' , Dialog ) ;
 /*
 	Babylon Game GUI
 
-	Copyright (c) 2023 Cédric Ronvel
+	Copyright (c) 2024 - 2025 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -1175,7 +1175,7 @@ BABYLON.RegisterClass( 'BABYLON.GUI.FlowingText' , FlowingText ) ;
 /*
 	Babylon Game GUI
 
-	Copyright (c) 2023 Cédric Ronvel
+	Copyright (c) 2024 - 2025 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -1276,7 +1276,7 @@ class HandPanel extends BABYLON.GUI.Container {
 		if ( ! control || ! ( control instanceof Card ) ) { return this ; }
 
 		var index = this._children.indexOf( control ) ;
-		if ( index !== -1 ) { return this ; }
+		if ( index !== - 1 ) { return this ; }
 
 		this._autoCardBehavior( control ) ;
 
@@ -1288,7 +1288,7 @@ class HandPanel extends BABYLON.GUI.Container {
 		// e.g. it sorts by zIndex, so making card appearing on top would move it at the end (the right).
 		this._layoutOrderedChildren.push( control ) ;
 
-		this._markAsDirty();
+		this._markAsDirty() ;
 
 		return this ;
 	}
@@ -1318,7 +1318,7 @@ class HandPanel extends BABYLON.GUI.Container {
 	_autoCardBehavior( control ) {
 		// Force a zIndex
 		control._zIndex = this._children.length ;
-		
+
 		control.autoScale = true ;
 		control.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
 
@@ -1472,7 +1472,7 @@ BABYLON.RegisterClass( 'BABYLON.GUI.HandPanel' , HandPanel ) ;
 /*
 	Babylon Game GUI
 
-	Copyright (c) 2023 Cédric Ronvel
+	Copyright (c) 2024 - 2025 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -1580,7 +1580,7 @@ class VG extends BABYLON.GUI.Control {
 	async _afterVgUpdate() {
 		this._vgWidth = Math.ceil( this._vg.viewBox.width ) ;
 		this._vgHeight = Math.ceil( this._vg.viewBox.height ) ;
-		
+
 		if ( ! this._offscreenCanvas ) {
 			//console.warn( "new OffscreenCanvas:" , this._vgWidth , this._vgHeight ) ;
 			this._offscreenCanvas = new OffscreenCanvas( this._vgWidth , this._vgHeight ) ;
@@ -1593,14 +1593,14 @@ class VG extends BABYLON.GUI.Control {
 				this._offscreenCanvas.height = this._vgHeight ;
 			}
 		}
-		
+
 		await this._renderCanvas() ;
 
 		if ( ! this._dynamicManager && this._vg.isDynamic() ) {
 			this._generateDynamicManager() ;
 		}
 	}
-	
+
 	_generateDynamicManager() {
 		if ( this._dynamicManager ) { return ; }
 		//console.warn( "### Generate this._dynamicManager" , this._context , this._vg ) ;
@@ -1651,10 +1651,10 @@ class VG extends BABYLON.GUI.Control {
 
 		// It is the responsibility of a specific control to manage shadow
 		if ( this.shadowBlur || this.shadowOffsetX || this.shadowOffsetY ) {
-			context.shadowColor = this.shadowColor;
-			context.shadowBlur = this.shadowBlur;
-			context.shadowOffsetX = this.shadowOffsetX;
-			context.shadowOffsetY = this.shadowOffsetY;
+			context.shadowColor = this.shadowColor ;
+			context.shadowBlur = this.shadowBlur ;
+			context.shadowOffsetX = this.shadowOffsetX ;
+			context.shadowOffsetY = this.shadowOffsetY ;
 		}
 
 		if ( this._stretch === VG.STRETCH_UNIFORM ) {
@@ -1740,7 +1740,7 @@ BABYLON.RegisterClass( 'BABYLON.GUI.VG' , VG ) ;
 /*
 	Babylon Game GUI
 
-	Copyright (c) 2023 Cédric Ronvel
+	Copyright (c) 2024 - 2025 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -1787,7 +1787,7 @@ exports.Atlas = require( './misc/Atlas.js' ) ;
 /*
 	Babylon Game GUI
 
-	Copyright (c) 2023 Cédric Ronvel
+	Copyright (c) 2024 - 2025 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -1936,8 +1936,35 @@ helpers.areControlsOverlaping = ( control1 , control2 ) => {
 
 
 },{}],9:[function(require,module,exports){
+/*
+	Babylon Game GUI
+
+	Copyright (c) 2024 - 2025 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
 
 "use strict" ;
+
+/* global BABYLON */
 
 
 
@@ -1974,7 +2001,7 @@ class Atlas {
 
 	/*
 		Automatically compute face UV coordinates for an area.
-		
+
 		Arguments:
 			epsilon: (in pixel) ensure there is no leak, by reducing the UV window by that amount of pixel, on all 4 direction,
 			  3 (the default) is a good value
@@ -1993,7 +2020,7 @@ class Atlas {
 	_getOneAreaUV( area , epsilon , invertY ) {
 		// Ensure epsilon would not cause issues
 		epsilon = Math.min( + epsilon || 0 , Math.floor( area.width / 2 ) , Math.floor( area.height / 2 ) ) ;
-		
+
 		if ( invertY ) {
 			return new Vector4(
 				( area.xmin + epsilon ) / this._width ,
@@ -2002,14 +2029,14 @@ class Atlas {
 				1 - ( area.ymin + epsilon ) / this._height
 			) ;
 		}
-		else {
-			return new Vector4(
-				( area.xmin + epsilon ) / this._width ,
-				( area.ymin + epsilon ) / this._height ,
-				( area.xmax - epsilon ) / this._width ,
-				( area.ymax - epsilon ) / this._height
-			) ;
-		}
+
+		return new Vector4(
+			( area.xmin + epsilon ) / this._width ,
+			( area.ymin + epsilon ) / this._height ,
+			( area.xmax - epsilon ) / this._width ,
+			( area.ymax - epsilon ) / this._height
+		) ;
+
 	}
 
 
@@ -2027,14 +2054,14 @@ class Atlas {
 			this._byName[ name ] = area ;
 		}
 	}
-	
-	
-	
+
+
+
 	// .addArea( name , width , height )
 	// .addArea( name , viewbox )
 	addArea( name , width , height ) {
 		// Manage arguments
-		if ( width && typeof width ==='object' ) {
+		if ( width && typeof width === 'object' ) {
 			height = width.height ;
 			width = width.width ;
 		}
@@ -2189,7 +2216,7 @@ class Atlas {
 		let extraWidth = recyclingArea.width - area.width ;
 		let extraHeight = recyclingArea.height - area.height ;
 
-		if ( 
+		if (
 			//extraWidth >= 0 && extraHeight >= 0 &&
 			( extraWidth >= this._wastedThreshold || extraHeight >= this._wastedThreshold )
 		) {
@@ -2238,7 +2265,31 @@ module.exports = Atlas ;
 
 
 },{"svg-kit":115}],10:[function(require,module,exports){
+/*
+	Babylon Game GUI
 
+	Copyright (c) 2024 - 2025 Cédric Ronvel
+
+	The MIT License (MIT)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
 "use strict" ;
 
 /* global BABYLON, earcut */
