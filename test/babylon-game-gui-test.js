@@ -1,7 +1,7 @@
 /*
 	Babylon Game GUI
 
-	Copyright (c) 2023 Cédric Ronvel
+	Copyright (c) 2024 - 2025 Cédric Ronvel
 
 	The MIT License (MIT)
 
@@ -28,7 +28,7 @@
 
 
 
-const gameGUI = require( '..' ) ;
+//const gameGUI = require( '..' ) ;
 
 
 
