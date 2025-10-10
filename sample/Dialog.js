@@ -79,6 +79,7 @@ function createDialog( markupText ) {
 	//dialog.text = "bob" ;
 	//dialog.width = "700px" ; dialog.height = "250px" ;
 	dialog.idealWidthInPixels = 500 ; dialog.idealHeightInPixels = 100 ;
+	dialog.autoScale = true ;
 	//dialog.paddingLeft = "50px" ;
 	dialog.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
 
@@ -108,14 +109,13 @@ function createDialog( markupText ) {
 
 	
 	//dialog.textWrapping = "wordWrap" ;
+	dialog.textLineSpacing = 5 ;
+	//dialog.textHorizontalAlignment = 'center' ;
 	dialog.textAttr = {
 		color: '#777' ,
 		outlineColor: '#fff'
 	} ;
-	dialog.autoScale = true ;
 
-	dialog.textLineSpacing = 5 ;
-	//dialog.textHorizontalAlignment = 'center' ;
 	dialog.textFx = { slowTyping: { speed: 2 } } ;
 	
 	advancedTexture.addControl( dialog ) ;
