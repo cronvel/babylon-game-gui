@@ -73,13 +73,21 @@ function createGButton( markupText ) {
 	// When it loses focus (e.g.: the mouse leaves)
 	gbutton.blurStyle = {
 		backgroundColor: '#a5a' ,
-		borderColor: '#ddd'
+		borderColor: '#ddd' ,
+		textAttr: {
+			color: '#eee' ,
+			outlineColor: '#444'
+		}
 	} ;
 
 	// When it gains focus (e.g.: the mouse is hovering, or with the keyboard/gamepad navigation, the button is selected)
 	gbutton.focusStyle = {
 		backgroundColor: '#c7c' ,
-		borderColor: '#eee'
+		borderColor: '#eee' ,
+		textAttr: {
+			color: '#ffe' ,
+			outlineColor: '#886'
+		}
 	} ;
 
 	// When the button is pressed and its action is triggered (e.g.: it is clicked)
@@ -104,13 +112,7 @@ function createGButton( markupText ) {
 	gbutton.textLineSpacing = 5 ;
 	gbutton.textHorizontalAlignment = 'center' ;
 	gbutton.textVerticalAlignment = 'center' ;
-	gbutton.textAttr = {
-		color: '#eee' ,
-		outlineColor: '#444'
-	} ;
 	
-	gbutton._registerEvents() ;
-
 	advancedTexture.addControl( gbutton ) ;
 
 	return gbutton ;

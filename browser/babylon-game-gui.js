@@ -1233,6 +1233,7 @@ class GButton extends DecoratedContainer {
 	] ) ;
 
 	_state = GButton.BLUR ;
+	_nextState = GButton.BLUR ;
 
 	_text = null ;
 	_markupText = null ;
@@ -1242,6 +1243,9 @@ class GButton extends DecoratedContainer {
 	_focusStyle = null ;
 	_pressedStyle = null ;
 	_disabledStyle = null ;
+
+	_switchStateTimer = null ;
+	_animationTimer = null ;
 
 	constructor( name ) {
 		super( name ) ;
@@ -1253,6 +1257,8 @@ class GButton extends DecoratedContainer {
 		this._contentProperties.paddingBottom = '10px' ;
 		this._contentProperties.paddingLeft = '10px' ;
 		this._contentProperties.paddingRight = '10px' ;
+
+		this._registerEvents() ;
 	}
 
 	dispose() {
@@ -1301,6 +1307,13 @@ class GButton extends DecoratedContainer {
 		}
 	}
 
+	_registerEvents() {
+		this.onPointerEnterObservable.add( () => this.focus() ) ;
+		this.onPointerMoveObservable.add( () => this.focus() ) ;
+		this.onPointerOutObservable.add( () => this.blur() ) ;
+		this.onPointerClickObservable.add( () => this.press() ) ;
+	}
+
 	_applyStyle( style ) {
 		if ( style === undefined || typeof style !== 'object' ) {
 			switch ( this._state ) {
@@ -1320,35 +1333,38 @@ class GButton extends DecoratedContainer {
 		}
 	}
 
-	_registerEvents() {
-		this.onPointerEnterObservable.add( () => this.focus() ) ;
-		this.onPointerMoveObservable.add( () => this.focus() ) ;
-		this.onPointerOutObservable.add( () => this.blur() ) ;
-		this.onPointerClickObservable.add( () => this.press() ) ;
-	}
-
 	blur() {
-		console.warn( "BLUR called" ) ;
-		if ( this._state === GButton.DISABLED || this._state === GButton.PRESSED || this._state === GButton.BLUR ) { return ; }
+		if ( this._state === GButton.DISABLED || this._state === GButton.PRESSED || this._state === GButton.BLUR ) {
+			this._nextState = GButton.BLUR ;
+			return ;
+		}
+
 		this._state = GButton.BLUR ;
+		this._resetTimers() ;
 		this._applyStyle() ;
 	}
 
 	focus() {
-		console.warn( "FOCUS called" ) ;
-		if ( this._state === GButton.DISABLED || this._state === GButton.PRESSED || this._state === GButton.FOCUS ) { return ; }
+		if ( this._state === GButton.DISABLED || this._state === GButton.PRESSED || this._state === GButton.FOCUS ) {
+			this._nextState = GButton.FOCUS ;
+			return ;
+		}
+
 		this._state = GButton.FOCUS ;
+		this._resetTimers() ;
 		this._applyStyle() ;
 	}
 
 	press() {
-		console.warn( "PRESS called" ) ;
 		if ( this._state === GButton.DISABLED || this._state === GButton.PRESSED ) { return ; }
+
+		this._nextState = this._state ;
 		this._state = GButton.PRESSED ;
+		this._resetTimers() ;
 		this._applyStyle() ;
 
 		var duration = + this._pressedStyle.duration > 0 ? + this._pressedStyle.duration : 100 ;
-		setTimeout( () => this.release() , duration ) ;
+		this._switchStateTimer = setTimeout( () => this.release() , duration ) ;
 
 		if ( this._pressedStyle.blinks && this._pressedStyle.blinks >= 2 ) {
 			let switchCount = 0 ,
@@ -1356,12 +1372,7 @@ class GButton extends DecoratedContainer {
 				blinkDuration = duration / ( maxSwitchCount + 1 ) ;
 			//console.warn( "BLINKS " , switchCount , maxSwitchCount , blinkDuration ) ;
 
-			let blinkTimer = setInterval( () => {
-				if ( this._state !== GButton.PRESSED ) {
-					clearInterval( blinkTimer ) ;
-					return ;
-				}
-
+			this._animationTimer = setInterval( () => {
 				if ( switchCount % 2 ) {
 					// Turn on
 					this._applyStyle( this._pressedStyle ) ;
@@ -1373,31 +1384,45 @@ class GButton extends DecoratedContainer {
 
 				switchCount ++ ;
 				if ( switchCount >= maxSwitchCount ) {
-					clearInterval( blinkTimer ) ;
+					clearInterval( this._animationTimer ) ;
+					this._animationTimer = null ;
 				}
 			} , blinkDuration ) ;
 		}
 	}
 
 	release() {
-		console.warn( "RELEASE called" ) ;
 		if ( this._state !== GButton.PRESSED ) { return ; }
-		this._state = GButton.BLUR ;
+		this._state = this._nextState ;
+		this._resetTimers() ;
 		this._applyStyle() ;
 	}
 
 	enable() {
-		console.warn( "ENABLE called" ) ;
 		if ( this._state !== GButton.DISABLED ) { return ; }
-		this._state = GButton.BLUR ;
+		this._state = this._nextState ;
+		this._resetTimers() ;
 		this._applyStyle() ;
 	}
 
 	disable() {
-		console.warn( "DISABLED called" ) ;
 		if ( this._state === GButton.DISABLED ) { return ; }
+		this._nextState = this._state ;
 		this._state = GButton.DISABLED ;
+		this._resetTimers() ;
 		this._applyStyle() ;
+	}
+
+	_resetTimers() {
+		if ( this._switchStateTimer ) {
+			clearTimeout( this._switchStateTimer ) ;
+			this._switchStateTimer = null ;
+		}
+
+		if ( this._animationTimer ) {
+			clearInterval( this._animationTimer ) ;
+			this._animationTimer = null ;
+		}
 	}
 
 	_setContentPropertiesNow( content = this._content ) {
