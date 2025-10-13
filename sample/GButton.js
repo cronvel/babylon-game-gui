@@ -70,27 +70,27 @@ function createGButton( markupText ) {
 
 	// /!\ TODO /!\
 
-	// When it loses focus / the mouse leaves
+	// When it loses focus (e.g.: the mouse leaves)
 	gbutton.blurStyle = {
 		backgroundColor: '#a5a' ,
 		borderColor: '#ddd'
 	} ;
 
-	// When it gains focus / the mouse is hovering
+	// When it gains focus (e.g.: the mouse is hovering, or with the keyboard/gamepad navigation, the button is selected)
 	gbutton.focusStyle = {
 		backgroundColor: '#c7c' ,
 		borderColor: '#eee'
 	} ;
 
-	// When it is clicked
-	gbutton.activeStyle = {
+	// When the button is pressed and its action is triggered (e.g.: it is clicked)
+	gbutton.pressedStyle = {
 		duration: 200 ,		// The duration the style is used
 		blink: 2 ,			// How many times it blinks during this duration (1 blink alternate between the active style and the blur style)
 		backgroundColor: '#e9e' ,
 		borderColor: '#fff'
 	} ;
 
-	// When the button is disabled (can't be clicked)
+	// When the button is disabled (can't be interacted with)
 	gbutton.disabledStyle = {
 		backgroundColor: '#848' ,
 		borderColor: '#777'
