@@ -1221,6 +1221,17 @@ class GButton extends DecoratedContainer {
 	static FOCUS = 1 ;
 	static PRESSED = 2 ;
 
+	// Allowed keys in blurStyle/focusStyle/pressedStyle/disabledStyle
+	static STYLES = new Set( [
+		// DecoratedContainer
+		'backgroundColor' , 'borderColor' , 'borderThickness' , 'cornerRadius' ,
+		'source' , 'stretch' , 'sliceLeft' , 'sliceRight' , 'sliceTop' , 'sliceBottom' ,
+		// GButton
+		'text' , 'markupText' , 'structuredText' ,
+		'textPaddingTop' , 'textPaddingBottom' , 'textPaddingLeft' , 'textPaddingRight' ,
+		'textAttr' , 'textLineSpacing' , 'textWrapping' , 'textVerticalAlignment' , 'textHorizontalAlignment' , 'textDynamicStyles' , 'textFx'
+	] ) ;
+
 	_state = GButton.BLUR ;
 
 	_text = null ;
@@ -1291,16 +1302,102 @@ class GButton extends DecoratedContainer {
 	}
 
 	_applyStyle( style ) {
-		if ( ! style ) {
+		if ( style === undefined || typeof style !== 'object' ) {
 			switch ( this._state ) {
 				case GButton.BLUR : style = this._blurStyle ; break ;
 				case GButton.FOCUS : style = this._focusStyle ; break ;
 				case GButton.PRESSED : style = this._pressedStyle ; break ;
 				case GButton.DISABLED : style = this._disabledStyle ; break ;
 			}
-
-			if ( ! style ) { return ; }
 		}
+
+		if ( ! style ) { return ; }
+
+		for ( let key of Object.keys( style ) ) {
+			if ( GButton.STYLES.has( key ) ) {
+				this[ key ] = style[ key ] ;
+			}
+		}
+	}
+
+	_registerEvents() {
+		this.onPointerEnterObservable.add( () => this.focus() ) ;
+		this.onPointerMoveObservable.add( () => this.focus() ) ;
+		this.onPointerOutObservable.add( () => this.blur() ) ;
+		this.onPointerClickObservable.add( () => this.press() ) ;
+	}
+
+	blur() {
+		console.warn( "BLUR called" ) ;
+		if ( this._state === GButton.DISABLED || this._state === GButton.PRESSED || this._state === GButton.BLUR ) { return ; }
+		this._state = GButton.BLUR ;
+		this._applyStyle() ;
+	}
+
+	focus() {
+		console.warn( "FOCUS called" ) ;
+		if ( this._state === GButton.DISABLED || this._state === GButton.PRESSED || this._state === GButton.FOCUS ) { return ; }
+		this._state = GButton.FOCUS ;
+		this._applyStyle() ;
+	}
+
+	press() {
+		console.warn( "PRESS called" ) ;
+		if ( this._state === GButton.DISABLED || this._state === GButton.PRESSED ) { return ; }
+		this._state = GButton.PRESSED ;
+		this._applyStyle() ;
+
+		var duration = + this._pressedStyle.duration > 0 ? + this._pressedStyle.duration : 100 ;
+		setTimeout( () => this.release() , duration ) ;
+
+		if ( this._pressedStyle.blinks && this._pressedStyle.blinks >= 2 ) {
+			let switchCount = 0 ,
+				maxSwitchCount = ( this._pressedStyle.blinks - 1 ) * 2 ,
+				blinkDuration = duration / ( maxSwitchCount + 1 ) ;
+			//console.warn( "BLINKS " , switchCount , maxSwitchCount , blinkDuration ) ;
+
+			let blinkTimer = setInterval( () => {
+				if ( this._state !== GButton.PRESSED ) {
+					clearInterval( blinkTimer ) ;
+					return ;
+				}
+
+				if ( switchCount % 2 ) {
+					// Turn on
+					this._applyStyle( this._pressedStyle ) ;
+				}
+				else {
+					// Turn off
+					this._applyStyle( this._blurStyle ) ;
+				}
+
+				switchCount ++ ;
+				if ( switchCount >= maxSwitchCount ) {
+					clearInterval( blinkTimer ) ;
+				}
+			} , blinkDuration ) ;
+		}
+	}
+
+	release() {
+		console.warn( "RELEASE called" ) ;
+		if ( this._state !== GButton.PRESSED ) { return ; }
+		this._state = GButton.BLUR ;
+		this._applyStyle() ;
+	}
+
+	enable() {
+		console.warn( "ENABLE called" ) ;
+		if ( this._state !== GButton.DISABLED ) { return ; }
+		this._state = GButton.BLUR ;
+		this._applyStyle() ;
+	}
+
+	disable() {
+		console.warn( "DISABLED called" ) ;
+		if ( this._state === GButton.DISABLED ) { return ; }
+		this._state = GButton.DISABLED ;
+		this._applyStyle() ;
 	}
 
 	_setContentPropertiesNow( content = this._content ) {

@@ -43,7 +43,7 @@ async function createScene() {
 
 	//createGButton( "Blah ".repeat( 22 ) + "..." ) ;
 	var gbutton = createGButton( "Attack" ) ;
-	gbutton.onPointerUpObservable.addOnce( () => gbutton.dispose() ) ;
+	//gbutton.onPointerUpObservable.addOnce( () => gbutton.dispose() ) ;
 
 	return scene ;
 }
@@ -59,8 +59,8 @@ function createGButton( markupText ) {
 	gbutton.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
 	//gbutton.paddingTop = gbutton.paddingBottom = "10px" ;
 
-	gbutton.backgroundColor = '#a5a' ;
-	gbutton.borderColor = '#ddd' ;
+	//gbutton.backgroundColor = '#a5a' ;
+	//gbutton.borderColor = '#ddd' ;
 	gbutton.borderThickness = 4 ;
 	gbutton.cornerRadius = 4 ;
 	gbutton.textPaddingTop = '4px' ;
@@ -84,8 +84,8 @@ function createGButton( markupText ) {
 
 	// When the button is pressed and its action is triggered (e.g.: it is clicked)
 	gbutton.pressedStyle = {
-		duration: 200 ,		// The duration the style is used
-		blink: 2 ,			// How many times it blinks during this duration (1 blink alternate between the active style and the blur style)
+		duration: 250 ,		// The duration the style is used
+		blinks: 2 ,			// How many times it blinks during this duration (1 blink alternate between the pressed style and the blur style)
 		backgroundColor: '#e9e' ,
 		borderColor: '#fff'
 	} ;
@@ -95,7 +95,7 @@ function createGButton( markupText ) {
 		backgroundColor: '#848' ,
 		borderColor: '#777'
 	} ;
-
+ 
 
 
 	gbutton.markupText = markupText ;
@@ -109,6 +109,8 @@ function createGButton( markupText ) {
 		outlineColor: '#444'
 	} ;
 	
+	gbutton._registerEvents() ;
+
 	advancedTexture.addControl( gbutton ) ;
 
 	return gbutton ;
