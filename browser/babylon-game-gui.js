@@ -1197,6 +1197,8 @@ BABYLON.RegisterClass( 'BABYLON.GUI.FlowingText' , FlowingText ) ;
 
 
 
+const Observable = BABYLON.Observable ;
+
 const DecoratedContainer = require( './DecoratedContainer.js' ) ;
 const FlowingText = require( './FlowingText.js' ) ;
 const helpers = require( './helpers.js' ) ;
@@ -1216,22 +1218,6 @@ const Promise = require( 'seventh' ) ;
 
 
 class GButton extends DecoratedContainer {
-	static DISABLED = -1 ;
-	static BLUR = 0 ;
-	static FOCUS = 1 ;
-	static PRESSED = 2 ;
-
-	// Allowed keys in blurStyle/focusStyle/pressedStyle/disabledStyle
-	static STYLES = new Set( [
-		// DecoratedContainer
-		'backgroundColor' , 'borderColor' , 'borderThickness' , 'cornerRadius' ,
-		'source' , 'stretch' , 'sliceLeft' , 'sliceRight' , 'sliceTop' , 'sliceBottom' ,
-		// GButton
-		'text' , 'markupText' , 'structuredText' ,
-		'textPaddingTop' , 'textPaddingBottom' , 'textPaddingLeft' , 'textPaddingRight' ,
-		'textAttr' , 'textLineSpacing' , 'textWrapping' , 'textVerticalAlignment' , 'textHorizontalAlignment' , 'textDynamicStyles' , 'textFx'
-	] ) ;
-
 	_state = GButton.BLUR ;
 	_nextState = GButton.BLUR ;
 
@@ -1247,6 +1233,24 @@ class GButton extends DecoratedContainer {
 	_switchStateTimer = null ;
 	_animationTimer = null ;
 
+	onPressedObservable = new Observable() ;		// Immediately
+	onPressedAndReleasedObservable = new Observable() ;	// After animation ended
+
+	static DISABLED = -1 ;
+	static BLUR = 0 ;
+	static FOCUS = 1 ;
+	static PRESSED = 2 ;
+
+	// Allowed keys in blurStyle/focusStyle/pressedStyle/disabledStyle
+	static STYLES = new Set( [
+		// DecoratedContainer
+		'backgroundColor' , 'borderColor' , 'borderThickness' , 'cornerRadius' ,
+		'source' , 'stretch' , 'sliceLeft' , 'sliceRight' , 'sliceTop' , 'sliceBottom' ,
+		// GButton
+		'text' , 'markupText' , 'structuredText' ,
+		'textPaddingTop' , 'textPaddingBottom' , 'textPaddingLeft' , 'textPaddingRight' ,
+		'textAttr' , 'textLineSpacing' , 'textWrapping' , 'textVerticalAlignment' , 'textHorizontalAlignment' , 'textDynamicStyles' , 'textFx'
+	] ) ;
 	constructor( name ) {
 		super( name ) ;
 
@@ -1389,6 +1393,8 @@ class GButton extends DecoratedContainer {
 				}
 			} , blinkDuration ) ;
 		}
+
+		this.onPressedObservable.notifyObservers() ;
 	}
 
 	release() {
@@ -1396,6 +1402,7 @@ class GButton extends DecoratedContainer {
 		this._state = this._nextState ;
 		this._resetTimers() ;
 		this._applyStyle() ;
+		this.onPressedAndReleasedObservable.notifyObservers() ;
 	}
 
 	enable() {

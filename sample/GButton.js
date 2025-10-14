@@ -42,8 +42,13 @@ async function createScene() {
 	svgKit.fontLib.setFontUrl( 'serif' , 'bold' , 'italic' , './serif-bold+italic.ttf' ) ;
 
 	//createGButton( "Blah ".repeat( 22 ) + "..." ) ;
-	var gbutton = createGButton( "Attack" ) ;
-	//gbutton.onPointerUpObservable.addOnce( () => gbutton.dispose() ) ;
+	var gbutton = createGButton( "Attack ([x2]<red>)" ) ;
+	gbutton.onPressedObservable.add( () => console.warn( "Button pressed" ) ) ;
+	gbutton.onPressedAndReleasedObservable.add( () => {
+		console.warn( "Button pressed and released" ) ;
+		gbutton.disable() ;
+		setTimeout( () => gbutton.enable() , 2000 ) ;
+	} ) ;
 
 	return scene ;
 }
@@ -92,16 +97,24 @@ function createGButton( markupText ) {
 
 	// When the button is pressed and its action is triggered (e.g.: it is clicked)
 	gbutton.pressedStyle = {
-		duration: 250 ,		// The duration the style is used
+		duration: 300 ,		// The duration the style is used
 		blinks: 2 ,			// How many times it blinks during this duration (1 blink alternate between the pressed style and the blur style)
 		backgroundColor: '#e9e' ,
-		borderColor: '#fff'
+		borderColor: '#fff' ,
+		textAttr: {
+			color: '#ffe' ,
+			outlineColor: '#886'
+		}
 	} ;
 
 	// When the button is disabled (can't be interacted with)
 	gbutton.disabledStyle = {
-		backgroundColor: '#848' ,
-		borderColor: '#777'
+		backgroundColor: '#777' ,
+		borderColor: '#888' ,
+		textAttr: {
+			color: '#888' ,
+			outlineColor: '#999'
+		}
 	} ;
  
 
