@@ -1,6 +1,6 @@
 {
   "name": "babylon-game-gui",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Game GUI extension for Babylon.js build on top of Babylon 2D GUI, and 3D UI for board games.",
   "main": "lib/babylon-game-gui.js",
   "directories": {

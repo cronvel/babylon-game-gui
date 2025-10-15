@@ -41,13 +41,13 @@ async function createScene() {
 	svgKit.fontLib.setFontUrl( 'serif' , 'bold' , './serif-bold.ttf' ) ;
 	svgKit.fontLib.setFontUrl( 'serif' , 'bold' , 'italic' , './serif-bold+italic.ttf' ) ;
 
-	//createGButton( "Blah ".repeat( 22 ) + "..." ) ;
-	var gbutton = createGButton( "Attack ([x2]<red>)" ) ;
-	gbutton.onPressedObservable.add( () => console.warn( "Button pressed" ) ) ;
-	gbutton.onPressedAndReleasedObservable.add( () => {
+	//createActionButton( "Blah ".repeat( 22 ) + "..." ) ;
+	var button = createActionButton( "Attack ([x2]<red>)" ) ;
+	button.onPressedObservable.add( () => console.warn( "Button pressed" ) ) ;
+	button.onPressedAndReleasedObservable.add( () => {
 		console.warn( "Button pressed and released" ) ;
-		gbutton.disable() ;
-		setTimeout( () => gbutton.enable() , 2000 ) ;
+		button.disable() ;
+		setTimeout( () => button.enable() , 2000 ) ;
 	} ) ;
 
 	return scene ;
@@ -55,28 +55,28 @@ async function createScene() {
 
 
 
-function createGButton( markupText ) {
-	var gbutton = new BABYLON.GUI.GButton( 'gbutton' ) ;
+function createActionButton( markupText ) {
+	var button = new BABYLON.GUI.ActionButton( 'button' ) ;
 
-	gbutton.width = "300px" ; gbutton.height = "60px" ;
-	//gbutton.idealWidthInPixels = 100 ; gbutton.idealHeightInPixels = 25 ;
-	//gbutton.autoScale = true ;
-	gbutton.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
-	//gbutton.paddingTop = gbutton.paddingBottom = "10px" ;
+	button.width = "300px" ; button.height = "60px" ;
+	//button.idealWidthInPixels = 100 ; button.idealHeightInPixels = 25 ;
+	//button.autoScale = true ;
+	button.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
+	//button.paddingTop = button.paddingBottom = "10px" ;
 
-	//gbutton.backgroundColor = '#a5a' ;
-	//gbutton.borderColor = '#ddd' ;
-	gbutton.borderThickness = 4 ;
-	gbutton.cornerRadius = 4 ;
-	gbutton.textPaddingTop = '4px' ;
-	gbutton.textPaddingBottom = '4px' ;
-	gbutton.textPaddingLeft = '10px' ;
-	gbutton.textPaddingRight = '10px' ;
+	//button.backgroundColor = '#a5a' ;
+	//button.borderColor = '#ddd' ;
+	button.borderThickness = 4 ;
+	button.cornerRadius = 4 ;
+	button.textPaddingTop = '4px' ;
+	button.textPaddingBottom = '4px' ;
+	button.textPaddingLeft = '10px' ;
+	button.textPaddingRight = '10px' ;
 
 	// /!\ TODO /!\
 
 	// When it loses focus (e.g.: the mouse leaves)
-	gbutton.blurStyle = {
+	button.blurStyle = {
 		backgroundColor: '#a5a' ,
 		borderColor: '#ddd' ,
 		textAttr: {
@@ -86,7 +86,7 @@ function createGButton( markupText ) {
 	} ;
 
 	// When it gains focus (e.g.: the mouse is hovering, or with the keyboard/gamepad navigation, the button is selected)
-	gbutton.focusStyle = {
+	button.focusStyle = {
 		backgroundColor: '#c7c' ,
 		borderColor: '#eee' ,
 		textAttr: {
@@ -96,7 +96,7 @@ function createGButton( markupText ) {
 	} ;
 
 	// When the button is pressed and its action is triggered (e.g.: it is clicked)
-	gbutton.pressedStyle = {
+	button.pressedStyle = {
 		duration: 300 ,		// The duration the style is used
 		blinks: 2 ,			// How many times it blinks during this duration (1 blink alternate between the pressed style and the blur style)
 		backgroundColor: '#e9e' ,
@@ -108,7 +108,7 @@ function createGButton( markupText ) {
 	} ;
 
 	// When the button is disabled (can't be interacted with)
-	gbutton.disabledStyle = {
+	button.disabledStyle = {
 		backgroundColor: '#777' ,
 		borderColor: '#888' ,
 		textAttr: {
@@ -119,15 +119,15 @@ function createGButton( markupText ) {
  
 
 
-	gbutton.markupText = markupText ;
+	button.markupText = markupText ;
 
-	//gbutton.textWrapping = "wordWrap" ;
-	gbutton.textLineSpacing = 5 ;
-	gbutton.textHorizontalAlignment = 'center' ;
-	gbutton.textVerticalAlignment = 'center' ;
+	//button.textWrapping = "wordWrap" ;
+	button.textLineSpacing = 5 ;
+	button.textHorizontalAlignment = 'center' ;
+	button.textVerticalAlignment = 'center' ;
 	
-	advancedTexture.addControl( gbutton ) ;
+	advancedTexture.addControl( button ) ;
 
-	return gbutton ;
+	return button ;
 }
 
