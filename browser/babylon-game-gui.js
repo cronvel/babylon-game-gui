@@ -104,7 +104,7 @@ class ActionButton extends DecoratedContainer {
 		this._contentProperties.paddingLeft = '10px' ;
 		this._contentProperties.paddingRight = '10px' ;
 
-		this._registerEvents() ;
+		//this._registerEvents() ;
 	}
 
 	dispose() {
@@ -158,6 +158,20 @@ class ActionButton extends DecoratedContainer {
 		this.onPointerMoveObservable.add( () => this.focus() ) ;
 		this.onPointerOutObservable.add( () => this.blur() ) ;
 		this.onPointerClickObservable.add( () => this.press() ) ;
+	}
+
+	_registerDecorationEvents_( decoration = this.decoration ) {
+		decoration.onPointerEnterObservable.add( () => this.focus() ) ;
+		decoration.onPointerMoveObservable.add( () => this.focus() ) ;
+		decoration.onPointerOutObservable.add( () => this.blur() ) ;
+		decoration.onPointerClickObservable.add( () => this.press() ) ;
+	}
+
+	_registerDecorationEvents( decoration = this.decoration ) {
+		decoration.onPointerEnterObservable.add( () => { console.warn( "PointerEnter" ) ; this.focus() ; } ) ;
+		decoration.onPointerMoveObservable.add( () => { console.warn( "PointerMove" ) ; this.focus() ; } ) ;
+		decoration.onPointerOutObservable.add( () => { console.warn( "PointerOut" ) ; this.blur() ; } ) ;
+		decoration.onPointerClickObservable.add( () => { console.warn( "PointerClick" ) ; this.press() ; } ) ;
 	}
 
 	_applyStyle( style ) {
@@ -497,6 +511,9 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 	_sliceRight = null ;
 	_sliceBottom = null ;
 
+	_isPointerBlocker = false ;
+	_hoverCursor = null ;
+
 	_contentProperties = {} ;
 
 	onContentCreatedObservable = new Observable() ;
@@ -691,6 +708,22 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		}
 	}
 
+	get isPointerBlocker() { return this._isPointerBlocker ; }
+	set isPointerBlocker( v ) {
+		this._isPointerBlocker = v || null ;
+		if ( this._decoration ) {
+			this._decoration.isPointerBlocker = this._isPointerBlocker ;
+		}
+	}
+
+	get hoverCursor() { return this._hoverCursor ; }
+	set hoverCursor( v ) {
+		this._hoverCursor = v || null ;
+		if ( this._decoration ) {
+			this._decoration.hoverCursor = this._hoverCursor ;
+		}
+	}
+
 	// Must be subclassed
 	_createContentNow() {}
 
@@ -718,6 +751,8 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		rect.color = this._borderColor ;
 		rect.thickness = this._borderThickness ;
 		rect.cornerRadius = this._cornerRadius ;
+		rect.isPointerBlocker = this._isPointerBlocker ;
+		rect.hoverCursor = this._hoverCursor ;
 	}
 
 	_createRectangleNow() {
@@ -725,6 +760,7 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		this._setRectanglePropertiesNow( rect ) ;
 		// Call the setter
 		this.decoration = rect ;
+		if ( this._registerDecorationEvents ) { this._registerDecorationEvents( this.decoration ) ; }
 	}
 
 	_setImagePropertiesNow( image = this._decoration ) {
@@ -737,6 +773,9 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		image.sliceRight = this._sliceRight ;
 		image.sliceTop = this._sliceTop ;
 		image.sliceBottom = this._sliceBottom ;
+
+		image.isPointerBlocker = this._isPointerBlocker ;
+		image.hoverCursor = this._hoverCursor ;
 	}
 
 	_createImageNow() {
@@ -745,6 +784,7 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		this._setImagePropertiesNow( image ) ;
 		// Call the setter
 		this.decoration = image ;
+		if ( this._registerDecorationEvents ) { this._registerDecorationEvents( this.decoration ) ; }
 	}
 
 	async _onContentSizeUpdated( size ) {

@@ -58,7 +58,12 @@ async function createScene() {
 function createActionButton( markupText ) {
 	var button = new BABYLON.GUI.ActionButton( 'button' ) ;
 
+	button.isPointerBlocker = true ;
+	button.hoverCursor = 'pointer' ;
+
+	//button.width = 0.25 ; button.height = 0.1 ;
 	button.width = "300px" ; button.height = "60px" ;
+
 	//button.idealWidthInPixels = 100 ; button.idealHeightInPixels = 25 ;
 	//button.autoScale = true ;
 	button.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM ;
@@ -72,8 +77,6 @@ function createActionButton( markupText ) {
 	button.textPaddingBottom = '4px' ;
 	button.textPaddingLeft = '10px' ;
 	button.textPaddingRight = '10px' ;
-
-	// /!\ TODO /!\
 
 	// When it loses focus (e.g.: the mouse leaves)
 	button.blurStyle = {
