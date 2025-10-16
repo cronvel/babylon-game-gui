@@ -153,25 +153,27 @@ class ActionButton extends DecoratedContainer {
 		}
 	}
 
+	/*
 	_registerEvents() {
 		this.onPointerEnterObservable.add( () => this.focus() ) ;
 		this.onPointerMoveObservable.add( () => this.focus() ) ;
 		this.onPointerOutObservable.add( () => this.blur() ) ;
 		this.onPointerClickObservable.add( () => this.press() ) ;
 	}
+	*/
 
-	_registerDecorationEvents_( decoration = this.decoration ) {
+	_registerDecorationEvents( decoration = this.decoration ) {
 		decoration.onPointerEnterObservable.add( () => this.focus() ) ;
 		decoration.onPointerMoveObservable.add( () => this.focus() ) ;
 		decoration.onPointerOutObservable.add( () => this.blur() ) ;
 		decoration.onPointerClickObservable.add( () => this.press() ) ;
 	}
 
-	_registerDecorationEvents( decoration = this.decoration ) {
-		decoration.onPointerEnterObservable.add( () => { console.warn( "PointerEnter" ) ; this.focus() ; } ) ;
-		decoration.onPointerMoveObservable.add( () => { console.warn( "PointerMove" ) ; this.focus() ; } ) ;
-		decoration.onPointerOutObservable.add( () => { console.warn( "PointerOut" ) ; this.blur() ; } ) ;
-		decoration.onPointerClickObservable.add( () => { console.warn( "PointerClick" ) ; this.press() ; } ) ;
+	_registerContentEvents( content = this.content ) {
+		content.onPointerEnterObservable.add( () => this.focus() ) ;
+		content.onPointerMoveObservable.add( () => this.focus() ) ;
+		content.onPointerOutObservable.add( () => this.blur() ) ;
+		content.onPointerClickObservable.add( () => this.press() ) ;
 	}
 
 	_applyStyle( style ) {
@@ -332,14 +334,11 @@ class ActionButton extends DecoratedContainer {
 	}
 
 	_createContentNow() {
-		var flowingText = new FlowingText( this.name + ':flowingText' ) ;
-
-		// Call the setter
-		this.content = flowingText ;
-		flowingText.isPointerBlocker = this.isPointerBlocker ;
+		// It calls the setter
+		this.content = new FlowingText( this.name + ':flowingText' ) ;
 
 		//this._setContentProperties( flowingText ) ;
-		this._setContentPropertiesNow( flowingText ) ;
+		this._setContentPropertiesNow( this.content ) ;
 	}
 }
 
@@ -546,16 +545,6 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		this.heightInPixels = h ;
 	}
 
-	/*
-	get isPointerBlocker() { return super.isPointerBlocker ; }
-	set isPointerBlocker( v ) {
-		v = !! v ;
-		super.isPointerBlocker = v ;
-		if ( this._decoration ) { this._decoration.isPointerBlocker = v ; }
-		if ( this._content ) { this._content.isPointerBlocker = v ; }
-	}
-	*/
-
 	get decoration() { return this._decoration ; }
 	set decoration( control ) {
 		control = control || null ;
@@ -573,6 +562,10 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		if ( this._autoScale && this._turnVisibleOnContentSizeReady && ! this._contentSizeReady ) {
 			this._decoration.isVisible = false ;
 		}
+
+		this._decoration.isPointerBlocker = this._isPointerBlocker ;
+		this._decoration.hoverCursor = this._hoverCursor ;
+		if ( this._registerDecorationEvents ) { this._registerDecorationEvents( this._decoration ) ; }
 	}
 
 	get content() { return this._content ; }
@@ -603,6 +596,10 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 
 			this._onContentSizeUpdated() ;
 		}
+
+		this._content.isPointerBlocker = this._isPointerBlocker ;
+		this._content.hoverCursor = this._hoverCursor ;
+		if ( this._registerContentEvents ) { this._registerContentEvents( this._content ) ; }
 
 		this.onContentCreatedObservable.notifyObservers( this._content ) ;
 	}
@@ -710,18 +707,16 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 
 	get isPointerBlocker() { return this._isPointerBlocker ; }
 	set isPointerBlocker( v ) {
-		this._isPointerBlocker = v || null ;
-		if ( this._decoration ) {
-			this._decoration.isPointerBlocker = this._isPointerBlocker ;
-		}
+		this._isPointerBlocker = !! v ;
+		if ( this._decoration ) { this._decoration.isPointerBlocker = this._isPointerBlocker ; }
+		if ( this._content ) { this._content.isPointerBlocker = this._isPointerBlocker ; }
 	}
 
 	get hoverCursor() { return this._hoverCursor ; }
 	set hoverCursor( v ) {
 		this._hoverCursor = v || null ;
-		if ( this._decoration ) {
-			this._decoration.hoverCursor = this._hoverCursor ;
-		}
+		if ( this._decoration ) { this._decoration.hoverCursor = this._hoverCursor ; }
+		if ( this._content ) { this._content.hoverCursor = this._hoverCursor ; }
 	}
 
 	// Must be subclassed
@@ -751,8 +746,6 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		rect.color = this._borderColor ;
 		rect.thickness = this._borderThickness ;
 		rect.cornerRadius = this._cornerRadius ;
-		rect.isPointerBlocker = this._isPointerBlocker ;
-		rect.hoverCursor = this._hoverCursor ;
 	}
 
 	_createRectangleNow() {
@@ -760,7 +753,6 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		this._setRectanglePropertiesNow( rect ) ;
 		// Call the setter
 		this.decoration = rect ;
-		if ( this._registerDecorationEvents ) { this._registerDecorationEvents( this.decoration ) ; }
 	}
 
 	_setImagePropertiesNow( image = this._decoration ) {
@@ -773,9 +765,6 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		image.sliceRight = this._sliceRight ;
 		image.sliceTop = this._sliceTop ;
 		image.sliceBottom = this._sliceBottom ;
-
-		image.isPointerBlocker = this._isPointerBlocker ;
-		image.hoverCursor = this._hoverCursor ;
 	}
 
 	_createImageNow() {
@@ -784,7 +773,6 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 		this._setImagePropertiesNow( image ) ;
 		// Call the setter
 		this.decoration = image ;
-		if ( this._registerDecorationEvents ) { this._registerDecorationEvents( this.decoration ) ; }
 	}
 
 	async _onContentSizeUpdated( size ) {
