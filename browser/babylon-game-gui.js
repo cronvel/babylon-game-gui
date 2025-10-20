@@ -469,10 +469,6 @@ const Promise = require( 'seventh' ) ;
 
 
 class DecoratedContainer extends BABYLON.GUI.Container {
-	static RECTANGLE = 0 ;
-	static IMAGE = 1 ;
-	static VG = 2 ;
-
 	_type = DecoratedContainer.RECTANGLE ;
 	_decoration = null ;
 	_content = null ;
@@ -507,6 +503,10 @@ class DecoratedContainer extends BABYLON.GUI.Container {
 	onContentCreatedObservable = new Observable() ;
 	onInfotipObservable = new Observable() ;
 	onInfotipClosedObservable = new Observable() ;
+
+	static RECTANGLE = 0 ;
+	static IMAGE = 1 ;
+	static VG = 2 ;
 
 	constructor( name ) {
 		super( name ) ;
