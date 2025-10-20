@@ -58,9 +58,6 @@ async function createScene() {
 function createActionButton( markupText ) {
 	var button = new BABYLON.GUI.ActionButton( 'button' ) ;
 
-	button.isPointerBlocker = true ;
-	button.hoverCursor = 'pointer' ;
-
 	//button.width = 0.25 ; button.height = 0.1 ;
 	button.width = "300px" ; button.height = "60px" ;
 
@@ -120,8 +117,6 @@ function createActionButton( markupText ) {
 		}
 	} ;
  
-
-
 	button.markupText = markupText ;
 
 	//button.textWrapping = "wordWrap" ;
